@@ -1,0 +1,86 @@
+cabal-version:      3.0
+name:               trisagion
+version:            0.1.0.0
+synopsis:           A monadic parsing library.
+description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
+category:           Parsing
+homepage:           https://github.com/lambda-dom/trisagion#readme
+author:             lambda-dom
+license:            BSD-3-Clause
+license-file:       LICENSE
+maintainer:         grodrigues.math@gmail.com
+copyright:          2024 G. Rodrigues
+build-type:         Simple
+extra-source-files:
+extra-doc-files:
+    LICENSE
+    README.md
+    CHANGELOG.md
+
+source-repository head
+    type: git
+    location: https://github.com/lambda-dom/trisagion
+
+common common-fields
+    default-language: GHC2021
+    default-extensions:
+        DerivingStrategies
+        TypeFamilies
+    build-depends:
+        -- GHC 9.6
+        base ^>=4.18 && <4.19,
+    ghc-options:
+        -Wall
+        -Wcompat
+        -Widentities
+        -Wincomplete-record-updates
+        -Wincomplete-uni-patterns
+        -Wmissing-export-lists
+        -Wmissing-home-modules
+        -Wpartial-fields
+        -Wredundant-constraints
+        -Wmissing-deriving-strategies
+        -- -Wunused-packages
+
+library trisagion-lib
+    import: common-fields
+    hs-source-dirs:
+        src
+    build-depends:
+        mtl >=2.3 && <2.4,
+        mono-traversable >=1.0 && <1.1,
+        text >=2.0 && <2.2,
+        bytestring >=0.11 && <0.13,
+        containers >=0.6 && <0.8,
+        vector >=0.13 && <0.14,
+    other-modules:
+    exposed-modules:
+        Trisagion.Types.ParseError
+        Trisagion.Types.Result
+        Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.Splittable
+        Trisagion.Get
+        Trisagion.Getters.Combinators
+        Trisagion.Getters.Streamable
+        Trisagion.Getters.Splittable
+        Trisagion.Getters.Word8
+        Trisagion.Getters.Char
+
+test-suite trisagion-tests
+    import: common-fields
+    type: exitcode-stdio-1.0
+    hs-source-dirs:
+        tests
+    main-is: Spec.hs
+    build-depends:
+        hspec ^>=2.11 && <2.12,
+        trisagion-lib,
+    build-tool-depends:
+        hspec-discover:hspec-discover
+    other-modules:
+        Tests.Helpers
+        Tests.Getters.StreamableSpec
+        Tests.Getters.CombinatorsSpec
+        Tests.Getters.SplittableSpec
+        Tests.Getters.Word8Spec
+        Tests.Getters.CharSpec
