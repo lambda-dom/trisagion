@@ -40,7 +40,7 @@ common common-fields
         -Wpartial-fields
         -Wredundant-constraints
         -Wmissing-deriving-strategies
-        -- -Wunused-packages
+        -Wunused-packages
 
 library
     import: common-fields
