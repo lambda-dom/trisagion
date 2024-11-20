@@ -42,7 +42,7 @@ common common-fields
         -Wmissing-deriving-strategies
         -- -Wunused-packages
 
-library trisagion-lib
+library
     import: common-fields
     hs-source-dirs:
         src
@@ -74,7 +74,7 @@ test-suite trisagion-tests
     main-is: Spec.hs
     build-depends:
         hspec ^>=2.11 && <2.12,
-        trisagion-lib,
+        trisagion,
     build-tool-depends:
         hspec-discover:hspec-discover
     other-modules:
