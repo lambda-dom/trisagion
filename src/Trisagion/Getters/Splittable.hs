@@ -81,8 +81,8 @@ takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takeP
     where
         v prefix =
             if olength prefix < fromIntegral n
-            then Left $ InputError n
-            else Right prefix
+                then Left $ InputError n
+                else Right prefix
 
 {- | Get a matching prefix from the stream.
 
@@ -98,8 +98,8 @@ match xs = validate v (takeExact (fromIntegral $ olength xs))
     where
         v prefix =
             if xs == prefix
-            then Right prefix
-            else Left $ MatchError xs
+                then Right prefix
+                else Left $ MatchError xs
 
 {- | Get the longest prefix from the streamable whose elements satisfy a predicate. -}
 takeWith :: Splittable s => (Element s -> Bool) -> Get s Void (PrefixOf s)
@@ -119,10 +119,10 @@ atLeastOneWith p = do
     s <- get
     xs <- first absurd $ takeWith p
     if not (onull xs)
-    then pure xs
-    else do
-        b <- gets onull
-        -- Either not enough input or malformed one.
-        if b
-        then throwError $ makeParseError s (Left InsufficientInputError)
-        else throwError $ makeParseError s (Right ValidationError)
+        then pure xs
+        else do
+            b <- gets onull
+            -- Either not enough input or malformed one.
+            if b
+                then throwError $ makeParseError s (Left InsufficientInputError)
+                else throwError $ makeParseError s (Right ValidationError)

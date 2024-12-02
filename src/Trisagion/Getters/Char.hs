@@ -110,5 +110,5 @@ signed p = do
     sgn <- first absurd (fromMaybe Positive <$> option sign)
     number <- fromIntegral <$> p
     if sgn == Positive
-    then pure number
-    else pure (-number)
+        then pure number
+        else pure (-number)
