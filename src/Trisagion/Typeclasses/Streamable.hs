@@ -42,11 +42,11 @@ instance Streamable [a] where
 
 instance Streamable (NonEmpty a) where
     getOne :: NonEmpty a -> Maybe (a, NonEmpty a)
-    getOne = h . NonEmpty.uncons
+    getOne = switch . NonEmpty.uncons
         where
-            h :: (a, Maybe (NonEmpty a)) -> Maybe (a, NonEmpty a)
-            h (_, Nothing) = Nothing
-            h (x, Just xs) = Just (x, xs)
+            switch :: (a, Maybe (NonEmpty a)) -> Maybe (a, NonEmpty a)
+            switch (_, Nothing) = Nothing
+            switch (x, Just xs) = Just (x, xs)
 
 instance Streamable ByteString where
     getOne :: ByteString -> Maybe (Word8, ByteString)
