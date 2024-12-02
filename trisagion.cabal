@@ -59,6 +59,8 @@ library
         Trisagion.Types.Result
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
+        Trisagion.Streams.Streamable
+        Trisagion.Streams.Offset
         Trisagion.Get
         Trisagion.Getters.Combinators
         Trisagion.Getters.Streamable
