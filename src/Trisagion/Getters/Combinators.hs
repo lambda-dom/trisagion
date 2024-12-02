@@ -95,12 +95,12 @@ validate v p = do
 {- | Add error context to a parser. -}
 onParseError
     :: (Show d, Eq d, Typeable d)
-    => e                            -- ^ Error tag for contextual error.
+    => s                            -- ^ State component of the error to throw.
+    -> e                            -- ^ Error tag for contextual error.
     -> Get s (ParseError s d) a     -- ^ Parser to try.
     -> Get s (ParseError s e) a
-onParseError e p = do
-    s <- get
-    handleError p (\ err -> throwError $ ParseError (Just err) s e)
+onParseError s err p = do
+    handleError p (\ e -> throwError $ ParseError (Just e) s err)
 
 {- | The parser @failIff p@ fails if and only if @p@ succeeds.
 
