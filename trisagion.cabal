@@ -55,6 +55,7 @@ library
         vector >=0.13 && <0.14,
     other-modules:
     exposed-modules:
+        Trisagion.Lib.NonEmpty
         Trisagion.Types.ParseError
         Trisagion.Types.Result
         Trisagion.Typeclasses.Streamable

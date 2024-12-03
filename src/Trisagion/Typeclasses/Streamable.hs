@@ -14,7 +14,6 @@ module Trisagion.Typeclasses.Streamable (
 import Data.List.NonEmpty (NonEmpty)
 import Data.Word (Word8)
 import qualified Data.List as List (uncons)
-import qualified Data.List.NonEmpty as NonEmpty (uncons)
 
 -- Libraries.
 import Data.MonoTraversable (MonoFunctor (..), Element, MonoFoldable)
@@ -25,6 +24,9 @@ import qualified Data.Text.Lazy as LazyText (Text, uncons)
 import qualified Data.ByteString as Bytes (ByteString, uncons)
 import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons)
 import qualified Data.Vector as Vector (uncons)
+
+-- Packages.
+import qualified Trisagion.Lib.NonEmpty as NonEmpty (uncons)
 
 
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
@@ -58,11 +60,7 @@ instance Streamable [a] where
 
 instance Streamable (NonEmpty a) where
     getOne :: NonEmpty a -> Maybe (a, NonEmpty a)
-    getOne = switch . NonEmpty.uncons
-        where
-            switch :: (a, Maybe (NonEmpty a)) -> Maybe (a, NonEmpty a)
-            switch (_, Nothing) = Nothing
-            switch (x, Just xs) = Just (x, xs)
+    getOne = NonEmpty.uncons
 
 instance Streamable (Seq a) where
     getOne :: Seq a -> Maybe (Element (Seq a), Seq a)
