@@ -12,6 +12,7 @@ module Trisagion.Getters.Combinators (
 
     -- * Handling t'ParseError'.
     validate,
+    onParseErrorWith,
     onParseError,
 
     -- * Parsers without values.
@@ -93,14 +94,24 @@ validate v p = do
         Right x -> pure x
 
 {- | Add error context to a parser. -}
-onParseError
+onParseErrorWith
     :: (Show d, Eq d, Typeable d)
     => s                            -- ^ State component of the error to throw.
     -> e                            -- ^ Error tag for contextual error.
     -> Get s (ParseError s d) a     -- ^ Parser to try.
     -> Get s (ParseError s e) a
-onParseError s err p = do
+onParseErrorWith s err p = do
     handleError p (\ e -> throwError $ ParseError (Just e) s err)
+
+{- | Specialized version of 'onParseErrorWith' capturing the current parser state. -}
+onParseError
+    :: (Show d, Eq d, Typeable d)
+    => e                            -- ^ Error tag for contextual error.
+    -> Get s (ParseError s d) a     -- ^ Parser to try.
+    -> Get s (ParseError s e) a
+onParseError err p = do
+    s <- get
+    onParseErrorWith s err p
 
 {- | The parser @failIff p@ fails if and only if @p@ succeeds.
 
