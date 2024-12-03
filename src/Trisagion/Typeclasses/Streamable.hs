@@ -17,13 +17,13 @@ import qualified Data.List as List (uncons)
 import qualified Data.List.NonEmpty as NonEmpty (uncons)
 
 -- Libraries.
-import Data.ByteString (ByteString)
 import Data.MonoTraversable (MonoFunctor (..), Element, MonoFoldable)
 import Data.Sequence (Seq (..))
-import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Text as Text (uncons)
-import qualified Data.ByteString as Bytes (uncons)
+import qualified Data.Text as Text (Text, uncons)
+import qualified Data.Text.Lazy as LazyText (Text, uncons)
+import qualified Data.ByteString as Bytes (ByteString, uncons)
+import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons)
 import qualified Data.Vector as Vector (uncons)
 
 
@@ -36,6 +36,22 @@ class (MonoFunctor s, MonoFoldable s) => Streamable s where
 
 
 -- Instances.
+instance Streamable Bytes.ByteString where
+    getOne :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
+    getOne = Bytes.uncons
+
+instance Streamable LazyBytes.ByteString where
+    getOne :: LazyBytes.ByteString -> Maybe (Word8, LazyBytes.ByteString)
+    getOne = LazyBytes.uncons
+
+instance Streamable Text.Text where
+    getOne :: Text.Text -> Maybe (Char, Text.Text)
+    getOne = Text.uncons
+
+instance Streamable LazyText.Text where
+    getOne :: LazyText.Text -> Maybe (Char, LazyText.Text)
+    getOne = LazyText.uncons
+
 instance Streamable [a] where
     getOne :: [a] -> Maybe (a, [a])
     getOne = List.uncons
@@ -48,18 +64,10 @@ instance Streamable (NonEmpty a) where
             switch (_, Nothing) = Nothing
             switch (x, Just xs) = Just (x, xs)
 
-instance Streamable ByteString where
-    getOne :: ByteString -> Maybe (Word8, ByteString)
-    getOne = Bytes.uncons
-
 instance Streamable (Seq a) where
     getOne :: Seq a -> Maybe (Element (Seq a), Seq a)
     getOne Empty      = Nothing
     getOne (x :<| xs) = Just (x, xs)
-
-instance Streamable Text where
-    getOne :: Text -> Maybe (Char, Text)
-    getOne = Text.uncons
 
 instance Streamable (Vector a) where
     getOne :: Vector a -> Maybe (a, Vector a)
