@@ -19,7 +19,7 @@ import Trisagion.Getters.Streamable (InputError (..), MatchError (..), Validatio
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Char tests" $ do
+spec = describe "Trisagion.Getters.Char tests" $ do
     spec_lf
     spec_cr
     spec_spaces

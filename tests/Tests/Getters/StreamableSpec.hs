@@ -19,7 +19,7 @@ import Trisagion.Types.ParseError (makeParseError)
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Streamable tests" $ do
+spec = describe "Trisagion.Getters.Streamable tests" $ do
     spec_eoi
     spec_one
     spec_peek

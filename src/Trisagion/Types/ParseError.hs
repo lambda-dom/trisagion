@@ -12,9 +12,9 @@ module Trisagion.Types.ParseError (
     makeParseError,
 
     -- ** Prisms.
-    state,
-    tag,
-    backtrace,
+    getState,
+    getTag,
+    getBacktrace,
 
     -- ** Elimination functions.
     withParseError,
@@ -78,18 +78,18 @@ makeParseError = ParseError (Nothing :: Maybe (ParseError s Void))
 
 
 {- | Getter for the error state component. -}
-state :: ParseError s e -> Maybe s
-state = withParseError Nothing (\ _ s _ -> Just s)
+getState :: ParseError s e -> Maybe s
+getState = withParseError Nothing (\ _ s _ -> Just s)
 
 {- | Getter for the error tag. -}
-tag :: ParseError s e -> Maybe e
-tag = withParseError Nothing (\ _ _ e -> Just e)
+getTag :: ParseError s e -> Maybe e
+getTag = withParseError Nothing (\ _ _ e -> Just e)
 
 {- | Getter for the backtrace of an error as an elimination function. -}
-backtrace :: (forall d . s -> d -> a) -> ParseError s e -> [a]
-backtrace f  = go
+getBacktrace :: (forall d . s -> d -> a) -> ParseError s e -> [a]
+getBacktrace f  = go
     where
-        go (ParseError r s e) = f s e : maybe [] (backtrace f) r
+        go (ParseError r s e) = f s e : maybe [] (getBacktrace f) r
         go Fail               = []
 
 

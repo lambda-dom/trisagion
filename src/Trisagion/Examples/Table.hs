@@ -12,7 +12,7 @@ module Trisagion.Examples.Table (
     initLines,
 
     -- * Error types.
-    TableError,
+    TableError (..),
 
     -- * Parsers.
     parseHeader,
