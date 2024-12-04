@@ -89,9 +89,10 @@ validate
 validate v p = do
     s <- get
     r <- first (fmap Left) p
-    case v r of
-        Left e -> throwError $ makeParseError s (Right e)
-        Right x -> pure x
+    either
+        (throwError . makeParseError s . Right)
+        pure
+        (v r)
 
 {- | Add error context to a parser. -}
 onParseErrorWith
@@ -101,7 +102,9 @@ onParseErrorWith
     -> Get s (ParseError s d) a     -- ^ Parser to try.
     -> Get s (ParseError s e) a
 onParseErrorWith s err p = do
-    handleError p (\ e -> throwError $ ParseError (Just e) s err)
+    handleError
+        p
+        (\ e -> throwError $ ParseError (Just e) s err)
 
 {- | Specialized version of 'onParseErrorWith' capturing the current parser state. -}
 onParseError

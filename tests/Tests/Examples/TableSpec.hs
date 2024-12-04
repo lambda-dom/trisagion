@@ -14,13 +14,15 @@ import Tests.Helpers
 import Trisagion.Examples.Table
 
 -- Libraries.
-import qualified Data.Text as Text (pack)
+import qualified Data.Text as Text (pack, empty)
+import Data.Void (Void)
 
 
 -- Main module test driver.
 spec :: Spec
 spec = describe "Trisagion.Examples.Table tests" $ do
     spec_parseHeader
+    spec_parseComment
 
 
 -- Tests.
@@ -33,16 +35,32 @@ spec_parseHeader = describe "parseHeader" $ do
             (Text.pack "tbl-v1.0")
             (1, "some more text")
 
+    it "Failure on mismatch" $ do
+        testTableError
+            parseHeader
+            "some arbitrary text\nsome more text"
+            (HeaderError :: TableError Void)
+            (0, "some arbitrary text")
+
     it "Failure on leading whitespace" $ do
         testTableError
             parseHeader
             "   tbl-v1.0\nsome more text"
-            HeaderError
+            (HeaderError :: TableError Void)
             (0, "   tbl-v1.0")
 
     it "Failure on wrong casing" $ do
         testTableError
             parseHeader
             "TBL-v1.0\nsome more text"
-            HeaderError
+            (HeaderError :: TableError Void)
             (0, "TBL-v1.0")
+
+spec_parseComment :: Spec
+spec_parseComment = describe "parseComment" $ do
+    it "Success case" $ do
+        testSuccess
+            parseComment
+            (Text.pack "#some arbitrary text")
+            (Text.pack "some arbitrary text")
+            Text.empty

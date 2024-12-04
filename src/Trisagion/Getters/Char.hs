@@ -14,6 +14,7 @@ module Trisagion.Getters.Char (
 
     -- * Whitespace parsers.
     spaces,
+    notSpaces,
 
     -- * Numeric parsers.
     sign,
@@ -25,7 +26,7 @@ module Trisagion.Getters.Char (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor(..))
-import Data.Char (isDigit, ord)
+import Data.Char (isDigit, ord, isSpace)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
@@ -60,14 +61,13 @@ cr
     => Get s (ParseError s (Either InputError (MatchError Char))) Char
 cr = matchElem '\r'
 
-{- | Parser for a, possibly empty, prefix of whitespace.
-
-note(s):
-
-    * Includes tabs but not newline characters.
--}
+{- | Parser for a possibly null prefix of whitespace. -}
 spaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
-spaces = takeWith (\c -> c == '\t' || c == ' ')
+spaces = takeWith isSpace
+
+{- | Parser for a possibly null prefix of non-whitespace characters. -}
+notSpaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
+notSpaces = takeWith (not . isSpace)
 
 {- | Parser for the number sign. -}
 sign

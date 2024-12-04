@@ -89,6 +89,13 @@ spec_spaces = describe "spaces" $ do
             "  \t "
             "0123"
 
+    it "Success cases with chars other than space and tab" $ do
+        testSuccess
+            spaces
+            "\v\f\r\n0123"
+            "\v\f\r\n"
+            "0123"
+
     it "No leading whitespace" $ do
         testSuccess
             spaces

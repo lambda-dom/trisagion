@@ -16,24 +16,27 @@ module Trisagion.Examples.Table (
 
     -- * Parsers.
     parseHeader,
-    parseFields,
+    parseComment,
+    parseLineWith,
 ) where
 
 -- Imports.
 -- Base.
-import Data.List.NonEmpty (NonEmpty, nonEmpty)
+import Data.Bifunctor (Bifunctor (..))
 
 -- Libraries.
+import Control.Monad.State (MonadState (..))
+import Control.Monad.Except (MonadError (..))
 import Data.Text (Text)
-import qualified Data.Text as Text (lines, pack, words, strip, null)
+import qualified Data.Text as Text (lines, pack, empty)
 
 -- Package.
 import Trisagion.Streams.Streamable (Stream, initialize)
-import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Get (Get)
-import Trisagion.Getters.Combinators (onParseError, validate)
-import Trisagion.Getters.Streamable (InputError, ValidationError (..), one, matchElem)
-
+import Trisagion.Types.ParseError (ParseError, makeParseError)
+import Trisagion.Get (Get, eval)
+import Trisagion.Getters.Combinators (onParseError)
+import Trisagion.Getters.Streamable (one, matchElem, InputError, MatchError)
+import Data.Void (Void, absurd)
 
 {- | A type alias for @t'Stream' ['Text']@. -}
 type Lines = Stream [Text]
@@ -45,28 +48,36 @@ initLines text = initialize (Text.lines text)
 
 
 {- | The @TableError@ error type. -}
-data TableError
-    = HeaderError
-    | FieldsError
-    deriving stock (Eq, Show)
+data TableError e
+    = HeaderError   -- ^ Error raised on incorrect table signature.
+    | LineError e   -- ^ Error raised on a line parsing failure.
+    deriving stock (Eq, Show, Functor)
 
 
 {- | Parser for the header of a .tbl table. -}
-parseHeader :: Get Lines (ParseError Lines TableError ) Text
+parseHeader :: Get Lines (ParseError Lines (TableError e)) Text
 parseHeader = onParseError HeaderError (matchElem (Text.pack "tbl-v1.0"))
 
-{- | Get the next non-empty line, stripped of whitespace on both sides. -}
-nextNonEmpty :: Get Lines (ParseError Lines InputError) Text
-nextNonEmpty = do
-    xs <- Text.strip <$> one
-    if Text.null xs
-        then nextNonEmpty
-        else pure xs
+{- | Parser for a comment in a .tbl row. -}
+parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text
+parseComment = matchElem '#' *> first absurd remainder
+    where
+        remainder :: Get Text Void Text
+        remainder = get <* put Text.empty
 
-{- | Parse the next non-empty line into a 'NonEmpty' of words. -}
-parseLine :: Get Lines (ParseError Lines (Either InputError ValidationError)) (NonEmpty Text)
-parseLine = validate (maybe (Left ValidationError) Right . nonEmpty) (Text.words <$> nextNonEmpty)
+{- | Parse one line with a 'Text' parser.
 
-{- | Parser for the fields line of a .tbl table. -}
-parseFields :: Get Lines (ParseError Lines TableError) (NonEmpty Text)
-parseFields = onParseError FieldsError parseLine
+note(s):
+
+    * any unconsumed input by the 'Text' parser is discarded.
+-}
+parseLineWith 
+    :: Get Text e a
+    -> Get Lines (ParseError Lines (Either InputError (TableError e))) a
+parseLineWith p = do
+    s    <- get
+    text <- first (fmap Left) one
+    either
+        (throwError . makeParseError s . Right . LineError)
+        pure
+        (eval p text)
