@@ -14,9 +14,6 @@ module Trisagion.Get (
     eval,
     exec,
 
-    -- * State parsers.
-    replace,
-
     -- * Error parsers.
     handleError,
 
@@ -184,10 +181,6 @@ eval p = withResult Left (\ _ x -> Right x) . run p
 exec :: Get s e a -> s -> Either e s
 exec p = withResult Left (\ s _ -> Right s) . run p
 
-
-{- | Parser returning the remainder of the state and replacing it with something else. -}
-replace :: s -> Get s Void s
-replace s = get <* put s
 
 {- | Type-changing version of 'catchError'. -}
 handleError

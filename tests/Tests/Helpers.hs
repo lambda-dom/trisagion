@@ -19,7 +19,7 @@ import Data.Void (Void)
 
 -- Libraries.
 import Data.Text (Text)
-import qualified Data.Text as Text (pack)
+import qualified Data.Text as Text (pack, null)
 
 -- Package.
 import Trisagion.Types.Result (Result (..), withResult)
@@ -85,8 +85,10 @@ testTableSuccess
     -> (Word, String)   -- ^ Stream position and first line of updated state.
     -> Expectation
 testTableSuccess p input ok (offset, out) =
-    let r = extractSuccess $ run p (initLines $ Text.pack input) in
-        r `shouldBe` Just (ok, (offset, Just $ Text.pack out))
+        let r = extractSuccess $ run p (initLines $ Text.pack input) in
+            r `shouldBe` Just (ok, (offset, justIfNotNull $ Text.pack out))
+    where
+        justIfNotNull text = if Text.null text then Nothing else Just text
 
 {- | Test table parser errors by testing error equality via @'shouldBe'@. -}
 testTableError
@@ -97,5 +99,7 @@ testTableError
     -> (Word, String)                       -- ^ Error state component.
     -> Expectation
 testTableError p input err (offset, out) =
-    let r = extractParseError $ run p (initLines $ Text.pack input) in
-        r `shouldBe` Just (err, (offset, Just $ Text.pack out))
+        let r = extractParseError $ run p (initLines $ Text.pack input) in
+            r `shouldBe` Just (err, (offset, justIfNotNull $ Text.pack out))
+    where
+        justIfNotNull text = if Text.null text then Nothing else Just text

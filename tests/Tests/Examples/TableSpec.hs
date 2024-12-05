@@ -15,6 +15,7 @@ import Trisagion.Examples.Table
 
 -- Libraries.
 import qualified Data.Text as Text (pack, empty)
+import Trisagion.Getters.Streamable (InputError(..))
 
 
 -- Main module test driver.
@@ -22,6 +23,7 @@ spec :: Spec
 spec = describe "Trisagion.Examples.Table tests" $ do
     spec_parseHeader
     spec_parseComment
+    spec_parseFields
 
 
 -- Tests.
@@ -63,3 +65,46 @@ spec_parseComment = describe "parseComment" $ do
             (Text.pack "#some arbitrary text")
             (Text.pack "some arbitrary text")
             Text.empty
+
+spec_parseFields :: Spec
+spec_parseFields = describe "parseFields" $ do
+    it "Success case" $ do
+        testTableSuccess
+            parseFields
+            "some arbitrary text"
+            (Text.pack <$> ["some", "arbitrary", "text"])
+            (1, "")
+
+    it "Success with leading whitespace" $ do
+        testTableSuccess
+            parseFields
+            " \r\v\t\f   some arbitrary text"
+            (Text.pack <$> ["some", "arbitrary", "text"])
+            (1, "")
+
+    it "Success with empty line" $ do
+        testTableSuccess
+            parseFields
+            "    "
+            []
+            (1, "")
+
+    it "Success with comment character" $ do
+        testTableSuccess
+            parseFields
+            "some #arbitrary text"
+            (Text.pack <$> ["some", "#arbitrary", "text"])
+            (1, "")
+
+        testTableSuccess
+            parseFields
+            "some arbi##trary text"
+            (Text.pack <$> ["some", "arbi##trary", "text"])
+            (1, "")
+
+    it "Failure on no input" $ do
+        testTableError
+            parseFields
+            ""
+            (InputError 1)
+            (0, "")
