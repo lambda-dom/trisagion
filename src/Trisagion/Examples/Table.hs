@@ -11,13 +11,10 @@ module Trisagion.Examples.Table (
     -- ** Constructors.
     initLines,
 
-    -- * Error types.
-    SignatureError (..),
-
     -- * Generic parsers.
     parseLineWith,
 
-    -- * Parsers.
+    -- * Auxiliary parsers.
     parseHeader,
     parseComment,
     parseFields,
@@ -37,7 +34,7 @@ import qualified Data.Text as Text (lines, pack, empty, strip, words)
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Combinators (onParseError, replace, validate)
+import Trisagion.Getters.Combinators (replace, validate)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
 
 
@@ -48,11 +45,6 @@ type Lines = Stream [Text]
 {- | Construct a t'Lines' streamable from @'Text.lines' text@. -}
 initLines :: Text -> Lines
 initLines text = initialize (Text.lines text)
-
-
-{- | The @SignatureError@ error type. -}
-data SignatureError = SignatureError
-    deriving stock (Eq, Show)
 
 
 {- | Parse one line stripped of whitespace on both ends with a 'Text' parser.
@@ -67,8 +59,8 @@ parseLineWith
 parseLineWith p = validate (eval p) (Text.strip <$> one)
 
 {- | Parser for the header of a .tbl table. -}
-parseHeader :: Get Lines (ParseError Lines SignatureError) Text
-parseHeader = onParseError SignatureError (matchElem (Text.pack "tbl-v1.0"))
+parseHeader :: Get Lines (ParseError Lines (Either InputError (MatchError Text))) Text
+parseHeader = matchElem (Text.pack "tbl-v1.0")
 
 {- | Parser for a comment in a .tbl row. -}
 parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text

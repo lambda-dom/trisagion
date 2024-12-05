@@ -15,7 +15,9 @@ import Trisagion.Examples.Table
 
 -- Libraries.
 import qualified Data.Text as Text (pack, empty)
-import Trisagion.Getters.Streamable (InputError(..))
+
+-- Package.
+import Trisagion.Getters.Streamable (InputError (..), MatchError (..) )
 
 
 -- Main module test driver.
@@ -40,21 +42,21 @@ spec_parseHeader = describe "parseHeader" $ do
         testTableError
             parseHeader
             "some arbitrary text\nsome more text"
-            SignatureError
+            (Right $ MatchError (Text.pack "tbl-v1.0"))
             (0, "some arbitrary text")
 
     it "Failure on leading whitespace" $ do
         testTableError
             parseHeader
             "   tbl-v1.0\nsome more text"
-            SignatureError
+            (Right $ MatchError (Text.pack "tbl-v1.0"))
             (0, "   tbl-v1.0")
 
     it "Failure on wrong casing" $ do
         testTableError
             parseHeader
             "TBL-v1.0\nsome more text"
-            SignatureError
+            (Right $ MatchError (Text.pack "tbl-v1.0"))
             (0, "TBL-v1.0")
 
 spec_parseComment :: Spec
