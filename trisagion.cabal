@@ -25,6 +25,7 @@ common common-fields
     default-language: GHC2021
     default-extensions:
         DerivingStrategies
+        DerivingVia
         TypeFamilies
     build-depends:
         -- GHC 9.6

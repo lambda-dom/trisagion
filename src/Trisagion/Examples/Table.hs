@@ -12,7 +12,8 @@ module Trisagion.Examples.Table (
     initLines,
 
     -- * Error types.
-    TableError (..),
+    SignatureError (..),
+    LineError (..),
 
     -- * Parsers.
     parseHeader,
@@ -23,6 +24,8 @@ module Trisagion.Examples.Table (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+import Data.Functor.Identity (Identity (..))
+import Data.Void (absurd)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
@@ -33,10 +36,9 @@ import qualified Data.Text as Text (lines, pack, empty)
 -- Package.
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
-import Trisagion.Get (Get, eval)
+import Trisagion.Get (Get, eval, replace)
 import Trisagion.Getters.Combinators (onParseError)
 import Trisagion.Getters.Streamable (one, matchElem, InputError, MatchError)
-import Data.Void (Void, absurd)
 
 {- | A type alias for @t'Stream' ['Text']@. -}
 type Lines = Stream [Text]
@@ -47,23 +49,23 @@ initLines :: Text -> Lines
 initLines text = initialize (Text.lines text)
 
 
-{- | The @TableError@ error type. -}
-data TableError e
-    = HeaderError   -- ^ Error raised on incorrect table signature.
-    | LineError e   -- ^ Error raised on a line parsing failure.
-    deriving stock (Eq, Show, Functor)
+{- | The @HeaderError@ error type. -}
+data SignatureError = SignatureError
+    deriving stock (Eq, Show)
+
+{- | The @LineError@ error type. -}
+newtype LineError e = LineError e
+    deriving stock (Eq, Show)
+    deriving Functor via Identity
 
 
 {- | Parser for the header of a .tbl table. -}
-parseHeader :: Get Lines (ParseError Lines (TableError e)) Text
-parseHeader = onParseError HeaderError (matchElem (Text.pack "tbl-v1.0"))
+parseHeader :: Get Lines (ParseError Lines SignatureError) Text
+parseHeader = onParseError SignatureError (matchElem (Text.pack "tbl-v1.0"))
 
 {- | Parser for a comment in a .tbl row. -}
 parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text
-parseComment = matchElem '#' *> first absurd remainder
-    where
-        remainder :: Get Text Void Text
-        remainder = get <* put Text.empty
+parseComment = matchElem '#' *> first absurd (replace Text.empty)
 
 {- | Parse one line with a 'Text' parser.
 
@@ -73,7 +75,7 @@ note(s):
 -}
 parseLineWith 
     :: Get Text e a
-    -> Get Lines (ParseError Lines (Either InputError (TableError e))) a
+    -> Get Lines (ParseError Lines (Either InputError (LineError e))) a
 parseLineWith p = do
     s    <- get
     text <- first (fmap Left) one
