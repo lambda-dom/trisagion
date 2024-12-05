@@ -23,6 +23,7 @@ spec = describe "Trisagion.Getters.Char tests" $ do
     spec_lf
     spec_cr
     spec_spaces
+    spec_notSpaces
     spec_sign
     spec_positive
     spec_signed
@@ -106,6 +107,29 @@ spec_spaces = describe "spaces" $ do
     it "No input" $ do
         testSuccess
             spaces
+            ""
+            ""
+            ""
+
+spec_notSpaces :: Spec
+spec_notSpaces = describe "notSpaces" $ do
+    it "Success case" $ do
+        testSuccess
+            notSpaces
+            "0123"
+            "0123"
+            ""
+
+    it "Success on leadinhg whitespace" $ do
+        testSuccess
+            notSpaces
+            "    0123"
+            ""
+            "    0123"
+
+    it "No input" $ do
+        testSuccess
+            notSpaces
             ""
             ""
             ""

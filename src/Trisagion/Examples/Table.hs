@@ -17,25 +17,28 @@ module Trisagion.Examples.Table (
     -- * Auxiliary parsers.
     parseHeader,
     parseComment,
+    parseFieldOrComment,
+    parseRow,
     parseFields,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (absurd)
+import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.State (gets)
 import Data.Text (Text)
-import qualified Data.Text as Text (lines, pack, empty, strip, words)
+import qualified Data.Text as Text (lines, pack, empty, strip, words, null)
 
 -- Package.
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Combinators (replace, validate)
+import Trisagion.Getters.Combinators (replace, validate,option)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
+import Trisagion.Getters.Char (notSpaces, spaces)
 
 
 {- | A type alias for @t'Stream' ['Text']@. -}
@@ -65,6 +68,24 @@ parseHeader = matchElem (Text.pack "tbl-v1.0")
 {- | Parser for a comment in a .tbl row. -}
 parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text
 parseComment = matchElem '#' *> first absurd (replace (const Text.empty))
+
+{- | Parser for a either a comment or a field in a .tbl row. -}
+parseFieldOrComment :: Get Text Void (Either Text Text)
+parseFieldOrComment = option parseComment >>= maybe (Right <$> notSpaces) (pure . Left)
+
+{- | Parser for a .tbl table row. -}
+parseRow :: Get Lines (ParseError Lines InputError) [Text]
+parseRow = first (fmap (either id absurd)) $ parseLineWith go
+    where
+        go :: Get Text Void [Text]
+        go = do
+            r <- spaces *> parseFieldOrComment
+            case r of
+                Left _     -> pure []
+                Right field ->
+                    if Text.null field
+                        then pure []
+                        else (field :) <$> go
 
 {- | Parse one line as a possibly empty list of field, or column, names. -}
 parseFields :: Get Lines (ParseError Lines InputError) [Text]

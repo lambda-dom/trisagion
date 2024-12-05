@@ -25,6 +25,8 @@ spec :: Spec
 spec = describe "Trisagion.Examples.Table tests" $ do
     spec_parseHeader
     spec_parseComment
+    spec_parseFieldOrComment
+    spec_parseRow
     spec_parseFields
 
 
@@ -67,6 +69,71 @@ spec_parseComment = describe "parseComment" $ do
             (Text.pack "#some arbitrary text")
             (Text.pack "some arbitrary text")
             Text.empty
+
+spec_parseFieldOrComment :: Spec
+spec_parseFieldOrComment = describe "parseFieldOrComment" $ do
+    it "Success on comment" $ do
+        testSuccess
+            parseFieldOrComment
+            (Text.pack "#some arbitrary text")
+            (Left $ Text.pack "some arbitrary text")
+            Text.empty
+
+    it "Success on field" $ do
+        testSuccess
+            parseFieldOrComment
+            (Text.pack "some #arbitrary text")
+            (Right $ Text.pack "some")
+            (Text.pack " #arbitrary text")
+
+    it "Success on whitespace" $ do
+        testSuccess
+            parseFieldOrComment
+            (Text.pack "    ")
+            (Right Text.empty)
+            (Text.pack "    ")
+
+    it "No input" $ do
+        testSuccess
+            parseFieldOrComment
+            Text.empty
+            (Right Text.empty)
+            Text.empty
+
+spec_parseRow :: Spec
+spec_parseRow = describe "parseRow" $ do
+    it "Success in case of only whitespace line" $ do
+        testTableSuccess
+            parseRow
+            "    "
+            []
+            (1, "")
+
+    it "Success in case of comment line" $ do
+        testTableSuccess
+            parseRow
+            "#a commentary"
+            []
+            (1, "")
+
+        testTableSuccess
+            parseRow
+            "     #a commentary"
+            []
+            (1, "")
+
+    it "Success case for fields" $ do
+        testTableSuccess
+            parseRow
+            "    some name"
+            (Text.pack <$> ["some", "name"])
+            (1, "")
+
+        testTableSuccess
+            parseRow
+            "    some name #some commentary"
+            (Text.pack <$> ["some", "name"])
+            (1, "")
 
 spec_parseFields :: Spec
 spec_parseFields = describe "parseFields" $ do
