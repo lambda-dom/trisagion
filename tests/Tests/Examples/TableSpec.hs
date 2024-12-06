@@ -16,6 +16,9 @@ import Trisagion.Examples.Table
 -- Libraries.
 import qualified Data.Text as Text (pack, empty)
 
+-- Base.
+import Data.List.NonEmpty (NonEmpty (..))
+
 -- Package.
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..) )
 
@@ -141,39 +144,39 @@ spec_parseFields = describe "parseFields" $ do
         testTableSuccess
             parseFields
             "some arbitrary text"
-            (Text.pack <$> ["some", "arbitrary", "text"])
+            (Text.pack <$> ("some" :| ["arbitrary", "text"]))
             (1, "")
 
     it "Success with leading whitespace" $ do
         testTableSuccess
             parseFields
             " \r\v\t\f   some arbitrary text"
-            (Text.pack <$> ["some", "arbitrary", "text"])
-            (1, "")
-
-    it "Success with empty line" $ do
-        testTableSuccess
-            parseFields
-            "    "
-            []
+            (Text.pack <$> ("some" :| ["arbitrary", "text"]))
             (1, "")
 
     it "Success with comment character" $ do
         testTableSuccess
             parseFields
-            "some #arbitrary text"
-            (Text.pack <$> ["some", "#arbitrary", "text"])
+            "some #arbitrary omment"
+            (Text.pack <$> ("some" :| []))
             (1, "")
 
         testTableSuccess
             parseFields
             "some arbi##trary text"
-            (Text.pack <$> ["some", "arbi##trary", "text"])
+            (Text.pack <$> ("some" :| ["arbi##trary", "text"]))
             (1, "")
 
     it "Failure on no input" $ do
         testTableError
             parseFields
             ""
-            (InputError 1)
+            (Left $ InputError 1)
             (0, "")
+
+    it "Failure on empty list of fields" $ do
+        testTableError
+            parseFields
+            "    #some arbitrary comment"
+            (Right FieldsError)
+            (0, "    #some arbitrary comment")

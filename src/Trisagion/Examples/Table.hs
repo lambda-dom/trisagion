@@ -11,6 +11,9 @@ module Trisagion.Examples.Table (
     -- ** Constructors.
     initLines,
 
+    -- * Error types.
+    TableError (..),
+
     -- * Generic parsers.
     parseLineWith,
 
@@ -20,25 +23,29 @@ module Trisagion.Examples.Table (
     parseFieldOrComment,
     parseRow,
     parseFields,
+    parseRows,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.State (gets)
 import Data.Text (Text)
-import qualified Data.Text as Text (lines, pack, empty, strip, words, null)
+import qualified Data.Text as Text (lines, pack, empty, strip, null)
 
 -- Package.
 import Trisagion.Streams.Streamable (Stream, initialize)
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Get (Get, eval)
 import Trisagion.Getters.Combinators (replace, validate,option)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
 import Trisagion.Getters.Char (notSpaces, spaces)
+import Trisagion.Lib.NonEmpty (zipExact)
+import Control.Monad.Except (MonadError(..))
+import Control.Monad.State (MonadState(..))
 
 
 {- | A type alias for @t'Stream' ['Text']@. -}
@@ -48,6 +55,14 @@ type Lines = Stream [Text]
 {- | Construct a t'Lines' streamable from @'Text.lines' text@. -}
 initLines :: Text -> Lines
 initLines text = initialize (Text.lines text)
+
+
+{- | The @TableError@ error type. -}
+data TableError
+    = SignatureError
+    | FieldsError
+    | MatchError
+    deriving stock (Eq, Show)
 
 
 {- | Parse one line stripped of whitespace on both ends with a 'Text' parser.
@@ -65,6 +80,10 @@ parseLineWith p = validate (eval p) (Text.strip <$> one)
 parseHeader :: Get Lines (ParseError Lines (Either InputError (MatchError Text))) Text
 parseHeader = matchElem (Text.pack "tbl-v1.0")
 
+{- | Parse one line as a 'NonEmpty' of field names. -}
+parseFields :: Get Lines (ParseError Lines (Either InputError TableError)) (NonEmpty Text)
+parseFields = validate (maybe (Left FieldsError) Right . nonEmpty) parseRow
+
 {- | Parser for a comment in a .tbl row. -}
 parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text
 parseComment = matchElem '#' *> first absurd (replace (const Text.empty))
@@ -81,12 +100,26 @@ parseRow = first (fmap (either id absurd)) $ parseLineWith go
         go = do
             r <- spaces *> parseFieldOrComment
             case r of
-                Left _     -> pure []
+                Left _      -> pure []
                 Right field ->
                     if Text.null field
                         then pure []
                         else (field :) <$> go
 
-{- | Parse one line as a possibly empty list of field, or column, names. -}
-parseFields :: Get Lines (ParseError Lines InputError) [Text]
-parseFields = first (fmap (either id absurd)) $ parseLineWith (gets Text.words)
+{- | Parser for a non-empty list of .tbl table rows. -}
+parseRows :: NonEmpty Text -> Get Lines (ParseError Lines TableError) [NonEmpty (Text, Text)]
+parseRows fields = go
+    where
+        go = do
+            s <- get
+            r <- first absurd $ option parseRow
+            case r of
+                Nothing -> pure []
+                Just ts ->
+                    case nonEmpty ts of
+                        -- Case of empty line.
+                        Nothing -> parseRows fields
+                        Just fs ->
+                            case zipExact fields fs of
+                                Nothing -> throwError $ makeParseError s MatchError
+                                Just ps -> (ps :) <$> parseRows fields
