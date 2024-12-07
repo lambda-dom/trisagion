@@ -19,10 +19,11 @@ import Trisagion.Getters.Streamable (InputError (..), MatchError (..), Validatio
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Char tests" $ do
+spec = describe "Trisagion.Getters.Char tests" $ do
     spec_lf
     spec_cr
     spec_spaces
+    spec_notSpaces
     spec_sign
     spec_positive
     spec_signed
@@ -89,6 +90,13 @@ spec_spaces = describe "spaces" $ do
             "  \t "
             "0123"
 
+    it "Success cases with chars other than space and tab" $ do
+        testSuccess
+            spaces
+            "\v\f\r\n0123"
+            "\v\f\r\n"
+            "0123"
+
     it "No leading whitespace" $ do
         testSuccess
             spaces
@@ -99,6 +107,29 @@ spec_spaces = describe "spaces" $ do
     it "No input" $ do
         testSuccess
             spaces
+            ""
+            ""
+            ""
+
+spec_notSpaces :: Spec
+spec_notSpaces = describe "notSpaces" $ do
+    it "Success case" $ do
+        testSuccess
+            notSpaces
+            "0123"
+            "0123"
+            ""
+
+    it "Success on leadinhg whitespace" $ do
+        testSuccess
+            notSpaces
+            "    0123"
+            ""
+            "    0123"
+
+    it "No input" $ do
+        testSuccess
+            notSpaces
             ""
             ""
             ""

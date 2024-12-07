@@ -24,7 +24,7 @@ import Trisagion.Getters.Streamable
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Combinators tests" $ do
+spec = describe "Trisagion.Getters.Combinators tests" $ do
     spec_observe
     spec_lookAhead
     spec_option

@@ -25,10 +25,12 @@ common common-fields
     default-language: GHC2021
     default-extensions:
         DerivingStrategies
+        DerivingVia
         TypeFamilies
     build-depends:
         -- GHC 9.6
         base ^>=4.18 && <4.19,
+        text >=2.0 && <2.2,
     ghc-options:
         -Wall
         -Wcompat
@@ -49,7 +51,6 @@ library
     build-depends:
         mtl >=2.3 && <2.4,
         mono-traversable >=1.0 && <1.1,
-        text >=2.0 && <2.2,
         bytestring >=0.11 && <0.13,
         containers >=0.6 && <0.8,
         vector >=0.13 && <0.14,
@@ -68,6 +69,7 @@ library
         Trisagion.Getters.Splittable
         Trisagion.Getters.Word8
         Trisagion.Getters.Char
+        Trisagion.Examples.Table
 
 test-suite trisagion-tests
     import: common-fields
@@ -87,3 +89,4 @@ test-suite trisagion-tests
         Tests.Getters.SplittableSpec
         Tests.Getters.Word8Spec
         Tests.Getters.CharSpec
+        Tests.Examples.TableSpec

@@ -10,6 +10,9 @@ module Trisagion.Getters.Combinators (
     lookAhead,
     option,
 
+    -- * State parsers.
+    replace,
+
     -- * Handling t'ParseError'.
     validate,
     onParseErrorWith,
@@ -55,7 +58,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (MonadState (..))
+import Control.Monad.State (MonadState (..), gets)
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError (..), initial, makeParseError)
@@ -81,6 +84,10 @@ The difference with @'Control.Applicative.optional'@ is the more precise type si
 option :: Get s e a -> Get s Void (Maybe a)
 option p = either (const Nothing) Just <$> observe p
 
+{- | Parser returning the remainder of the state and replacing it with something else. -}
+replace :: (s -> s) -> Get s Void s
+replace f = get <* (gets f >>= put) 
+
 {- | Run parser and return the result, validating it. -}
 validate
     :: (a -> Either d b)            -- ^ Validator.
@@ -89,9 +96,10 @@ validate
 validate v p = do
     s <- get
     r <- first (fmap Left) p
-    case v r of
-        Left e -> throwError $ makeParseError s (Right e)
-        Right x -> pure x
+    either
+        (throwError . makeParseError s . Right)
+        pure
+        (v r)
 
 {- | Add error context to a parser. -}
 onParseErrorWith
@@ -101,7 +109,9 @@ onParseErrorWith
     -> Get s (ParseError s d) a     -- ^ Parser to try.
     -> Get s (ParseError s e) a
 onParseErrorWith s err p = do
-    handleError p (\ e -> throwError $ ParseError (Just e) s err)
+    handleError
+        p
+        (\ e -> throwError $ ParseError (Just e) s err)
 
 {- | Specialized version of 'onParseErrorWith' capturing the current parser state. -}
 onParseError
