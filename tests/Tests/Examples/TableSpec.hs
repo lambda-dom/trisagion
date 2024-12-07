@@ -178,5 +178,5 @@ spec_parseFields = describe "parseFields" $ do
         testTableError
             parseFields
             "    #some arbitrary comment"
-            (Right FieldsError)
+            (Right EmptyLineError)
             (0, "    #some arbitrary comment")
