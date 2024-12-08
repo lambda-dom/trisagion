@@ -12,7 +12,8 @@ module Trisagion.Streams.Streamable (
     initialize,
 
     -- ** Getters.
-    offset,
+    getOffset,
+    getStream,
 ) where
 
 -- Imports.
@@ -71,5 +72,9 @@ initialize :: s -> Stream s
 initialize = Stream 0
 
 {- | Return the current offset of the t'Stream'. -}
-offset :: Stream s -> Word
-offset (Stream off _) = off
+getOffset :: Stream s -> Word
+getOffset (Stream off _) = off
+
+{- | Return the underlying stream. -}
+getStream :: Stream s -> s
+getStream (Stream _ s) = s

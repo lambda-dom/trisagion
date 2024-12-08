@@ -22,7 +22,7 @@ import Trisagion.Getters.Streamable (InputError (..))
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Streamable tests" $ do
+spec = describe "Trisagion.Getters.Word8 tests" $ do
     spec_word8
     spec_int8
     spec_word32Le

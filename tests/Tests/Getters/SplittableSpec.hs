@@ -19,7 +19,7 @@ import Trisagion.Getters.Streamable (InputError (..), MatchError (..), Validatio
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Bins.Getters.Splittable tests" $ do
+spec = describe "Trisagion.Getters.Splittable tests" $ do
     spec_takePrefix
     spec_dropPrefix
     spec_takeExact
