@@ -21,6 +21,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 
 -- Package.
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..) )
+import Data.Foldable (Foldable(..))
 
 
 -- Main module test driver.
@@ -31,6 +32,7 @@ spec = describe "Trisagion.Examples.Table tests" $ do
     spec_parseFieldOrComment
     spec_parseRow
     spec_parseFields
+    spec_parseTable
 
 
 -- Tests.
@@ -180,3 +182,33 @@ spec_parseFields = describe "parseFields" $ do
             "    #some arbitrary comment"
             (Right EmptyLineError)
             (0, "    #some arbitrary comment")
+
+spec_parseTable :: Spec
+spec_parseTable = describe "parseTable" $ do
+    it "Failure on no input" $ do
+        testTableError
+            parseTable
+            ""
+            HeaderError
+            (0, "")
+
+    it "Failure on incorrect signature" $ do
+        testTableError
+            parseTable
+            "incorrect signature"
+            HeaderError
+            (0, "incorrect signature")
+
+    it "Success with empty list of rows" $ do
+        testTableSuccess
+            parseTable
+            "tbl-v1.0\nsome arbitrary field"
+            []
+            (2, "")
+
+    it "Success case" $ do
+        testTableSuccess
+            (fmap (fmap snd. toList) <$> parseTable)
+            "tbl-v1.0\nsome arbitrary field\n1 2 3\n2 1 4"
+            [Text.pack <$> ["1", "2", "3"], Text.pack <$> ["2", "1", "4"]]
+            (4, "")

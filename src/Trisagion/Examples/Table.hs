@@ -139,9 +139,7 @@ parseRows fields = go
                                 Just ps -> (ps :) <$> go
 
 {- | Parser for an entire .tbl table. -}
-parseTable
-    :: (NonEmpty (Text, Text) -> a)
-    -> Get Lines (ParseError Lines TableError) [a]
-parseTable processRow = do
+parseTable :: Get Lines (ParseError Lines TableError) [NonEmpty (Text, Text)]
+parseTable = do
         _  <- onParseError HeaderError parseHeader
-        onParseError FieldsError parseFields >>= fmap (fmap processRow) . parseRows
+        onParseError FieldsError parseFields >>= parseRows
