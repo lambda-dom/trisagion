@@ -41,15 +41,16 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError(..))
 import Control.Monad.State (MonadState(..))
 import Data.Text (Text)
-import qualified Data.Text as Text (lines, pack, empty, strip, null)
+import qualified Data.Text as Text (lines, pack, strip, null)
 
 -- Package.
 import Trisagion.Lib.NonEmpty (zipExact)
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Combinators (replace, validate,option, onParseError)
+import Trisagion.Getters.Combinators (validate, option, onParseError)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
+import Trisagion.Getters.Splittable (remainder)
 import Trisagion.Getters.Char (notSpaces, spaces)
 
 
@@ -95,7 +96,7 @@ parseHeader = matchElem (Text.pack "tbl-v1.0")
 
 {- | Parser for a comment in a .tbl row. -}
 parseComment :: Get Text (ParseError Text (Either InputError (MatchError Char))) Text
-parseComment = matchElem '#' *> first absurd (replace (const Text.empty))
+parseComment = matchElem '#' *> first absurd remainder
 
 {- | Parser for a either a comment or a field in a .tbl row. -}
 parseFieldOrComment :: Get Text Void (Either Text Text)

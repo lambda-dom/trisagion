@@ -9,6 +9,7 @@ module Trisagion.Getters.Splittable (
     isolateWith,
 
     -- * Parsers with @'Splittable' s@ constraint.
+    remainder,
     takePrefix,
     dropPrefix,
     takeExact,
@@ -53,6 +54,12 @@ isolateWith h p = do
             case eval p prefix of
                 Left e -> throwError $ makeParseError prefix (Right e)
                 Right x -> put suffix $> x
+
+{- | Get the rest of the input stream. -}
+remainder :: Splittable s => Get s Void (PrefixOf s)
+remainder = do
+    (prefix, suffix) <- gets getRemainder
+    put suffix $> prefix
 
 {- | Get a fixed size prefix from the stream.
 
