@@ -208,7 +208,10 @@ spec_parseTable = describe "parseTable" $ do
 
     it "Success case" $ do
         testTableSuccess
-            (fmap (fmap snd. toList) <$> parseTable)
+            (fmap toList <$> parseTable)
             "tbl-v1.0\nsome arbitrary field\n1 2 3\n2 1 4"
-            [Text.pack <$> ["1", "2", "3"], Text.pack <$> ["2", "1", "4"]]
+            [
+                [(Text.pack "some",Text.pack "1"), (Text.pack "arbitrary",Text.pack "2"), (Text.pack "field",Text.pack "3")],
+                [(Text.pack "some",Text.pack "2"), (Text.pack "arbitrary",Text.pack "1"), (Text.pack "field",Text.pack "4")]
+            ]
             (4, "")
