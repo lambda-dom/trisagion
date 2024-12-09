@@ -48,7 +48,8 @@ import Trisagion.Lib.NonEmpty (zipExact)
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Combinators (validate, option, onParseError)
+import Trisagion.Getters.Combinators (validate, onParseError)
+import qualified Trisagion.Getters.Combinators as Getters (maybe)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
 import Trisagion.Getters.Splittable (remainder)
 import Trisagion.Getters.Char (notSpaces, spaces)
@@ -100,7 +101,7 @@ parseComment = matchElem '#' *> first absurd remainder
 
 {- | Parser for a either a comment or a field in a .tbl row. -}
 parseFieldOrComment :: Get Text Void (Either Text Text)
-parseFieldOrComment = option parseComment >>= maybe (Right <$> notSpaces) (pure . Left)
+parseFieldOrComment = Getters.maybe parseComment >>= maybe (Right <$> notSpaces) (pure . Left)
 
 {- | Parser for a .tbl table row. -}
 parseRow :: Get Lines (ParseError Lines InputError) [Text]
@@ -126,7 +127,7 @@ parseRows fields = go
     where
         go = do
             s <- get
-            r <- first absurd $ option parseRow
+            r <- first absurd $ Getters.maybe parseRow
             case r of
                 Nothing -> pure []
                 Just ts ->

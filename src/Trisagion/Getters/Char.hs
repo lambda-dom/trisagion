@@ -25,7 +25,7 @@ module Trisagion.Getters.Char (
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor(..))
+import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isDigit, ord, isSpace)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
@@ -39,7 +39,8 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Get (Get)
-import Trisagion.Getters.Combinators (validate, option)
+import Trisagion.Getters.Combinators (validate)
+import qualified Trisagion.Getters.Combinators as Getters (maybe)
 import Trisagion.Getters.Streamable (InputError, MatchError, ValidationError (..), matchElem, satisfy, one) 
 import Trisagion.Getters.Splittable (takeWith, atLeastOneWith)
 
@@ -107,7 +108,7 @@ signed
     => Get s (ParseError s (Either InputError ValidationError)) Word
     -> Get s (ParseError s (Either InputError ValidationError)) Int
 signed p = do
-    sgn <- first absurd (fromMaybe Positive <$> option sign)
+    sgn <- first absurd (fromMaybe Positive <$> Getters.maybe sign)
     number <- fromIntegral <$> p
     if sgn == Positive
         then pure number

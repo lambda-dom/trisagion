@@ -17,11 +17,12 @@ import Trisagion.Examples.Table
 import qualified Data.Text as Text (pack, empty)
 
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty (..))
 
 -- Package.
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..) )
-import Data.Foldable (Foldable(..))
 
 
 -- Main module test driver.
@@ -208,7 +209,10 @@ spec_parseTable = describe "parseTable" $ do
 
     it "Success case" $ do
         testTableSuccess
-            (fmap (fmap snd. toList) <$> parseTable)
+            (fmap toList <$> parseTable)
             "tbl-v1.0\nsome arbitrary field\n1 2 3\n2 1 4"
-            [Text.pack <$> ["1", "2", "3"], Text.pack <$> ["2", "1", "4"]]
+            [
+                bimap Text.pack Text.pack <$> [("some","1"), ("arbitrary","2"), ("field","3")],
+                bimap Text.pack Text.pack <$> [("some","2"), ("arbitrary","1"), ("field","4")]
+            ]
             (4, "")
