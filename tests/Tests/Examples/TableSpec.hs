@@ -17,11 +17,12 @@ import Trisagion.Examples.Table
 import qualified Data.Text as Text (pack, empty)
 
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (Foldable (..))
 import Data.List.NonEmpty (NonEmpty (..))
 
 -- Package.
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..) )
-import Data.Foldable (Foldable(..))
 
 
 -- Main module test driver.
@@ -183,10 +184,6 @@ spec_parseFields = describe "parseFields" $ do
             (Right EmptyLineError)
             (0, "    #some arbitrary comment")
 
--- Auxiliary function.
-onPair :: (a -> b) -> (a, a) -> (b, b)
-onPair f (x, y) = (f x, f y)
-
 spec_parseTable :: Spec
 spec_parseTable = describe "parseTable" $ do
     it "Failure on no input" $ do
@@ -215,7 +212,7 @@ spec_parseTable = describe "parseTable" $ do
             (fmap toList <$> parseTable)
             "tbl-v1.0\nsome arbitrary field\n1 2 3\n2 1 4"
             [
-                onPair Text.pack <$> [("some","1"), ("arbitrary","2"), ("field","3")],
-                onPair Text.pack <$> [("some","2"), ("arbitrary","1"), ("field","4")]
+                bimap Text.pack Text.pack <$> [("some","1"), ("arbitrary","2"), ("field","3")],
+                bimap Text.pack Text.pack <$> [("some","2"), ("arbitrary","1"), ("field","4")]
             ]
             (4, "")

@@ -22,6 +22,8 @@ module Trisagion.Getters.Combinators (
     -- * Applicative parsers.
     pair,
     pairWith,
+    before,
+    after,
     between,
 
     -- * Alternative parsers.
@@ -126,10 +128,10 @@ note(s):
 -}
 failIff :: Get s e a -> Get s (ParseError s Void) ()
 failIff p = do
-    r <- first absurd (lookAhead p)
-    case r of
-        Left _  -> pure ()
-        Right _ -> second absurd $ throwError mempty
+    first absurd (lookAhead p) >>=
+        either
+            (const $ pure ())
+            (const . second absurd $ throwError mempty)
 
 {- | Run the parser but discard the result.
 
@@ -149,13 +151,27 @@ pair = pairWith (,)
 pairWith :: (a -> b -> c) -> Get s e a -> Get s e b -> Get s e c
 pairWith f p q = f <$> p <*> q
 
+{- | The parser @'before' b p@ parses @b@ and @p@ in succession, returning the result of @p@. -}
+before
+    :: Get s e b                -- ^ Parser to run first.
+    -> Get s e a                -- ^ Parser to run second.
+    -> Get s e a
+before b p = b *> p
+
+{- | The parser @'after' a p@ parses @p@ and @a@ in succession, returning the result of @p@. -}
+after
+    :: Get s e b                -- ^ Parser to run after.
+    -> Get s e a                -- ^ Parser to run first.
+    -> Get s e a
+after a p = p <* a
+
 {- | The parser @'between' o c p@ parses @o@, @p@ and @c@ in succession, returning the result of @p@. -}
 between
     :: Get s e b                -- ^ Opening parser.
     -> Get s e c                -- ^ Closing parser.
     -> Get s e a                -- ^ Parser to run in-between.
     -> Get s e a
-between open close p = open *> p <* close
+between open close = before open . after close
 
 {- | Run the first parser and if it fails run the second. Return the result as an @'Either'@.
 
@@ -170,7 +186,7 @@ eitherOf q p = (Left <$> q) <|> (Right <$> p)
 choose :: (Foldable t, Monoid e) => t (Get s e a) -> Get s e a
 choose = asum
 
-{- | Chain together a traversable of parsers and return the results. -}
+{- | Chain together a traversable of parsers and return the traversable of results. -}
 chain :: Traversable t => t (Get s e a) -> Get s e (t a)
 chain = sequenceA
 
@@ -193,7 +209,7 @@ unfold h = go
 
 {- | Repeatedly run the parser until it fails, returning the list of results.
 
-The difference with @'many'@ from @'Alternative'@ is the more precise type signature.
+The difference with @'Alternative.many'@ is the more precise type signature.
 
 note(s):
 
@@ -222,7 +238,7 @@ atMostN n p = go n
             r <- option p
             case r of
                 Nothing -> pure []
-                Just x  -> (x :) <$> go (i - 1)
+                Just x  -> (x :) <$> go (pred i)
 
 {- | Run the parser one or more times and return the results as a @'NonEmpty'@.
 
