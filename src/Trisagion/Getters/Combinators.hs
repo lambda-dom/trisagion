@@ -107,7 +107,7 @@ backtrackParseError p = do
         s <- get
         handleError
             p
-            (\ err -> throwError $ mapWith id (const s) id err)
+            (throwError . mapWith id (const s) id)
 
 {- | Add error context to a 'ParseError'. -}
 onParseError
