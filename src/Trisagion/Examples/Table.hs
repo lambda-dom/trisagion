@@ -16,6 +16,12 @@ module Trisagion.Examples.Table (
     MismatchError (..),
     TableError (..),
 
+    -- * Types.
+    Table,
+
+    -- ** Constructors.
+    makeTable,
+
     -- * Generic parsers.
     parseLineWith,
 
@@ -41,7 +47,8 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError(..))
 import Control.Monad.State (MonadState(..))
 import Data.Text (Text)
-import qualified Data.Text as Text (lines, pack, strip, null)
+import Data.Text qualified as Text (lines, pack, strip, null)
+import Data.Vector.Strict (Vector, fromList)
 
 -- Package.
 import Trisagion.Lib.NonEmpty (zipExact)
@@ -49,7 +56,7 @@ import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Get (Get, eval)
 import Trisagion.Getters.Combinators (validate, onParseError)
-import qualified Trisagion.Getters.Combinators as Getters (maybe)
+import Trisagion.Getters.Combinators qualified as Getters (maybe)
 import Trisagion.Getters.Streamable (one, matchElem, InputError (..), MatchError)
 import Trisagion.Getters.Splittable (remainder)
 import Trisagion.Getters.Char (notSpaces, spaces)
@@ -79,6 +86,15 @@ data TableError
     | RowError
     deriving stock (Eq, Show)
 
+
+{- | The @Table@ type. -}
+newtype Table a = Table (Vector a)
+    deriving stock (Eq, Show, Functor, Foldable, Traversable)
+
+
+{- | Construct a table from a list. -}
+makeTable :: [a] -> Table a
+makeTable = Table . fromList
 
 {- | Parse one line stripped of whitespace on both ends with a 'Text' parser.
 
@@ -140,7 +156,10 @@ parseRows fields = go
                                 Just ps -> (ps :) <$> go
 
 {- | Parser for an entire .tbl table. -}
-parseTable :: Get Lines (ParseError Lines TableError) [NonEmpty (Text, Text)]
-parseTable = do
-        _  <- onParseError HeaderError parseHeader
-        onParseError FieldsError parseFields >>= parseRows
+parseTable
+    :: (NonEmpty (Text, Text) -> a)     -- ^ Row conversion function.
+    -> Get Lines (ParseError Lines TableError) (Table a)
+parseTable f = do
+        _      <- onParseError HeaderError parseHeader
+        fields <- onParseError FieldsError parseFields
+        makeTable . fmap f <$> parseRows fields

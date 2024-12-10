@@ -188,31 +188,31 @@ spec_parseTable :: Spec
 spec_parseTable = describe "parseTable" $ do
     it "Failure on no input" $ do
         testTableError
-            parseTable
+            (parseTable id)
             ""
             HeaderError
             (0, "")
 
     it "Failure on incorrect signature" $ do
         testTableError
-            parseTable
+            (parseTable id)
             "incorrect signature"
             HeaderError
             (0, "incorrect signature")
 
     it "Success with empty list of rows" $ do
         testTableSuccess
-            parseTable
+            (parseTable id)
             "tbl-v1.0\nsome arbitrary field"
-            []
+            (makeTable [])
             (2, "")
 
     it "Success case" $ do
         testTableSuccess
-            (fmap toList <$> parseTable)
+            (parseTable toList)
             "tbl-v1.0\nsome arbitrary field\n1 2 3\n2 1 4"
-            [
+            (makeTable [
                 bimap Text.pack Text.pack <$> [("some","1"), ("arbitrary","2"), ("field","3")],
                 bimap Text.pack Text.pack <$> [("some","2"), ("arbitrary","1"), ("field","4")]
-            ]
+            ])
             (4, "")
