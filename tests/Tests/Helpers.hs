@@ -14,6 +14,7 @@ module Tests.Helpers (
 import Test.Hspec
 
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Maybe (listToMaybe)
 import Data.Void (Void)
 
@@ -26,8 +27,7 @@ import Trisagion.Types.Result (Result (..), withResult)
 import Trisagion.Types.ParseError (ParseError (..), getTag, getState)
 import Trisagion.Streams.Streamable (getStream, getOffset)
 import Trisagion.Get (Get, run)
-import Trisagion.Examples.Table (Lines, initLines)
-import Data.Bifunctor (Bifunctor(..))
+import Trisagion.Examples.Table.Parsers (Lines, initLines)
 
  
 {- | Test parser success by testing success equality via @'shouldBe'@. -}

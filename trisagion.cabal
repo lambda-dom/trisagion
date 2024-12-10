@@ -90,4 +90,5 @@ test-suite trisagion-tests
         Tests.Getters.SplittableSpec
         Tests.Getters.Word8Spec
         Tests.Getters.CharSpec
+        Tests.Examples.Table.ParsersSpec
         Tests.Examples.TableSpec
