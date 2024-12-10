@@ -27,7 +27,7 @@ module Trisagion.Getters.Combinators (
     between,
 
     -- * Alternative parsers.
-    eitherOf,
+    either,
     choose,
 
     -- * List parsers.
@@ -45,7 +45,8 @@ module Trisagion.Getters.Combinators (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (maybe, repeat, sequence, until, zip, zipWith)
+import Prelude qualified as Base (either)
+import Prelude hiding (either, maybe, repeat, sequence, until, zip, zipWith)
 
 -- Base.
 import Control.Applicative (Alternative ((<|>)), asum)
@@ -84,7 +85,7 @@ lookAhead p = eval p <$> first absurd get
 The difference with @'Control.Applicative.optional'@ is the more precise type signature.
 -}
 maybe :: Get s e a -> Get s Void (Maybe a)
-maybe p = either (const Nothing) Just <$> observe p
+maybe p = Base.either (const Nothing) Just <$> observe p
 
 {- | Run parser and return the result, validating it. -}
 validate
@@ -94,7 +95,7 @@ validate
 validate v p = do
     s <- get
     r <- first (fmap Left) p
-    either
+    Base.either
         (throwError . makeParseError s . Right)
         pure
         (v r)
@@ -107,7 +108,7 @@ backtrackParseError p = do
         s <- get
         handleError
             p
-            (\ err -> throwError $ mapWith id (const s) id err)
+            (throwError . mapWith id (const s) id)
 
 {- | Add error context to a 'ParseError'. -}
 onParseError
@@ -132,7 +133,7 @@ note(s):
 failIff :: Get s e a -> Get s (ParseError s Void) ()
 failIff p =
     first absurd (lookAhead p) >>=
-        either
+        Base.either
             (const $ pure ())
             (const . second absurd $ throwError mempty)
 
@@ -182,8 +183,8 @@ note(s):
 
     * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
 -}
-eitherOf :: Monoid e => Get s e a -> Get s e b -> Get s e (Either a b)
-eitherOf q p = (Left <$> q) <|> (Right <$> p)
+either :: Monoid e => Get s e a -> Get s e b -> Get s e (Either a b)
+either q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Run the parsers in succession, returning the result of the first successful one. -}
 choose :: (Foldable t, Monoid e) => t (Get s e a) -> Get s e a
@@ -263,7 +264,7 @@ untilEnd :: Monoid e => Get s e a -> Get s e a -> Get s e (NonEmpty a)
 untilEnd end p = go
     where
         go = do
-            r <- eitherOf end p
+            r <- either end p
             case r of
                 Left e -> pure $ e :| []
                 Right x -> (x <|) <$> go

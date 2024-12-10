@@ -12,7 +12,8 @@ import Tests.Helpers
 
 -- Module to test.
 import Trisagion.Getters.Combinators
-import qualified Trisagion.Getters.Combinators as Getters (maybe, repeat, sequence, until, zip, zipWith)
+import Trisagion.Getters.Combinators qualified as Getters
+    (either, maybe, repeat, sequence, until, zip, zipWith)
 
 -- Base.
 import Data.Bifunctor (Bifunctor(..))
@@ -34,7 +35,7 @@ spec = describe "Trisagion.Getters.Combinators tests" $ do
     spec_zip
     spec_zipWith
     spec_between
-    spec_eitherOf
+    spec_either
     spec_sequence
     spec_repeat
     spec_many
@@ -246,32 +247,32 @@ spec_between = describe "between" $ do
             ""
             (Left $ InputError 1)
 
-spec_eitherOf :: Spec
-spec_eitherOf = describe "eitherOf" $ do
+spec_either :: Spec
+spec_either = describe "either" $ do
     it "Success of first parser" $ do
         testSuccess
-            (eitherOf one one)
+            (Getters.either one one)
             "0123"
             (Left '0')
             "123"
 
     it "Success on second parser" $ do
         testSuccess
-            (eitherOf (matchElem '1') (first (fmap Left) one))
+            (Getters.either (matchElem '1') (first (fmap Left) one))
             "0123"
             (Right '0')
             "123"
 
     it "Failure of both parsers" $ do
         testError
-            (eitherOf (matchElem '1') (matchElem '2'))
+            (Getters.either (matchElem '1') (matchElem '2'))
             "0123"
             "0123"
             (Right $ MatchError '1')
 
     it "Failure of both parsers but with different errors" $ do
         testError
-            (eitherOf (matchElem '1') (bimap (fmap Left) snd $ Getters.zip one one))
+            (Getters.either (matchElem '1') (bimap (fmap Left) snd $ Getters.zip one one))
             "0"
             "0"
             (Right $ MatchError '1')
