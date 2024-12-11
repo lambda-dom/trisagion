@@ -33,7 +33,7 @@ import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), withResult)
-import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Types.ParseError (ParseError (..), makeParseError)
 
 
 {- | The @Get@ parsing monad. -}
@@ -192,12 +192,10 @@ handleError p h = embed $ \ s ->
             Success x t -> Success x t
             Error e     -> run (h e) s
 
-{- | Parser that throws @t'ParseError' s e@ with specified tag.
+{- | Parser that throws @t'ParseError' s e@ with specified error tag.
 
 The state component is the current parser state and the backtrace is a @'Nothing'@ of type
 @'Maybe' (ParseError s 'Void')@.
 -}
 throwParseError :: e -> Get s (ParseError s e) Void
-throwParseError e = embed $ \ s -> Error (ParseError b s e)
-    where
-        b = Nothing :: Maybe (ParseError s Void)
+throwParseError e = embed $ \ s -> Error (makeParseError s e)
