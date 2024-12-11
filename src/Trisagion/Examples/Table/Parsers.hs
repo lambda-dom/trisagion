@@ -13,6 +13,7 @@ module Trisagion.Examples.Table.Parsers (
 
     -- * Error types.
     NoFieldsError (..),
+    MismatchError (..),
 
     -- * Parsers.
     parseHeader,
@@ -20,6 +21,7 @@ module Trisagion.Examples.Table.Parsers (
     parseFieldOrComment,
     parseLine,
     parseFields,
+    parseRows,
 ) where
 
 -- Imports.
@@ -29,14 +31,17 @@ import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Void (Void, absurd)
 
 -- Libraries.
+import Control.Monad.Except (MonadError(..))
+import Control.Monad.State (MonadState(..))
 import Data.Text (Text)
 import Data.Text qualified as Text (pack, lines, strip, null)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Lib.NonEmpty (zipExact)
+import Trisagion.Types.ParseError (ParseError (..), withParseError, makeParseError)
 import Trisagion.Streams.Streamable (Stream, initialize)
 import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Combinators (validate)
+import Trisagion.Getters.Combinators (validate, observe)
 import Trisagion.Getters.Combinators qualified as Getters (maybe)
 import Trisagion.Getters.Streamable (InputError, MatchError, matchElem, one)
 import Trisagion.Getters.Splittable (remainder)
@@ -54,6 +59,10 @@ initLines text = initialize (Text.lines text)
 
 {- | The @NoFieldsError@ error type, raised on a line with no field values. -}
 data NoFieldsError = NoFieldsError
+    deriving stock (Eq, Show)
+
+{- | The @MismatchError@ error type, raised on a line with incorrect number of fields. -}
+data MismatchError = MismatchError
     deriving stock (Eq, Show)
 
 
@@ -94,3 +103,18 @@ parseLine = first (fmap (either id absurd)) $ parseLineWith go
 {- | Parse one line as a 'NonEmpty' of field values. -}
 parseFields :: Get Lines (ParseError Lines (Either InputError NoFieldsError)) (NonEmpty Text)
 parseFields = validate (maybe (Left NoFieldsError) Right . nonEmpty) parseLine
+
+{- | Parser for a list of .tbl table rows. -}
+parseRows :: NonEmpty Text -> Get Lines (ParseError Lines MismatchError) [NonEmpty (Text, Text)]
+parseRows fields = go
+    where
+        go = do
+            s <- get
+            first absurd (observe parseFields) >>=
+                either
+                    (withParseError
+                        (throwError Fail)
+                        (\ _ _ e -> either (const $ pure []) (const go) e))
+                    (\ values -> case zipExact fields values of
+                        Nothing -> throwError $ makeParseError s MismatchError
+                        Just ps -> (ps :) <$> go)

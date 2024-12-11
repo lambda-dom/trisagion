@@ -15,6 +15,7 @@ import Trisagion.Examples.Table.Parsers
 
 -- Auxiliary imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.List.NonEmpty ((<|), singleton)
 
 -- Libraries.
@@ -32,6 +33,7 @@ spec = describe "Trisagion.Examples.Table tests" $ do
     spec_parseFieldOrComment
     spec_parseLine
     spec_parseFields
+    spec_parseRows
 
 
 spec_parseHeader :: Spec
@@ -194,3 +196,32 @@ spec_parseFields = describe "parseFields" $ do
             "    #some arbitrary comment"
             (Right NoFieldsError)
             (0, "    #some arbitrary comment")
+
+spec_parseRows :: Spec
+spec_parseRows = describe "parseRows" $ do
+    it "Success case" $ do
+        testTableSuccess
+            (parseRows (Text.pack <$> ("some" <| singleton "field")))
+            "1 2\n2 1"
+            [
+                bimap Text.pack Text.pack <$> (("some","1") <| singleton ("field","2")),
+                bimap Text.pack Text.pack <$> (("some","2") <| singleton ("field","1"))
+            ]
+            (2, "")
+
+    it "Success with comment lines" $ do
+        testTableSuccess
+            (parseRows (Text.pack <$> ("some" <| singleton "field")))
+            "1 2 #first comment\n2 1 #second comment"
+            [
+                bimap Text.pack Text.pack <$> (("some","1") <| singleton ("field","2")),
+                bimap Text.pack Text.pack <$> (("some","2") <| singleton ("field","1"))
+            ]
+            (2, "")
+
+    it "Failure on mismatched number of fields" $ do
+        testTableError
+            (parseRows (Text.pack <$> ("some" <| singleton "field")))
+            "1 2\n2 1 spurious"
+            MismatchError
+            (1, "2 1 spurious")
