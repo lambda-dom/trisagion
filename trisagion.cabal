@@ -69,6 +69,7 @@ library
         Trisagion.Getters.Splittable
         Trisagion.Getters.Word8
         Trisagion.Getters.Char
+        Trisagion.Examples.Table.Parsers
         Trisagion.Examples.Table
 
 test-suite trisagion-tests
@@ -89,4 +90,5 @@ test-suite trisagion-tests
         Tests.Getters.SplittableSpec
         Tests.Getters.Word8Spec
         Tests.Getters.CharSpec
+        Tests.Examples.Table.ParsersSpec
         Tests.Examples.TableSpec
