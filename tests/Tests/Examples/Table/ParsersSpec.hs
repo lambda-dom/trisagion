@@ -209,6 +209,13 @@ spec_parseRows = describe "parseRows" $ do
             ]
             (2, "")
 
+    it "Success on no input" $ do
+        testTableSuccess
+            (parseRows (Text.pack <$> ("some" <| singleton "field")))
+            ""
+            []
+            (0, "")
+            
     it "Success with comment lines" $ do
         testTableSuccess
             (parseRows (Text.pack <$> ("some" <| singleton "field")))
