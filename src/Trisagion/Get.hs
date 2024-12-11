@@ -192,7 +192,7 @@ handleError p h = embed $ \ s ->
             Success x t -> Success x t
             Error e     -> run (h e) s
 
-{- | Parser that throws @t'ParseError' s e@ with specified state and tag.
+{- | Parser that throws @t'ParseError' s e@ with specified error tag.
 
 The state component is the current parser state and the backtrace is a @'Nothing'@ of type
 @'Maybe' (ParseError s 'Void')@.
