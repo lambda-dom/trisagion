@@ -12,7 +12,6 @@ module Trisagion.Examples.Table.Parsers (
     initLines,
 
     -- * Error types.
-    NoFieldsError (..),
     MismatchError (..),
 
     -- * Parsers.
@@ -21,6 +20,7 @@ module Trisagion.Examples.Table.Parsers (
     parseFieldOrComment,
     parseLine,
     parseFields,
+    parseRow,
     parseRows,
 ) where
 
@@ -56,10 +56,6 @@ type Lines = Stream [Text]
 initLines :: Text -> Lines
 initLines text = initialize (Text.lines text)
 
-
-{- | The @NoFieldsError@ error type, raised on a line with no field values. -}
-data NoFieldsError = NoFieldsError
-    deriving stock (Eq, Show)
 
 {- | The @MismatchError@ error type, raised on a line with incorrect number of fields. -}
 data MismatchError = MismatchError
@@ -101,8 +97,15 @@ parseLine = first (fmap (either id absurd)) $ parseLineWith go
                     (\ field -> if Text.null field then pure [] else (field :) <$> go)
 
 {- | Parse one line as a 'NonEmpty' of field values. -}
-parseFields :: Get Lines (ParseError Lines (Either InputError NoFieldsError)) (NonEmpty Text)
-parseFields = validate (maybe (Left NoFieldsError) Right . nonEmpty) parseLine
+parseFields :: Get Lines (ParseError Lines (Either InputError MismatchError)) (NonEmpty Text)
+parseFields = validate (maybe (Left MismatchError) Right . nonEmpty) parseLine
+
+{- | Parse one row of field values using a validating function. -}
+parseRow
+    :: NonEmpty Text
+    -> (NonEmpty (Text, Text) -> Either e a)
+    -> Get Lines (ParseError Lines (Either InputError MismatchError)) a
+parseRow = undefined
 
 {- | Parser for a list of .tbl table rows. -}
 parseRows :: NonEmpty Text -> Get Lines (ParseError Lines MismatchError) [NonEmpty (Text, Text)]

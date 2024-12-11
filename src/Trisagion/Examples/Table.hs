@@ -57,6 +57,6 @@ parseTable
     :: (NonEmpty (Text, Text) -> a)     -- ^ Row conversion function.
     -> Get Lines (ParseError Lines TableError) (Table a)
 parseTable f = do
-        _      <- onParseError HeaderError parseHeader
-        fields <- onParseError FieldsError parseFields
-        bimap (fmap (const RowError)) (makeTable . fmap f) $ parseRows fields
+    _      <- onParseError HeaderError parseHeader
+    fields <- onParseError FieldsError parseFields
+    bimap (fmap (const RowError)) (makeTable . fmap f) $ parseRows fields
