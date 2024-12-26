@@ -10,9 +10,6 @@ module Trisagion.Streams.Offset (
 
     -- ** Constructors.
     initialize,
-
-    -- ** Getters.
-    offset,
 ) where
 
 -- Imports.
@@ -25,6 +22,7 @@ import Data.MonoTraversable (Element, MonoFunctor (..), MonoFoldable (..))
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position.
@@ -80,11 +78,13 @@ instance Splittable s => Splittable (Stream s) where
     getWith :: (Element (Stream s) -> Bool) -> Stream s -> (PrefixOf (Stream s), Stream s)
     getWith p (Stream l xs) = second (Stream l) $ getWith p xs
 
+instance Streamable s => HasPosition (Stream s) where
+    type PositionOf (Stream s) = Word
+
+    getPosition :: Stream s -> Word
+    getPosition (Stream n xs) = n - fromIntegral (olength xs)
+
 
 {- | Construct a t'Stream' from a 'Streamable'. -}
 initialize :: MonoFoldable s => s -> Stream s
 initialize xs = Stream (fromIntegral $ olength xs) xs
-
-{- | Return the current offset of the t'Stream'. -}
-offset :: MonoFoldable s => Stream s -> Word
-offset (Stream l xs) = l - fromIntegral (olength xs)
