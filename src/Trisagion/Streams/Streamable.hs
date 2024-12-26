@@ -10,10 +10,6 @@ module Trisagion.Streams.Streamable (
 
     -- ** Constructors.
     initialize,
-
-    -- ** Getters.
-    getOffset,
-    getStream,
 ) where
 
 -- Imports.
@@ -25,6 +21,7 @@ import Data.MonoTraversable (Element, MonoFunctor (..), MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position. -}
@@ -66,15 +63,13 @@ instance Streamable s => Streamable (Stream s) where
     getOne :: Stream s -> Maybe (Element (Stream s), Stream s)
     getOne (Stream off xs) = second (Stream (succ off)) <$> getOne xs
 
+instance Streamable s => HasPosition (Stream s) where
+    type PositionOf (Stream s) = Word
+
+    getPosition :: Stream s -> Word
+    getPosition (Stream n _) = n
+
 
 {- | Construct a t'Stream' from a 'Streamable'. -}
 initialize :: s -> Stream s
 initialize = Stream 0
-
-{- | Return the current offset of the t'Stream'. -}
-getOffset :: Stream s -> Word
-getOffset (Stream off _) = off
-
-{- | Return the underlying stream. -}
-getStream :: Stream s -> s
-getStream (Stream _ s) = s
