@@ -35,8 +35,7 @@ import Control.Monad.Except (MonadError (..))
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace, makeParseError, initial)
 import Trisagion.Types.Result (Result (..))
-import Trisagion.Get (Get, embed, handleError)
-import Trisagion.Getters.Combinators (lookAhead, many)
+import Trisagion.Get (Get, embed, handleError, lookAhead, many)
 
 
 {- | Type alias for the @'Get' s ('ParseError' ('PositionOf' s) e) a@ parser monad. -}
