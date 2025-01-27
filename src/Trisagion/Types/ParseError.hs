@@ -10,6 +10,7 @@ module Trisagion.Types.ParseError (
 
     -- ** Constructors.
     makeParseError,
+    makeParseErrorNoBacktrace,
 
     -- ** Prisms.
     getState,
@@ -75,14 +76,23 @@ instance Monoid (ParseError s e) where
     mempty = Fail
 
 
-{- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
+{- | Constructor helper to create a t'ParseError' capturing the position of the stream. -}
 {-# INLINE makeParseError #-}
 makeParseError
+    :: (HasPosition s, Show d, Eq d, Typeable d)
+    => ParseError (PositionOf s) d
+    -> s
+    -> e
+    -> ParseError (PositionOf s) e
+makeParseError b s = ParseError (Just b) (getPosition s)
+
+{- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
+makeParseErrorNoBacktrace
     :: forall s e . (HasPosition s)
     => s
     -> e
     -> ParseError (PositionOf s) e
-makeParseError s =
+makeParseErrorNoBacktrace s =
     let b = Nothing :: Maybe (ParseError (PositionOf s) Void) in
         ParseError b (getPosition s)
 

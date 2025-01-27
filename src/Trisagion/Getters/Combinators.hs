@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Getters.Combinators
 
-General parser combinators.
+General parser combinators that do not rely on special error handling with @ParseError@.
 -}
 
 module Trisagion.Getters.Combinators (
@@ -10,13 +10,7 @@ module Trisagion.Getters.Combinators (
     lookAhead,
     maybe,
 
-    -- * Handling t'ParseError'.
-    validate,
-    backtrackParseError,
-    onParseError,
-
     -- * Parsers without values.
-    failIff,
     skip,
 
     -- * Applicative parsers.
@@ -37,7 +31,6 @@ module Trisagion.Getters.Combinators (
     many,
     some,
     atMostN,
-    until,
     untilEnd,
     sepBy,
     sepBy1,
@@ -46,29 +39,26 @@ module Trisagion.Getters.Combinators (
 -- Imports.
 -- Prelude hiding.
 import Prelude qualified as Base (either)
-import Prelude hiding (either, maybe, repeat, sequence, until, zip, zipWith)
+import Prelude hiding (either, maybe, repeat, sequence, zipWith, zip)
 
 -- Base.
 import Control.Applicative (Alternative ((<|>)), asum)
 import Control.Monad (replicateM)
 import Data.Bifunctor (Bifunctor (..))
-import Data.Data (Typeable)
-import Data.Foldable (Foldable (..))
 import Data.Functor (($>))
-import Data.List.NonEmpty (NonEmpty (..), (<|))
+import Data.List.NonEmpty (NonEmpty (..), (<|), toList)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError (..), initial, makeParseError, mapWith)
 import Trisagion.Get (Get, handleError, eval)
 
 
 {- | Run the parser and return the result as a @Right@; if it errors, backtrack and return the error as a @Left@. -}
+{-# INLINE observe #-}
 observe :: Get s e a -> Get s Void (Either e a)
 observe p = do
     s <- get
@@ -77,6 +67,7 @@ observe p = do
         (\ e -> put s $> Left e)
 
 {- | Run the parser and return the result, but do not consume any input. -}
+{-# INLINE lookAhead #-}
 lookAhead :: Get s e a -> Get s Void (Either e a)
 lookAhead p = eval p <$> first absurd get
 
@@ -84,66 +75,9 @@ lookAhead p = eval p <$> first absurd get
 
 The difference with @'Control.Applicative.optional'@ is the more precise type signature.
 -}
+{-# INLINE maybe #-}
 maybe :: Get s e a -> Get s Void (Maybe a)
 maybe p = Base.either (const Nothing) Just <$> observe p
-
-{- | Run parser and return the result, validating it. -}
-validate
-    :: (a -> Either d b)            -- ^ Validator.
-    -> Get s (ParseError s e) a     -- ^ Parser to run.
-    -> Get s (ParseError s (Either e d)) b
-validate v p = do
-    s <- get
-    r <- first (fmap Left) p
-    Base.either
-        (throwError . makeParseError s . Right)
-        pure
-        (v r)
-
-{- | Parser that throws @t'ParseError' s e@ with specified error tag.
-
-The state component is the current parser state and the backtrace is a @'Nothing'@ of type
-@'Maybe' (ParseError s 'Void')@.
--}
--- throwParseError :: e -> Get s (ParseError (PositionOf s) e) Void
--- throwParseError e = embed $ \ s -> Error (makeParseError s e)
-
-{- | Backtrack the parser state component of a thrown 'ParseError'. -}
-backtrackParseError
-    :: Get s (ParseError s e) a
-    -> Get s (ParseError s e) a
-backtrackParseError p = do
-        s <- get
-        handleError
-            p
-            (throwError . mapWith id (const s) id)
-
-{- | Add error context to a 'ParseError'. -}
-onParseError
-    :: (Show d, Eq d, Typeable d)
-    => e                            -- ^ Error tag for contextual error.
-    -> Get s (ParseError s d) a     -- ^ Parser to try.
-    -> Get s (ParseError s e) a
-onParseError err p = do
-    s <- get
-    handleError
-        p
-        (\ d -> throwError $ ParseError (Just d) s err)
-
-{- | The parser @failIff p@ fails if and only if @p@ succeeds.
-
-The parser does not consume input and throws a @t'ParseError' s 'Void'@ if @p@ succeeds.
-
-note(s):
-
-    * This parser can be used to implement the longest match rule -- see 'until' below.
--}
-failIff :: Get s e a -> Get s (ParseError s Void) ()
-failIff p =
-    first absurd (lookAhead p) >>=
-        Base.either
-            (const $ pure ())
-            (const . second absurd $ throwError mempty)
 
 {- | Run the parser but discard the result.
 
@@ -152,18 +86,22 @@ note(s):
     * Various combinators have more efficient @skip*@ versions that avoid constructing intermediate
     values; use those whenever possible.
 -}
+{-# INLINE skip #-}
 skip :: Get s e a -> Get s e ()
 skip = (() <$)
 
 {- | Sequence two parsers and zip the results in a pair. -}
+{-# INLINE zip #-}
 zip :: Get s e a -> Get s e b -> Get s e (a, b)
 zip = zipWith (,)
 
 {- | Sequence two parsers and zip the results with a binary function. -}
+{-# INLINE zipWith #-}
 zipWith :: (a -> b -> c) -> Get s e a -> Get s e b -> Get s e c
 zipWith f p q = f <$> p <*> q
 
 {- | The parser @'before' b p@ parses @b@ and @p@ in succession, returning the result of @p@. -}
+{-# INLINE before #-}
 before
     :: Get s e b                -- ^ Parser to run first.
     -> Get s e a                -- ^ Parser to run second.
@@ -171,6 +109,7 @@ before
 before b p = b *> p
 
 {- | The parser @'after' a p@ parses @p@ and @a@ in succession, returning the result of @p@. -}
+{-# INLINE after #-}
 after
     :: Get s e b                -- ^ Parser to run after.
     -> Get s e a                -- ^ Parser to run first.
@@ -178,6 +117,7 @@ after
 after a p = p <* a
 
 {- | The parser @'between' o c p@ parses @o@, @p@ and @c@ in succession, returning the result of @p@. -}
+{-# INLINE between #-}
 between
     :: Get s e b                -- ^ Opening parser.
     -> Get s e c                -- ^ Closing parser.
@@ -191,14 +131,17 @@ note(s):
 
     * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
 -}
+{-# INLINE either #-}
 either :: Monoid e => Get s e a -> Get s e b -> Get s e (Either a b)
 either q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Run the parsers in succession, returning the result of the first successful one. -}
+{-# INLINE choose #-}
 choose :: (Foldable t, Monoid e) => t (Get s e a) -> Get s e a
 choose = asum
 
 {- | Sequence a traversable of parsers and return the traversable of results. -}
+{-# INLINE sequence #-}
 sequence :: Traversable t => t (Get s e a) -> Get s e (t a)
 sequence = sequenceA
 
@@ -206,6 +149,7 @@ sequence = sequenceA
 
 It is guaranteed that the list of results has exactly @n@ elements.
 -}
+{-# INLINE repeat #-}
 repeat :: Word -> Get s e a -> Get s e [a]
 repeat = replicateM . fromIntegral
 
@@ -242,6 +186,7 @@ many p = go
 
 The difference with @'Control.Applicative.some'@ is the more precise type signature.
 -}
+{-# INLINE some #-}
 some :: Get s e a -> Get s e (NonEmpty a)
 some p = zipWith (:|) p (first absurd $ many p)
 
@@ -259,14 +204,6 @@ atMostN n p = go n
                 Nothing -> pure []
                 Just x  -> (x :) <$> go (pred i)
 
-{- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds. -}
-until
-    :: Monoid e
-    => Get s e b                -- ^ Closing parser.
-    -> Get s e a                -- ^ Parser to run.
-    -> Get s Void [a]
-until end p = many $ first initial (failIff end) *> p
-
 {- | The parser @'untilEnd' end p@ runs @p@ zero or more times until @end@ succeeds, returning the results of @p@ and @end@. -}
 untilEnd :: Monoid e => Get s e a -> Get s e a -> Get s e (NonEmpty a)
 untilEnd end p = go
@@ -277,10 +214,12 @@ untilEnd end p = go
                 Left e -> pure $ e :| []
                 Right x -> (x <|) <$> go
 
-{- | The parser @'sepBy sep p'@ parses zero or more occurences of @p@ separated by @sep@. -}
+{- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
+{-# INLINE sepBy #-}
 sepBy :: Get s e a -> Get s e b -> Get s Void [b]
 sepBy sep p = fromMaybe [] <$> maybe (toList <$> sepBy1 sep p)
 
-{- | The parser @'sepBy sep p'@ parses one or more occurences of @p@ separated by @sep@. -}
+{- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+{-# INLINE sepBy1 #-}
 sepBy1 :: Get s e a -> Get s e b -> Get s e (NonEmpty b)
 sepBy1 sep p = zipWith (:|) p (first absurd $ many (sep *> p))
