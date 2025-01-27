@@ -6,7 +6,7 @@ The @ParseError@ error type.
 
 module Trisagion.Types.ParseError (
     -- * Types.
-    ParseError (..),
+    ParseError,
 
     -- ** Constructors.
     makeParseError,
@@ -59,20 +59,24 @@ instance (Eq s, Eq e) => Eq (ParseError s e) where
     (==) _    _    = False
 
 instance Functor (ParseError s) where
+    {-# INLINE fmap #-}
     fmap :: (d -> e) -> ParseError s d -> ParseError s e
     fmap = mapWith id id
 
 instance Semigroup (ParseError s e) where
+    {-# INLINE (<>) #-}
     (<>) :: ParseError s e -> ParseError s e -> ParseError s e
     (<>) Fail x = x
     (<>) x    _ = x
 
 instance Monoid (ParseError s e) where
+    {-# INLINE mempty #-}
     mempty :: ParseError s e
     mempty = Fail
 
 
 {- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
+{-# INLINE makeParseError #-}
 makeParseError
     :: forall s e . (HasPosition s)
     => s
@@ -84,22 +88,23 @@ makeParseError s =
 
 
 {- | Getter for the error state component. -}
+{-# INLINE getState #-}
 getState :: ParseError s e -> Maybe s
 getState = withParseError Nothing (\ _ s _ -> Just s)
 
 {- | Getter for the error tag. -}
+{-# INLINE getTag #-}
 getTag :: ParseError s e -> Maybe e
 getTag = withParseError Nothing (\ _ _ e -> Just e)
 
 {- | Getter for the backtrace of an error as an elimination function. -}
 getBacktrace :: (forall d . s -> d -> a) -> ParseError s e -> [a]
-getBacktrace f  = go
-    where
-        go (ParseError r s e) = f s e : maybe [] (getBacktrace f) r
-        go Fail               = []
+getBacktrace _ Fail               = []
+getBacktrace f (ParseError r s e) = f s e : maybe [] (getBacktrace f) r
 
 
 {- | Case analysis elimination function for the t'ParseError' type. -}
+{-# INLINE withParseError #-}
 withParseError
     :: a
     -> (forall d . Maybe (ParseError s d) -> s -> e -> a)
@@ -109,6 +114,7 @@ withParseError _ f (ParseError b s e) = f b s e
 withParseError x _ Fail               = x
 
 {- | The universal property of the initial monoid @t'ParseError' s 'Void'@. -}
+{-# INLINE initial #-}
 initial :: Monoid e => ParseError s Void -> e
 initial e =
     case e of
@@ -116,6 +122,7 @@ initial e =
 
 
 {- | Generalized @'fmap'@ to provide monofunctoriality over the state and the backtrace. -}
+{-# INLINE mapWith #-}
 mapWith
     :: (forall c . ParseError s c -> ParseError s c)    -- ^ Map over the backtrace.
     -> (s -> s)                                         -- ^ Map over the state.

@@ -100,6 +100,14 @@ validate v p = do
         pure
         (v r)
 
+{- | Parser that throws @t'ParseError' s e@ with specified error tag.
+
+The state component is the current parser state and the backtrace is a @'Nothing'@ of type
+@'Maybe' (ParseError s 'Void')@.
+-}
+-- throwParseError :: e -> Get s (ParseError (PositionOf s) e) Void
+-- throwParseError e = embed $ \ s -> Error (makeParseError s e)
+
 {- | Backtrack the parser state component of a thrown 'ParseError'. -}
 backtrackParseError
     :: Get s (ParseError s e) a

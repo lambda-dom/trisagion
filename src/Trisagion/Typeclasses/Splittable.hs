@@ -53,83 +53,104 @@ class Streamable s => Splittable s where
 instance Splittable Bytes.ByteString where
     type PrefixOf Bytes.ByteString = Bytes.ByteString
 
+    {-# INLINE getAt #-}
     getAt :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     getAt n = Bytes.splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     getWith = Bytes.span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     getRemainder xs = (xs, Bytes.empty)
 
 instance Splittable LazyBytes.ByteString where
     type PrefixOf LazyBytes.ByteString = LazyBytes.ByteString
 
+    {-# INLINE getAt #-}
     getAt :: Word -> LazyBytes.ByteString -> (LazyBytes.ByteString, LazyBytes.ByteString)
     getAt n = LazyBytes.splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (Word8 -> Bool) -> LazyBytes.ByteString -> (LazyBytes.ByteString, LazyBytes.ByteString)
     getWith = LazyBytes.span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: LazyBytes.ByteString -> (LazyBytes.ByteString, LazyBytes.ByteString)
     getRemainder xs = (xs, LazyBytes.empty)
 
 instance Splittable Text.Text where
     type PrefixOf Text.Text = Text.Text
 
+    {-# INLINE getAt #-}
     getAt :: Word -> Text.Text -> (Text.Text, Text.Text)
     getAt n = Text.splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
     getWith = Text.span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: Text.Text -> (Text.Text, Text.Text)
     getRemainder xs = (xs, Text.empty)
 
 instance Splittable LazyText.Text where
     type PrefixOf LazyText.Text = LazyText.Text
 
+    {-# INLINE getAt #-}
     getAt :: Word -> LazyText.Text -> (LazyText.Text, LazyText.Text)
     getAt n = LazyText.splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (Char -> Bool) -> LazyText.Text -> (LazyText.Text, LazyText.Text)
     getWith = LazyText.span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: LazyText.Text -> (LazyText.Text, LazyText.Text)
     getRemainder xs = (xs, LazyText.empty)
 
 instance Splittable [a] where
     type PrefixOf [a] = [a]
 
+    {-# INLINE getAt #-}
     getAt :: Word -> [a] -> ([a], [a])
     getAt n = splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (a -> Bool) -> [a] -> ([a], [a])
     getWith = span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: [a] -> ([a], [a])
     getRemainder xs = (xs, [])
 
 instance Splittable (Seq a) where
     type PrefixOf (Seq a) = Seq a
 
+    {-# INLINE getAt #-}
     getAt :: Word -> Seq a -> (Seq a, Seq a)
     getAt n = Seq.splitAt $ fromIntegral n
 
+    {-# INLINE getWith #-}
     getWith :: (a -> Bool) -> Seq a -> (Seq a, Seq a)
     getWith = Seq.spanl
 
+    {-# INLINE getRemainder #-}
     getRemainder :: Seq a -> (Seq a, Seq a)
     getRemainder xs = (xs, Seq.empty)
 
 instance Splittable (Vector a) where
     type PrefixOf (Vector a) = Vector a
 
+    {-# INLINE getAt #-}
     getAt :: Word -> Vector a -> (Vector a, Vector a)
     getAt n = Vector.splitAt (fromIntegral n)
 
+    {-# INLINE getWith #-}
     getWith :: (a -> Bool) -> Vector a -> (Vector a, Vector a)
     getWith = Vector.span
 
+    {-# INLINE getRemainder #-}
     getRemainder :: Vector a -> (Vector a, Vector a)
     getRemainder xs = (xs, Vector.empty)

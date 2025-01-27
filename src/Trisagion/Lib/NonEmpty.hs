@@ -18,6 +18,7 @@ import qualified Data.List.NonEmpty as NonEmpty (uncons)
 
 
 {- | Uncons the first element of a 'NonEmpty'. -}
+{-# INLINE uncons #-}
 uncons :: NonEmpty a -> Maybe (a, NonEmpty a)
 uncons xs =
     case NonEmpty.uncons xs of
@@ -25,6 +26,7 @@ uncons xs =
         (y, Just ys) -> Just (y, ys)
 
 {- | Zip exactly two 'NonEmpty'. -}
+{-# INLINE zipExact #-}
 zipExact :: NonEmpty a -> NonEmpty b -> Maybe (NonEmpty (a, b))
 zipExact = zipWithExact (,)
 

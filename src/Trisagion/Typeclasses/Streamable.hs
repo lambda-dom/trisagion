@@ -39,34 +39,42 @@ class (MonoFunctor s, MonoFoldable s) => Streamable s where
 
 -- Instances.
 instance Streamable Bytes.ByteString where
+    {-# INLINE getOne #-}
     getOne :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
     getOne = Bytes.uncons
 
 instance Streamable LazyBytes.ByteString where
+    {-# INLINE getOne #-}
     getOne :: LazyBytes.ByteString -> Maybe (Word8, LazyBytes.ByteString)
     getOne = LazyBytes.uncons
 
 instance Streamable Text.Text where
+    {-# INLINE getOne #-}
     getOne :: Text.Text -> Maybe (Char, Text.Text)
     getOne = Text.uncons
 
 instance Streamable LazyText.Text where
+    {-# INLINE getOne #-}
     getOne :: LazyText.Text -> Maybe (Char, LazyText.Text)
     getOne = LazyText.uncons
 
 instance Streamable [a] where
+    {-# INLINE getOne #-}
     getOne :: [a] -> Maybe (a, [a])
     getOne = List.uncons
 
 instance Streamable (NonEmpty a) where
+    {-# INLINE getOne #-}
     getOne :: NonEmpty a -> Maybe (a, NonEmpty a)
     getOne = NonEmpty.uncons
 
 instance Streamable (Seq a) where
+    {-# INLINE getOne #-}
     getOne :: Seq a -> Maybe (Element (Seq a), Seq a)
     getOne Empty      = Nothing
     getOne (x :<| xs) = Just (x, xs)
 
 instance Streamable (Vector a) where
+    {-# INLINE getOne #-}
     getOne :: Vector a -> Maybe (a, Vector a)
     getOne = Vector.uncons
