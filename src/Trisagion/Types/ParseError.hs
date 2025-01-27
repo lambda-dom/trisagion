@@ -31,6 +31,9 @@ import Data.Data (Typeable, (:~:) (Refl), eqT)
 -- Libraries.
 import Data.Void (Void)
 
+-- Package.
+import Trisagion.Typeclasses.HasPosition (HasPosition (..))
+
 
 {- | The @ParseError s e@ error type. -}
 data ParseError s e where
@@ -39,7 +42,7 @@ data ParseError s e where
     ParseError
         :: (Show d, Eq d, Typeable d)
         => Maybe (ParseError s d)   -- ^ Error backtrace.
-        -> !s                       -- ^ State.
+        -> !s                       -- ^ State component.
         -> !e                       -- ^ Error tag.
         -> ParseError s e
 
@@ -69,12 +72,15 @@ instance Monoid (ParseError s e) where
     mempty = Fail
 
 
-{- | Constructor helper to create a t'ParseError' with no backtrace. -}
+{- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
 makeParseError
-    :: s
+    :: forall s e . (HasPosition s)
+    => s
     -> e
-    -> ParseError s e
-makeParseError = ParseError (Nothing :: Maybe (ParseError s Void))
+    -> ParseError (PositionOf s) e
+makeParseError s =
+    let b = Nothing :: Maybe (ParseError (PositionOf s) Void) in
+        ParseError b (getPosition s)
 
 
 {- | Getter for the error state component. -}
