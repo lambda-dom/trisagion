@@ -41,14 +41,17 @@ import Trisagion.Getters.Splittable (takeExact)
 
 
 {- | Get a single @'Word8'@ from the input. -}
+{-# INLINE word8 #-}
 word8 :: (HasPosition s, Element s ~ Word8) => Parser s InputError Word8
 word8 = one
 
 {- | Get a single @'Int8'@ from the input. -}
+{-# INLINE int8 #-}
 int8 :: (HasPosition s, Element s ~ Word8) => Parser s InputError Int8
 int8 = fromIntegral <$> one
 
 {- | Get a machine-width integral in little-endian format from the streamable. -}
+{-# INLINE integralLe #-}
 integralLe
         :: forall s w
         .  (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
@@ -62,6 +65,7 @@ integralLe = do
         n = finiteBitSize @w 0 `quot` 8
 
 {- | Get a machine-width integral in big-endian format from the streamable. -}
+{-# INLINE integralBe #-}
 integralBe
         :: forall s w
         .  (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
@@ -75,36 +79,42 @@ integralBe = do
         n = finiteBitSize @w 0 `quot` 8
 
 {- | Get a @'Word16'@ in little-endian format from the streamable. -}
+{-# INLINE word16Le #-}
 word16Le
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word16
 word16Le = integralLe
 
 {- | Get a @'Word32'@ in little-endian format from the streamable. -}
+{-# INLINE word32Le #-}
 word32Le
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word32
 word32Le = integralLe
 
 {- | Get a @'Word64'@ in little-endian format from the streamable. -}
+{-# INLINE word64Le #-}
 word64Le
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word64
 word64Le = integralLe
 
 {- | Get a @'Word16'@ in big-endian format from the streamable. -}
+{-# INLINE word16Be #-}
 word16Be
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word16
 word16Be = integralBe
 
 {- | Get a @'Word32'@ in big-endian format from the streamable. -}
+{-# INLINE word32Be #-}
 word32Be
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word32
 word32Be = integralBe
 
 {- | Get a @'Word64'@ in big-endian format from the streamable. -}
+{-# INLINE word64Be #-}
 word64Be
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element (PrefixOf s) ~ Word8)
     => Parser s InputError Word64

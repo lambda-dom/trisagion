@@ -96,4 +96,3 @@ instance Streamable s => HasPosition (Position s) where
 {-# INLINE initialize #-}
 initialize :: s -> Position s
 initialize = Position
-

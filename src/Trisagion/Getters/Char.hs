@@ -50,26 +50,31 @@ data Sign = Negative | Positive
 
 
 {- | Get a line feed (character @'\\n'@) from the stream. -}
+{-# INLINE lf #-}
 lf
     :: (HasPosition s, Element s ~ Char)
     => Parser s (Either InputError (MatchError Char)) Char
 lf = matchElem '\n'
 
 {- | Get a carriage return (character @'\\r'@) from the stream. -}
+{-# INLINE cr #-}
 cr
     :: (HasPosition s, Element s ~ Char)
     => Parser s (Either InputError (MatchError Char)) Char
 cr = matchElem '\r'
 
 {- | Parser for a, possibly null, prefix of whitespace. -}
+{-# INLINE spaces #-}
 spaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
 spaces = takeWith isSpace
 
 {- | Parser for a, possibly null, prefix of non-whitespace characters. -}
+{-# INLINE notSpaces #-}
 notSpaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
 notSpaces = takeWith (not . isSpace)
 
 {- | Parser for the number sign. -}
+{-# INLINE sign #-}
 sign
     :: (HasPosition s, Element s ~ Char)
     => Parser s (Either InputError ValidationError) Sign
@@ -81,12 +86,14 @@ sign = validate v one
             _            -> Left ValidationError
 
 {- | Get a decimal digit from the streamable. -}
+{-# INLINE digit #-}
 digit
     :: (HasPosition s, Element s ~ Char)
     => Parser s (Either InputError ValidationError) Char
 digit = satisfy isDigit
 
 {- | Parser for positive, integer numbers in decimal format. -}
+{-# INLINE positive #-}
 positive
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element s ~ Char, Element (PrefixOf s) ~ Char)
     => Parser s (Either InputError ValidationError) Word
@@ -102,6 +109,7 @@ positive = do
         value c n = fromIntegral (ord c - ord '0') *  10 ^ n
 
 {- | Transform a @'Word'@ parser into an @'Int'@-parser for signed numbers. -}
+{-# INLINE signed #-}
 signed
     :: (HasPosition s, Element s ~ Char)
     => Parser s (Either InputError ValidationError) Word
