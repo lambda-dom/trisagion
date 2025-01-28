@@ -37,7 +37,6 @@ import Data.MonoTraversable (MonoFoldable (..), Element)
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Get (Get)
 import qualified Trisagion.Get as Getters (maybe)
 import Trisagion.Getters.ParseError (Parser, ValidationError (..), validate)
@@ -105,8 +104,8 @@ positive = do
 {- | Transform a @'Word'@ parser into an @'Int'@-parser for signed numbers. -}
 signed
     :: (HasPosition s, Element s ~ Char)
-    => Get s (ParseError s (Either InputError ValidationError)) Word
-    -> Get s (ParseError s (Either InputError ValidationError)) Int
+    => Parser s (Either InputError ValidationError) Word
+    -> Parser s (Either InputError ValidationError) Int
 signed p = do
     sgn <- first absurd (fromMaybe Positive <$> Getters.maybe sign)
     number <- fromIntegral <$> p
