@@ -60,6 +60,7 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
         Trisagion.Typeclasses.HasPosition
+        Trisagion.Streams.Position
         Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Types.ParseError
