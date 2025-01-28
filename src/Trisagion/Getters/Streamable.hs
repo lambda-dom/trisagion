@@ -7,7 +7,6 @@ Parsers with @'Streamable' s@ constraints on the state @s@.
 module Trisagion.Getters.Streamable (
     -- * Error types.
     InputError (..),
-    ValidationError (..),
     MatchError (..),
 
     -- * @'Streamable' s => 'Get' s e a@ parsers.
@@ -36,7 +35,7 @@ import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Get (Get, lookAhead)
-import Trisagion.Getters.ParseError (Parser, throwParseError, validate)
+import Trisagion.Getters.ParseError (Parser, ValidationError (..), throwParseError, validate)
 
 
 {- | The @InputError@ error type.
@@ -48,13 +47,6 @@ data InputError
     | InputError Word           -- ^ Failure case when it is possible to determine the amount requested.
     deriving stock (Eq, Show)
 
-{- | The @ValidationError@ error type.
-
-Error raised on failed validations against a predicate.
--}
-data ValidationError = ValidationError
-    deriving stock (Eq, Show)
-
 {- | The @MatchError@ error type.
 
 Error raised on failed validations against predicates of the form @p x y@ such as equality, element
@@ -62,7 +54,6 @@ tests, etc.
 -}
 newtype MatchError a = MatchError a
     deriving stock (Eq, Show)
-
 
 
 {- | Return @'True'@ if all input is consumed. -}

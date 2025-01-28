@@ -35,14 +35,14 @@ import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
 import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get, skip, eval)
-import Trisagion.Getters.ParseError (Parser, validate)
-import Trisagion.Getters.Streamable (InputError (..), MatchError (..), ValidationError (..))
+import Trisagion.Getters.ParseError (Parser, ValidationError (..), validate)
+import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
 
 {- | Run a parser isolated to a prefix of the stream.
 
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
-parser to run with an appropriate check.
+parser to run with an appropriate check -- see 'Trisagion.Getters.ParseError.guardWith'.
 -}
 isolateWith
     :: HasPosition s

@@ -8,14 +8,20 @@ module Trisagion.Getters.ParseError (
     -- * Type aliases.
     Parser,
 
+    -- * Error types.
+    ValidationError (..),
+
     -- * Handling t'ParseError'.
     throwParseError,
     onParseError,
     validate,
 
-    -- * Parsers without values.
+    -- * Parsers without errors.
     failIff,
     until,
+
+    -- * Post-conditions.
+    guardWith,
 ) where
 
 -- Imports.
@@ -40,6 +46,15 @@ import Trisagion.Get (Get, embed, handleError, lookAhead, many)
 
 {- | Type alias for the @'Get' s ('ParseError' ('PositionOf' s) e) a@ parser monad. -}
 type Parser s e a = Get s (ParseError (PositionOf s) e) a
+
+
+{- | The @ValidationError@ error type.
+
+Error raised on failed validations against a predicate.
+-}
+data ValidationError = ValidationError
+    deriving stock (Eq, Show)
+
 
 {- | Parser that throws @t'ParseError' ('PositionOf' s) e@ with specified error tag.
 
@@ -105,7 +120,7 @@ The parser does not consume input and throws a @'ParseError' ('PositionOf' s) 'V
 
 note(s):
 
-    * This parser can be used to implement the longest match rule -- see 'until' below.
+    * This parser can be used to implement the longest match rule -- see 'until'.
 -}
 {-# INLINE failIff #-}
 failIff :: Parser s e a -> Parser s Void ()
@@ -122,3 +137,21 @@ until
     -> Parser s e a                 -- ^ Parser to run.
     -> Get s Void [a]
 until end p = many $ first initial (failIff end) *> p
+
+
+{- | Guard a parser with a post-condition.
+
+A typical use case is to ensure all input was consumed, e. g. @'guardWith' p (const eoi)@.
+-}
+{-# INLINE guardWith #-}
+guardWith
+    :: HasPosition s
+    => Parser s e a                 -- ^ Parser to run.
+    -> (a -> Get s Void Bool)       -- ^ Post-condition parser.
+    -> Parser s (Either ValidationError e) a
+guardWith p cond = do
+    x <- first (fmap Right) p
+    t <- first absurd (cond x)
+    if t
+        then pure x
+        else second absurd $ throwParseError (Left ValidationError)
