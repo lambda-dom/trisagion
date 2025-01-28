@@ -99,7 +99,7 @@ onParseError e p = do
         p
         (\ b -> throwError $ makeParseError b s e)
 
-{- | Run parser and return the result, validating it. -}
+{- | Run the parser and return the result, validating it. -}
 {-# INLINE validate #-}
 validate
     :: HasPosition s

@@ -59,14 +59,14 @@ isolateWith h p = do
                 Right x -> put suffix $> x
 
 
-{- | Get the rest of the input stream. -}
+{- | Get the rest of the input stream as a prefix. -}
 {-# INLINE remainder #-}
 remainder :: Splittable s => Get s Void (PrefixOf s)
 remainder = do
     (prefix, suffix) <- gets getRemainder
     put suffix $> prefix
 
-{- | Get a fixed size prefix from the stream.
+{- | Parse a fixed size prefix.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 -}
@@ -81,7 +81,7 @@ takePrefix n = do
 dropPrefix :: Splittable s => Word -> Get s Void ()
 dropPrefix = skip . takePrefix
 
-{- | Get an exact, fixed size prefix from the stream.
+{- | Parse an exact, fixed size prefix.
 
 note(s):
 
@@ -99,7 +99,7 @@ takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takeP
                 then Left $ InputError n
                 else Right prefix
 
-{- | Get a matching prefix from the stream.
+{- | Parse a matching prefix.
 
 note(s):
 
@@ -117,19 +117,19 @@ match xs = validate v (takeExact (fromIntegral $ olength xs))
                 then Right prefix
                 else Left $ MatchError xs
 
-{- | Get the longest prefix from the streamable whose elements satisfy a predicate. -}
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE takeWith #-}
 takeWith :: Splittable s => (Element s -> Bool) -> Get s Void (PrefixOf s)
 takeWith p = do
     (prefix, suffix) <- gets $ getWith p
     put suffix $> prefix
 
-{- | Drop the longest prefix from the stream whose elements satisfy a predicate. -}
+{- | Drop the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE dropWith #-}
 dropWith :: Splittable s => (Element s -> Bool) -> Get s Void ()
 dropWith = skip . takeWith
 
-{- | Get the longest prefix with at least one element whose elements satisfy a predicate. -}
+{- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
 {-# INLINE atLeastOneWith #-}
 atLeastOneWith
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))

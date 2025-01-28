@@ -164,8 +164,8 @@ The @'get'@ parser allows probing the t'Get' parser state, e.g.:
         -- Do something with @s@.
 @
 
-The @'put'@ parser allows arbitrary state modifications. Provides mono-functoriality in @s@ via
-@'Control.MonadState.modify'@.
+The @'put'@ parser allows arbitrary state modifications. Provides mono-functoriality to @'Get' s e a@
+in @s@ via @'Control.MonadState.modify'@.
 -}
 instance MonadState s (Get s e) where
     {-# INLINE get #-}
@@ -343,7 +343,7 @@ unfold h = go
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
 
-The difference with @'Control.Applicative.many'@ is the more precise type signature.
+The difference with @'Control.Applicative.many'@ from 'Alternative' is the more precise type signature.
 
 note(s):
 
@@ -362,7 +362,7 @@ many p = go
 
 {- | Run the parser one or more times and return the results as a @'NonEmpty'@.
 
-The difference with @'Control.Applicative.some'@ is the more precise type signature.
+The difference with @'Control.Applicative.some'@ from 'Alternative' is the more precise type signature.
 -}
 {-# INLINE some #-}
 some :: Get s e a -> Get s e (NonEmpty a)

@@ -61,7 +61,7 @@ newtype MatchError a = MatchError a
 eoi :: Streamable s => Get s Void Bool
 eoi = gets onull
 
-{- | Get the first @'Element' s@ from the streamable. -}
+{- | Parse the first @'Element' s@ from the streamable. -}
 {-# INLINE one #-}
 one
     :: HasPosition s
@@ -79,7 +79,7 @@ peek
     => Get s Void (Either (ParseError (PositionOf s) InputError) (Element s))
 peek = lookAhead one
 
-{- | Get one @'Element' s@ from the streamable satisfying a predicate. -}
+{- | Parse one @'Element' s@ satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
     :: HasPosition s
@@ -89,7 +89,7 @@ satisfy p = validate v one
     where
         v x = if p x then Right x else Left ValidationError
 
-{- | Get one matching @'Element' s@ from the streamable @s@. -}
+{- | Parse one matching @'Element' s@. -}
 {-# INLINE matchElem #-}
 matchElem
     :: (HasPosition s, Eq (Element s))
@@ -97,7 +97,7 @@ matchElem
     -> Parser s (Either InputError (MatchError (Element s))) (Element s)
 matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
 
-{- | Get one @'Element' s@ from the stream if it is an element of the foldable. -}
+{- | Parse one @'Element' s@ that is an element of the foldable. -}
 {-# INLINE oneOf #-}
 oneOf
     :: (HasPosition s, Eq (Element s), Foldable t)
