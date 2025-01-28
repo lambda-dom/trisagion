@@ -1,12 +1,12 @@
 {- |
 Module: Trisagion.Streams.Offset
 
-The @Stream@ type wrapping a 'Streamable' with an offset tracking current position.
+The @Offset@ type wrapping a 'Streamable' with an offset tracking current position.
 -}
 
 module Trisagion.Streams.Offset (
     -- * Types.
-    Stream,
+    Offset,
 
     -- ** Constructors.
     initialize,
@@ -31,71 +31,71 @@ note(s):
 
     * Requires efficient implementation of 'olength'; e. g. streamables like @Text@ are not appropriate.
 -}
-data Stream s = Stream !Word !s
+data Offset s = Offset !Word !s
     deriving stock (Eq, Show)
 
 
 -- Associated type.
-type instance Element (Stream s) = Element s
+type instance Element (Offset s) = Element s
 
 -- Instances.
-instance MonoFunctor s => MonoFunctor (Stream s) where
+instance MonoFunctor s => MonoFunctor (Offset s) where
     {-# INLINE omap #-}
-    omap :: (Element (Stream s) -> Element (Stream s)) -> Stream s -> Stream s
-    omap f (Stream l xs) = Stream l (omap f xs)
+    omap :: (Element (Offset s) -> Element (Offset s)) -> Offset s -> Offset s
+    omap f (Offset l xs) = Offset l (omap f xs)
 
-instance (MonoFoldable s) => MonoFoldable (Stream s) where
+instance (MonoFoldable s) => MonoFoldable (Offset s) where
     {-# INLINE ofoldMap #-}
-    ofoldMap :: Monoid m => (Element (Stream s) -> m) -> Stream s -> m
-    ofoldMap f (Stream _ xs) = ofoldMap f xs
+    ofoldMap :: Monoid m => (Element (Offset s) -> m) -> Offset s -> m
+    ofoldMap f (Offset _ xs) = ofoldMap f xs
 
     {-# INLINE ofoldr #-}
-    ofoldr :: (Element (Stream s) -> a -> a) -> a -> Stream s -> a
-    ofoldr f x (Stream _ xs) = ofoldr f x xs
+    ofoldr :: (Element (Offset s) -> a -> a) -> a -> Offset s -> a
+    ofoldr f x (Offset _ xs) = ofoldr f x xs
 
     {-# INLINE ofoldl' #-}
-    ofoldl' :: (a -> Element (Stream s) -> a) -> a -> Stream s -> a
-    ofoldl' f x (Stream _ xs) = ofoldl' f x xs
+    ofoldl' :: (a -> Element (Offset s) -> a) -> a -> Offset s -> a
+    ofoldl' f x (Offset _ xs) = ofoldl' f x xs
 
     {-# INLINE ofoldr1Ex #-}
     ofoldr1Ex
-        :: (Element (Stream s) -> Element (Stream s) -> Element (Stream s))
-        -> Stream s
-        -> Element (Stream s)
-    ofoldr1Ex f (Stream _ xs) = ofoldr1Ex f xs
+        :: (Element (Offset s) -> Element (Offset s) -> Element (Offset s))
+        -> Offset s
+        -> Element (Offset s)
+    ofoldr1Ex f (Offset _ xs) = ofoldr1Ex f xs
 
     {-# INLINE ofoldl1Ex' #-}
     ofoldl1Ex'
-        :: (Element (Stream s) -> Element (Stream s) -> Element (Stream s))
-        -> Stream s
-        -> Element (Stream s)
-    ofoldl1Ex' f (Stream _ xs) = ofoldl1Ex' f xs
+        :: (Element (Offset s) -> Element (Offset s) -> Element (Offset s))
+        -> Offset s
+        -> Element (Offset s)
+    ofoldl1Ex' f (Offset _ xs) = ofoldl1Ex' f xs
 
-instance Streamable s => Streamable (Stream s) where
+instance Streamable s => Streamable (Offset s) where
     {-# INLINE getOne #-}
-    getOne :: Stream s -> Maybe (Element (Stream s), Stream s)
-    getOne (Stream l xs) = second (Stream l) <$> getOne xs
+    getOne :: Offset s -> Maybe (Element (Offset s), Offset s)
+    getOne (Offset l xs) = second (Offset l) <$> getOne xs
 
-instance Splittable s => Splittable (Stream s) where
-    type PrefixOf (Stream s) = PrefixOf s
+instance Splittable s => Splittable (Offset s) where
+    type PrefixOf (Offset s) = PrefixOf s
 
     {-# INLINE getAt #-}
-    getAt :: Word -> Stream s -> (PrefixOf (Stream s), Stream s)
-    getAt n (Stream l xs) = second (Stream l) $ getAt n xs
+    getAt :: Word -> Offset s -> (PrefixOf (Offset s), Offset s)
+    getAt n (Offset l xs) = second (Offset l) $ getAt n xs
 
     {-# INLINE getWith #-}
-    getWith :: (Element (Stream s) -> Bool) -> Stream s -> (PrefixOf (Stream s), Stream s)
-    getWith p (Stream l xs) = second (Stream l) $ getWith p xs
+    getWith :: (Element (Offset s) -> Bool) -> Offset s -> (PrefixOf (Offset s), Offset s)
+    getWith p (Offset l xs) = second (Offset l) $ getWith p xs
 
-instance Streamable s => HasPosition (Stream s) where
-    type PositionOf (Stream s) = Word
+instance Streamable s => HasPosition (Offset s) where
+    type PositionOf (Offset s) = Word
 
     {-# INLINE getPosition #-}
-    getPosition :: Stream s -> Word
-    getPosition (Stream n xs) = n - fromIntegral (olength xs)
+    getPosition :: Offset s -> Word
+    getPosition (Offset n xs) = n - fromIntegral (olength xs)
 
 
-{- | Construct a t'Stream' from a 'Streamable'. -}
+{- | Construct an t'Offset' from a 'Streamable'. -}
 {-# INLINE initialize #-}
-initialize :: MonoFoldable s => s -> Stream s
-initialize xs = Stream (fromIntegral $ olength xs) xs
+initialize :: MonoFoldable s => s -> Offset s
+initialize xs = Offset (fromIntegral $ olength xs) xs
