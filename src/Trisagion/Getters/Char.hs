@@ -21,6 +21,9 @@ module Trisagion.Getters.Char (
     digit,
     positive,
     signed,
+
+    -- * Other lexemes.
+    comment,
 ) where
 
 -- Imports.
@@ -120,3 +123,23 @@ signed p = do
     case sgn of
         Positive -> pure number
         Negative -> pure (-number)
+
+
+{- | Parse a comment.
+
+A comment starts with @p@ and then runs to the end of the line (character @'\\n'@), returning the
+prefix in-between.
+
+note(s):
+
+    * If the streamable contains Windows end of lines, then the comment text will contain an ending
+    @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ -- the practical solution
+    -- or complicating and downgrading the implementation significantly.
+-}
+comment
+    :: (HasPosition s, Splittable s, Element s ~ Char)
+    => Parser s e (PrefixOf s)      -- ^ Parser for beginning comment.
+    -> Parser s e (PrefixOf s)
+comment p = do
+    _ <- p
+    first absurd $ takeWith (/= '\n') <* Getters.maybe cr
