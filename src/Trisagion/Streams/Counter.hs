@@ -22,6 +22,7 @@ import Data.MonoTraversable (Element, MonoFunctor (..), MonoFoldable (..))
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position. -}
@@ -69,6 +70,36 @@ instance Streamable s => Streamable (Counter s) where
     {-# INLINE getOne #-}
     getOne :: Counter s -> Maybe (Element (Counter s), Counter s)
     getOne (Counter offset xs) = second (Counter (succ offset)) <$> getOne xs
+
+{- | 'Splittable' instance.
+
+Naively, the instance requires computing the length of the prefix, which is @O(n)@ for some types,
+e. g. @Text@. This in its turn, requires the constraint @'MonoFoldable' ('PrefixOf' s)@ which needs
+@UndecidableInstances@. The constraint, and the scary-sounding name extension, can be sidestepped
+by computing the difference between the length of the input and the suffix, which is the route we
+take, but makes performance even worse.
+-}
+instance Splittable s => Splittable (Counter s) where
+    type PrefixOf (Counter s) = PrefixOf s
+
+    {-# INLINE getAt #-}
+    getAt :: Word -> Counter s -> (PrefixOf (Counter s), Counter s)
+    getAt n ys@(Counter offset xs) =
+        let
+            (prefix, suffix) = getAt n xs
+            delta = olength ys - olength suffix
+        in
+            (prefix, Counter (offset + fromIntegral delta) suffix)
+
+    {-# INLINE getWith #-}
+    getWith :: (Element (Counter s) -> Bool) -> Counter s -> (PrefixOf (Counter s), Counter s)
+    getWith p ys@(Counter offset xs) =
+        let
+            (prefix, suffix) = getWith p xs
+            delta = olength ys - olength suffix
+        in
+            (prefix, Counter (offset + fromIntegral delta) suffix)
+
 
 instance Streamable s => HasPosition (Counter s) where
     type PositionOf (Counter s) = Word
