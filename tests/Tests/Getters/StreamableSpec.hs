@@ -54,12 +54,12 @@ spec_one = describe "Trisagion.Getters.Streamable.one tests" $ do
             '0'
             1
 
---     it "Failure on end of input" $ do
---         testError
---             one
---             ""
---             ""
---             (InputError 1)
+    -- it "Failure on end of input" $ do
+    --     testGetError
+    --         one
+    --         ""
+    --         (InputError 1)
+    --         0
 
 -- spec_peek :: Spec
 -- spec_peek = describe "peek" $ do
