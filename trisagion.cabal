@@ -84,9 +84,9 @@ test-suite trisagion-tests
     build-tool-depends:
         hspec-discover:hspec-discover
     other-modules:
-        Tests.Helpers
-        Tests.Getters.StreamableSpec
+        Lib.Helpers
         -- Tests.GetSpec
+        Tests.Getters.StreamableSpec
         Tests.Getters.SplittableSpec
         -- Tests.Getters.Word8Spec
         -- Tests.Getters.CharSpec

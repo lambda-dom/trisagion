@@ -1,4 +1,4 @@
-module Tests.Helpers (
+module Lib.Helpers (
     -- * Testing helpers.
     testGetSuccess,
     testGetError,

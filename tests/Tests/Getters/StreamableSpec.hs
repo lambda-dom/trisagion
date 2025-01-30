@@ -8,7 +8,7 @@ module Tests.Getters.StreamableSpec (
 import Test.Hspec
 
 -- Testing helpers.
-import Tests.Helpers
+import Lib.Helpers
 
 -- Module to test.
 import Trisagion.Getters.Streamable
