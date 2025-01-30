@@ -87,6 +87,6 @@ test-suite trisagion-tests
         Tests.Helpers
         Tests.Getters.StreamableSpec
         -- Tests.GetSpec
-        -- Tests.Getters.SplittableSpec
+        Tests.Getters.SplittableSpec
         -- Tests.Getters.Word8Spec
         -- Tests.Getters.CharSpec
