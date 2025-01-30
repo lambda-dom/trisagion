@@ -85,7 +85,8 @@ test-suite trisagion-tests
         hspec-discover:hspec-discover
     other-modules:
         Lib.Helpers
-        -- Tests.GetSpec
+        Tests.GetSpec
+        Tests.Getters.ParseErrorSpec
         Tests.Getters.StreamableSpec
         Tests.Getters.SplittableSpec
         -- Tests.Getters.Word8Spec

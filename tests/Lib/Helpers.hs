@@ -2,6 +2,7 @@ module Lib.Helpers (
     -- * Testing helpers.
     testGetSuccess,
     testGetError,
+    testGetFail,
 ) where
 
 -- Imports.
@@ -12,7 +13,7 @@ import Test.Hspec
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Streams.Counter (Counter, initialize)
-import Trisagion.Types.Result (Result, withResult)
+import Trisagion.Types.Result (Result (..), withResult)
 import Trisagion.Types.ParseError (ParseError, withParseError)
 import Trisagion.Get (Get, run)
 import Trisagion.Getters.ParseError (GetPE)
@@ -59,5 +60,15 @@ testGetError
     -> PositionOf (Counter s)       -- ^ Position of stream in thrown error.
     -> Expectation
 testGetError p input err position = extractError result `shouldBe` Just (err, position)
+    where
+        result = run p (initialize input)
+
+{- | Test parser @Fail@ errors by testing error equality via @'shouldBe'@. -}
+testGetFail
+    :: (Show e, Eq e)
+    => GetPE (Counter s) e a        -- ^ Parser to test.
+    -> s                            -- ^ Parser input
+    -> Expectation
+testGetFail p input = extractError result `shouldBe` Nothing
     where
         result = run p (initialize input)
