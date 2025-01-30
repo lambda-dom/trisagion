@@ -9,6 +9,7 @@ import Test.Hspec
 
 -- Package.
 import Trisagion.Types.Result (Result, withResult)
+import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Streams.Counter (Counter, initialize)
 import Trisagion.Get (Get, run)
@@ -24,12 +25,12 @@ extractSuccess =
 
 {- | Test parser success by testing equality of output and updated state. -}
 testGetSuccess
-    :: HasPosition s
-    => Get s e a                    -- ^ Parser to test.
-    -> s                            -- ^ Initial input.
+    :: (Streamable s, Show a, Eq a)
+    => Get (Counter s) e a          -- ^ Parser to test.
+    -> s                            -- ^ Initial input, usually @'String'@.
     -> a                            -- ^ Parsed result.
     -> PositionOf (Counter s)       -- ^ Position of updated stream.
     -> Expectation
-testGetSuccess p input x position = extractSuccess result `shouldBe` Just (x, output)
+testGetSuccess p input x position = extractSuccess result `shouldBe` Just (x, position)
     where
         result = run p (initialize input)
