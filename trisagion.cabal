@@ -69,7 +69,7 @@ library
         Trisagion.Getters.ParseError
         Trisagion.Getters.Streamable
         Trisagion.Getters.Splittable
-        -- Trisagion.Getters.Word8
+        Trisagion.Getters.Word8
         -- Trisagion.Getters.Char
 
 test-suite trisagion-tests
@@ -89,5 +89,5 @@ test-suite trisagion-tests
         Tests.Getters.ParseErrorSpec
         Tests.Getters.StreamableSpec
         Tests.Getters.SplittableSpec
-        -- Tests.Getters.Word8Spec
+        Tests.Getters.Word8Spec
         -- Tests.Getters.CharSpec

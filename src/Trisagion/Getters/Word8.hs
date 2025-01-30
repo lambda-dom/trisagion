@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Getters.Word8
 
-Parsers @('HasPosition' s, 'Element' s ~ Word8) => 'Parser' s@.
+Parsers @('HasPosition' s, 'Element' s ~ Word8) => 'GetPE' s@.
 -}
 
 module Trisagion.Getters.Word8 (
