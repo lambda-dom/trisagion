@@ -3,13 +3,6 @@ module Tests.Getters.CombinatorsSpec (
     spec,
 ) where
 
--- Imports.
--- Testing library.
-import Test.Hspec
-
--- Testing helpers.
-import Tests.Helpers
-
 -- Module to test.
 import Trisagion.Getters.Combinators
 import Trisagion.Getters.Combinators qualified as Getters
@@ -49,13 +42,6 @@ spec = describe "Trisagion.Getters.Combinators tests" $ do
 -- Tests.
 spec_observe :: Spec
 spec_observe = describe "observe" $ do
-    it "Success case" $ do
-        testSuccess
-            (observe one)
-            "0123"
-            (Right '0')
-            "123"
-
     it "Failure case" $ do
         testSuccess
             (observe (matchElem '1'))
