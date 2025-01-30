@@ -118,7 +118,7 @@ validate v p = do
     s <- get
     r <- first (fmap Left) p
     either
-        (throwError . makeParseErrorNoBacktrace s . Right)
+        (second absurd . throwParseErrorWithStream s . Right)
         pure
         (v r)
 
@@ -149,17 +149,17 @@ until end p = many $ first initial (failIff end) *> p
 
 {- | Guard a parser with a post-condition.
 
-A typical use case is to ensure all input was consumed, e. g. @'guardWith' p (const eoi)@.
+A typical use case is to ensure all input was consumed, e. g. @'guardWith' p (\ _ s -> onull s)@.
 -}
 {-# INLINE guardWith #-}
 guardWith
     :: HasPosition s
     => GetPE s e a                  -- ^ Parser to run.
-    -> (a -> Get s Void Bool)       -- ^ Post-condition parser.
+    -> (s -> a -> Bool)             -- ^ Post-condition.
     -> GetPE s (Either ValidationError e) a
 guardWith p cond = do
     x <- first (fmap Right) p
-    t <- first absurd (cond x)
-    if t
+    s <- get
+    if cond s x
         then pure x
         else second absurd $ throwParseError (Left ValidationError)
