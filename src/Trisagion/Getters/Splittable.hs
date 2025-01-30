@@ -26,64 +26,70 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets)
 import Data.MonoTraversable (MonoFoldable (..), Element)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, makeParseError)
+import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Get (Get, eval)
-import Trisagion.Getters.Streamable (InputError (..), MatchError (..), ValidationError (..))
-import Trisagion.Getters.Combinators (skip, validate)
+import Trisagion.Get (Get, skip, eval)
+import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate, throwParseErrorWithStream)
+import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
 
 {- | Run a parser isolated to a prefix of the stream.
 
-Any unconsumed input in the prefix is silently discarded.
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
+parser to run with an appropriate check -- see 'Trisagion.Getters.ParseError.guardWith'.
 -}
 isolateWith
-    :: (s -> Maybe (s, s))      -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
-    -> Get s e a                -- ^ Parser to run.
-    -> Get s (ParseError s (Either InputError e)) a
+    :: HasPosition s
+    => (s -> Maybe (s, s))          -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
+    -> Get s e a                    -- ^ Parser to run.
+    -> GetPE s (Either InputError e) a
 isolateWith h p = do
     xs <- get
     case h xs of
-        Nothing               -> throwError $ makeParseError xs (Left InsufficientInputError)
+        Nothing               -> absurd <$> throwParseErrorWithStream xs (Left InsufficientInputError)
         Just (prefix, suffix) ->
             case eval p prefix of
-                Left e -> throwError $ makeParseError prefix (Right e)
+                Left e -> absurd <$> throwParseErrorWithStream prefix (Right e)
                 Right x -> put suffix $> x
 
-{- | Get the rest of the input stream. -}
+
+{- | Get the rest of the input stream as a prefix. -}
+{-# INLINE remainder #-}
 remainder :: Splittable s => Get s Void (PrefixOf s)
 remainder = do
     (prefix, suffix) <- gets getRemainder
     put suffix $> prefix
 
-{- | Get a fixed size prefix from the stream.
+{- | Parse a fixed size prefix.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 -}
+{-# INLINE takePrefix #-}
 takePrefix :: Splittable s => Word -> Get s Void (PrefixOf s)
 takePrefix n = do
     (prefix, suffix) <- gets $ getAt n
     put suffix $> prefix
 
 {- | Drop a fixed size prefix from the stream. -}
+{-# INLINE dropPrefix #-}
 dropPrefix :: Splittable s => Word -> Get s Void ()
 dropPrefix = skip . takePrefix
 
-{- | Get an exact, fixed size prefix from the stream.
+{- | Parse an exact, fixed size prefix.
 
 note(s):
 
-    * The implementation requires computing the length of the prefix, which is @O(n)@ for some types
+    * Implementation requires computing the length of the prefix, which is @O(n)@ for some types
     (e.g. @Text@).
 -}
+{-# INLINE takeExact #-}
 takeExact
-    :: (Splittable s, MonoFoldable (PrefixOf s))
-    => Word -> Get s (ParseError s InputError) (PrefixOf s)
+    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
+    => Word -> GetPE s InputError (PrefixOf s)
 takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takePrefix n)
     where
         v prefix =
@@ -91,16 +97,17 @@ takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takeP
                 then Left $ InputError n
                 else Right prefix
 
-{- | Get a matching prefix from the stream.
+{- | Parse a matching prefix.
 
 note(s):
 
     * The implementation requires computing the length of the prefix, which is @O(n)@ for some types
     (e.g. @Text@).
 -}
+{-# INLINE match #-}
 match
-    :: (Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
-    => PrefixOf s -> Get s (ParseError s (Either InputError (MatchError (PrefixOf s)))) (PrefixOf s)
+    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
+    => PrefixOf s -> GetPE s (Either InputError (MatchError (PrefixOf s))) (PrefixOf s)
 match xs = validate v (takeExact (fromIntegral $ olength xs))
     where
         v prefix =
@@ -108,20 +115,23 @@ match xs = validate v (takeExact (fromIntegral $ olength xs))
                 then Right prefix
                 else Left $ MatchError xs
 
-{- | Get the longest prefix from the streamable whose elements satisfy a predicate. -}
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
+{-# INLINE takeWith #-}
 takeWith :: Splittable s => (Element s -> Bool) -> Get s Void (PrefixOf s)
 takeWith p = do
     (prefix, suffix) <- gets $ getWith p
     put suffix $> prefix
 
-{- | Drop the longest prefix from the stream whose elements satisfy a predicate. -}
+{- | Drop the longest prefix whose elements satisfy a predicate. -}
+{-# INLINE dropWith #-}
 dropWith :: Splittable s => (Element s -> Bool) -> Get s Void ()
 dropWith = skip . takeWith
 
-{- | Get the longest prefix with at least one element whose elements satisfy a predicate. -}
+{- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
+{-# INLINE atLeastOneWith #-}
 atLeastOneWith
-    :: (Splittable s, MonoFoldable (PrefixOf s))
-    => (Element s -> Bool) -> Get s (ParseError s (Either InputError ValidationError)) (PrefixOf s)
+    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
+    => (Element s -> Bool) -> GetPE s (Either InputError ValidationError) (PrefixOf s)
 atLeastOneWith p = do
     s <- get
     xs <- first absurd $ takeWith p
@@ -131,5 +141,5 @@ atLeastOneWith p = do
             b <- gets onull
             -- Either not enough input or malformed one.
             if b
-                then throwError $ makeParseError s (Left InsufficientInputError)
-                else throwError $ makeParseError s (Right ValidationError)
+                then absurd <$> throwParseErrorWithStream s (Left InsufficientInputError)
+                else absurd <$> throwParseErrorWithStream s (Right ValidationError)

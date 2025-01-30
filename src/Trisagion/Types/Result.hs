@@ -26,15 +26,18 @@ data Result s e a
 
 -- Instances.
 instance Functor (Result s e) where
+    {-# INLINE fmap #-}
     fmap :: (a -> b) -> Result s e a -> Result s e b
     fmap f = withResult Error (\ s x -> Success (f x) s)
 
 instance Bifunctor (Result s) where
+    {-# INLINE bimap #-}
     bimap :: (d -> e) -> (a -> b) -> Result s d a -> Result s e b
     bimap g f = withResult (Error . g) (\ s x -> Success (f x) s)
 
 
 {- | Case analysis elimination function for the t'Result' type. -}
+{-# INLINE withResult #-}
 withResult :: (e -> b) -> (s -> a -> b) -> Result s e a -> b
 withResult _ f (Success x s) = f s x
 withResult g _ (Error e)     = g e

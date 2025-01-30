@@ -8,13 +8,14 @@ module Tests.Getters.SplittableSpec (
 import Test.Hspec
 
 -- Testing helpers.
-import Tests.Helpers
+import Lib.Helpers
 
 -- Module to test.
 import Trisagion.Getters.Splittable
 
 -- Package.
-import Trisagion.Getters.Streamable (InputError (..), MatchError (..), ValidationError (..))
+import Trisagion.Getters.ParseError (ValidationError (..))
+import Trisagion.Getters.Streamable (InputError (..), MatchError (..))
 
 
 -- Main module test driver.
@@ -30,117 +31,117 @@ spec = describe "Trisagion.Getters.Splittable tests" $ do
 
 -- Tests.
 spec_takePrefix :: Spec
-spec_takePrefix = describe "takePrefix" $ do
+spec_takePrefix = describe "takePrefix tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             (takePrefix 2)
             "0123"
             "01"
-            "23"
+            2
 
     it "Case of insufficient input" $ do
-        testSuccess
+        testGetSuccess
             (takePrefix 10)
             "0123"
             "0123"
-            ""
+            4
 
 spec_dropPrefix :: Spec
-spec_dropPrefix = describe "dropPrefix" $ do
+spec_dropPrefix = describe "dropPrefix tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             (dropPrefix 2)
             "0123"
             ()
-            "23"
+            2
 
     it "Case of insufficient input" $ do
-        testSuccess
+        testGetSuccess
             (dropPrefix 10)
             "0123"
             ()
-            ""
+            4
 
 spec_takeExact :: Spec
-spec_takeExact = describe "takeExact" $ do
+spec_takeExact = describe "takeExact tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             (takeExact 2)
             "0123"
             "01"
-            "23"
+            2
 
     it "Case of insufficient input" $ do
-        testError
+        testGetError
             (takeExact 10)
             "0123"
-            "0123"
             (InputError 10)
+            0
 
 spec_match :: Spec
-spec_match = describe "match" $ do
+spec_match = describe "match tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             (match "01")
             "0123"
             "01"
-            "23"
+            2
 
     it "Failure on insufficient input" $ do
-        testError
+        testGetError
             (match "01234")
             "0123"
-            "0123"
             (Left $ InputError 5)
+            0
 
     it "Failure on failing match" $ do
-        testError
+        testGetError
             (match "{{}}")
             "0123"
-            "0123"
             (Right (MatchError "{{}}"))
+            0
 
 spec_takeWith :: Spec
 spec_takeWith = describe "takeWith" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             (takeWith ('3' /=))
             "0123"
             "012"
-            "3"
+            3
 
     it "No input case" $ do
-        testSuccess
+        testGetSuccess
             (takeWith ('3' /=))
             ""
             ""
-            ""
+            0
 
 spec_atLeastOneWith :: Spec
 spec_atLeastOneWith = describe "atLeastOneWith" $ do
     it "Success cases" $ do
-         testSuccess
+         testGetSuccess
             (atLeastOneWith ('0' ==))
             "0123"
             "0"
-            "123"
+            1
 
-         testSuccess
+         testGetSuccess
             (atLeastOneWith ('0' ==))
             "0003"
             "000"
-            "3"
+            3
 
     it "Failed validation" $ do
-        testError
+        testGetError
             (atLeastOneWith ('1' ==))
-            "0123"
             "0123"
             (Right ValidationError)
+            0
 
     it "Failure on empty input" $ do
-        testError
+        testGetError
             (atLeastOneWith ('1' ==))
             ""
-            ""
             (Left InsufficientInputError)
+            0

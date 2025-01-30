@@ -8,13 +8,14 @@ module Tests.Getters.CharSpec (
 import Test.Hspec
 
 -- Testing helpers.
-import Tests.Helpers
+import Lib.Helpers
 
 -- Module to test.
 import Trisagion.Getters.Char
 
 -- Package.
-import Trisagion.Getters.Streamable (InputError (..), MatchError (..), ValidationError (..))
+import Trisagion.Getters.Streamable (MatchError (..), InputError (..))
+import Trisagion.Getters.ParseError (ValidationError(..))
 
 
 -- Main module test driver.
@@ -29,193 +30,200 @@ spec = describe "Trisagion.Getters.Char tests" $ do
     spec_signed
 
 
+-- Tests.
 spec_lf :: Spec
-spec_lf = describe "lf" $ do
+spec_lf = describe "lf tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             lf
             "\n123"
             '\n'
-            "123"
+            1
 
     it "Failure case with non-matching element" $ do
-        testError
+        testGetError
             lf
-            "0123"
             "0123"
             (Right $ MatchError '\n')
+            0
 
     it "Failure case on end of input" $ do
-        testError
+        testGetError
             lf
             ""
-            ""
             (Left $ InputError 1)
+            0
 
 spec_cr :: Spec
-spec_cr = describe "cr" $ do
+spec_cr = describe "cr tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             cr
             "\r123"
             '\r'
-            "123"
+            1
 
     it "Failure case with non-matching element" $ do
-        testError
+        testGetError
             cr
-            "0123"
             "0123"
             (Right $ MatchError '\r')
+            0
 
     it "Failure case on end of input" $ do
-        testError
+        testGetError
             cr
             ""
-            ""
             (Left $ InputError 1)
+            0
 
 spec_spaces :: Spec
-spec_spaces = describe "spaces" $ do
+spec_spaces = describe "spaces tests" $ do
     it "Success cases" $ do
-        testSuccess
+        testGetSuccess
             spaces
             "  0123"
             "  "
-            "0123"
+            2
 
-        testSuccess
+        testGetSuccess
             spaces
             "  \t 0123"
             "  \t "
-            "0123"
+            4
 
     it "Success cases with chars other than space and tab" $ do
-        testSuccess
+        testGetSuccess
             spaces
             "\v\f\r\n0123"
             "\v\f\r\n"
-            "0123"
+            4
 
     it "No leading whitespace" $ do
-        testSuccess
+        testGetSuccess
             spaces
             "0123"
             ""
-            "0123"
+            0
 
     it "No input" $ do
-        testSuccess
+        testGetSuccess
             spaces
             ""
             ""
-            ""
+            0
 
 spec_notSpaces :: Spec
-spec_notSpaces = describe "notSpaces" $ do
+spec_notSpaces = describe "notSpaces tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             notSpaces
             "0123"
             "0123"
-            ""
+            4
 
     it "Success on leadinhg whitespace" $ do
-        testSuccess
+        testGetSuccess
             notSpaces
             "    0123"
             ""
-            "    0123"
+            0
 
     it "No input" $ do
-        testSuccess
+        testGetSuccess
             notSpaces
             ""
             ""
-            ""
+            0
 
 spec_sign :: Spec
-spec_sign = describe "sign" $ do
+spec_sign = describe "sign tests" $ do
     it "Success cases" $ do
-        testSuccess
+        testGetSuccess
             sign
             "+123"
             Positive
-            "123"
+            1
 
-        testSuccess
+        testGetSuccess
             sign
             "-123"
             Negative
-            "123"
+            1
 
     it "Failed validation" $ do
-        testError
+        testGetError
             sign
-            "0123"
             "0123"
             (Right ValidationError)
+            0
 
     it "Failure case on end of input" $ do
-        testError
+        testGetError
             sign
             ""
-            ""
             (Left $ InputError 1)
+            0
 
 spec_positive :: Spec
-spec_positive = describe "positive" $ do
+spec_positive = describe "positive tests" $ do
     it "Success cases" $ do
-        testSuccess
+        testGetSuccess
             positive
             "123"
             123
-            ""
+            3
 
-        testSuccess
+        testGetSuccess
             positive
             "1abc"
             1
-            "abc"
+            1
 
     it "Leading zeros" $ do
-        testSuccess
+        testGetSuccess
             positive
             "00123"
             123
-            ""
+            5
 
     it "Failed validation" $ do
-        testError
+        testGetError
             sign
             "abc"
-            "abc"
             (Right ValidationError)
+            0
 
     it "Failure case on end of input" $ do
-        testError
+        testGetError
             positive
             ""
-            ""
             (Left InsufficientInputError)
+            0
 
 spec_signed :: Spec
-spec_signed = describe "signed" $ do
+spec_signed = describe "signed tests" $ do
     it "Success cases" $ do
-        testSuccess
+        testGetSuccess
             (signed positive)
             "123"
             123
-            ""
+            3
 
-        testSuccess
+        testGetSuccess
+            (signed positive)
+            "00123"
+            123
+            5
+
+        testGetSuccess
             (signed positive)
             "+123"
             123
-            ""
+            4
 
-        testSuccess
+        testGetSuccess
             (signed positive)
             "-123"
             (-123)
-            ""
+            4

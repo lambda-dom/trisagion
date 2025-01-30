@@ -8,16 +8,14 @@ module Tests.Getters.Word8Spec (
 import Test.Hspec
 
 -- Testing helpers.
-import Tests.Helpers
+import Lib.Helpers
 
 -- Module to test.
 import Trisagion.Getters.Word8
 
--- Base.
-import Data.Int (Int8)
-
 -- Package.
-import Trisagion.Getters.Streamable (InputError (..))
+import Trisagion.Getters.Streamable (InputError(..))
+import Data.Int (Int8)
 
 
 -- Main module test driver.
@@ -29,122 +27,120 @@ spec = describe "Trisagion.Getters.Word8 tests" $ do
     spec_word32Be
 
 
--- Tests.
 spec_word8 :: Spec
-spec_word8 = describe "word8" $ do
+spec_word8 = describe "word8 tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             word8
             [0, 1, 2, 3] 
             0
-            [1, 2, 3]
+            1
 
     it "Failure on end of input" $ do
-        testError
+        testGetError
             word8
             []
-            []
             (InputError 1)
+            0
 
 spec_int8 :: Spec
-spec_int8 = describe "int8" $ do
+spec_int8 = describe "int8 tests" $ do
     it "Success case" $ do
-        testSuccess
+        testGetSuccess
             int8
             [0, 1, 2, 3] 
             0
-            [1, 2, 3]
+            1
 
     it "Success case with fromIntegral" $ do
-        testSuccess
+        testGetSuccess
             int8
             [fromIntegral (-1 :: Int8), 1, 2, 3] 
             (-1)
-            [1, 2, 3]
+            1
 
     it "Failure on end of input" $ do
-        testError
+        testGetError
             int8
             []
-            []
             (InputError 1)
+            0
 
 spec_word32Le :: Spec
-spec_word32Le = describe "Tests for word32Le" $ do
+spec_word32Le = describe "word32Le tests" $ do
     it "Success cases" $ do
-       testSuccess
+       testGetSuccess
             word32Le
             [0, 0, 0, 0, 0, 0, 0, 0] 
             0
-            [0, 0, 0, 0]
-
-       testSuccess
+            4
+       testGetSuccess
             word32Le
             [1, 0, 0, 0, 0, 0, 0, 0] 
             1
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Le
             [0, 1, 0, 0, 0, 0, 0, 0] 
             256
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Le
             [0, 0, 1, 0, 0, 0, 0, 0] 
             65536
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Le
             [0, 0, 0, 1, 0, 0, 0, 0] 
             16777216
-            [0, 0, 0, 0]
+            4
 
     it "Failure on end of input" $ do
-        testError
+        testGetError
             word32Le
             [0, 0, 0]
-            [0, 0, 0]
             (InputError 4)
+            0
 
 spec_word32Be :: Spec
-spec_word32Be = describe "Tests for word32Be" $ do
+spec_word32Be = describe "word32Be tests" $ do
     it "Success cases" $ do
-       testSuccess
+       testGetSuccess
             word32Be
             [0, 0, 0, 0, 0, 0, 0, 0] 
             0
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Be
             [0, 0, 0, 1, 0, 0, 0, 0] 
             1
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Be
             [0, 0, 1, 0, 0, 0, 0, 0] 
             256
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Be
             [0, 1, 0, 0, 0, 0, 0, 0] 
             65536
-            [0, 0, 0, 0]
+            4
 
-       testSuccess
+       testGetSuccess
             word32Be
             [1, 0, 0, 0, 0, 0, 0, 0] 
             16777216
-            [0, 0, 0, 0]
+            4
 
     it "Failure on end of input" $ do
-        testError
+        testGetError
             word32Be
             [0, 0, 0]
-            [0, 0, 0]
             (InputError 4)
+            0

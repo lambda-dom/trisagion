@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               trisagion
 version:            0.1.0.0
-synopsis:           A monadic parsing library.
+synopsis:           A simple monadic parsing library.
 description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
 category:           Parsing
 homepage:           https://github.com/lambda-dom/trisagion#readme
@@ -29,8 +29,7 @@ common common-fields
         TypeFamilies
     build-depends:
         -- GHC 9.6
-        base ^>=4.18 && <4.19,
-        text >=2.0 && <2.2,
+        base >=4.18 && <4.19,
     ghc-options:
         -Wall
         -Wcompat
@@ -52,25 +51,26 @@ library
         mtl >=2.3 && <2.4,
         mono-traversable >=1.0 && <1.1,
         bytestring >=0.11 && <0.13,
+        text >=2.0 && <2.2,
         containers >=0.6 && <0.8,
         vector >=0.13 && <0.14,
     other-modules:
     exposed-modules:
         Trisagion.Lib.NonEmpty
-        Trisagion.Types.ParseError
-        Trisagion.Types.Result
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
-        Trisagion.Streams.Streamable
+        Trisagion.Typeclasses.HasPosition
+        Trisagion.Streams.Position
+        Trisagion.Streams.Counter
         Trisagion.Streams.Offset
+        Trisagion.Types.ParseError
+        Trisagion.Types.Result
         Trisagion.Get
-        Trisagion.Getters.Combinators
+        Trisagion.Getters.ParseError
         Trisagion.Getters.Streamable
         Trisagion.Getters.Splittable
         Trisagion.Getters.Word8
         Trisagion.Getters.Char
-        Trisagion.Examples.Table.Parsers
-        Trisagion.Examples.Table
 
 test-suite trisagion-tests
     import: common-fields
@@ -84,11 +84,10 @@ test-suite trisagion-tests
     build-tool-depends:
         hspec-discover:hspec-discover
     other-modules:
-        Tests.Helpers
+        Lib.Helpers
+        Tests.GetSpec
+        Tests.Getters.ParseErrorSpec
         Tests.Getters.StreamableSpec
-        Tests.Getters.CombinatorsSpec
         Tests.Getters.SplittableSpec
         Tests.Getters.Word8Spec
         Tests.Getters.CharSpec
-        Tests.Examples.Table.ParsersSpec
-        Tests.Examples.TableSpec
