@@ -118,7 +118,7 @@ validate v p = do
     s <- get
     r <- first (fmap Left) p
     either
-        (second absurd . throwParseErrorWithStream s . Right)
+        (fmap absurd . throwParseErrorWithStream s . Right)
         pure
         (v r)
 
@@ -136,7 +136,7 @@ failIff p =
     first absurd (lookAhead p) >>=
         either
             (const $ pure ())
-            (const . second absurd $ throwError mempty)
+            (const $ absurd <$> throwError mempty)
 
 {- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds. -}
 {-# INLINE until #-}
@@ -162,4 +162,4 @@ guardWith p cond = do
     s <- get
     if cond s x
         then pure x
-        else second absurd $ throwParseError (Left ValidationError)
+        else absurd <$> throwParseError (Left ValidationError)
