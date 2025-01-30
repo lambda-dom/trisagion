@@ -13,6 +13,7 @@ module Trisagion.Getters.ParseError (
 
     -- * Handling t'ParseError'.
     throwParseError,
+    throwParseErrorWithStream,
     onParseError,
     validate,
 
@@ -65,6 +66,13 @@ The state component is the current parser position and the backtrace is a @'Noth
 throwParseError :: HasPosition s => e -> GetPE s e Void
 throwParseError e = embed $ Error . flip makeParseErrorNoBacktrace e
 
+{- | Parser that throws @t'ParseError' ('PositionOf' s) e@ with specified stream and error tag.
+
+The backtrace is a @'Nothing'@ of type @'Maybe' ('ParseError' ('PositionOf' s) 'Void')@.
+-}
+throwParseErrorWithStream :: HasPosition s => s -> e -> GetPE s e Void
+throwParseErrorWithStream xs = throwError . makeParseErrorNoBacktrace xs
+
 {- | Parser that swallows a thrown error as a backtrace for a new error.
 
 Combinator is useful to add contextual information, e. g. with a parser like:
@@ -91,7 +99,7 @@ aParser = onParseError e q
 onParseError
     :: (HasPosition s, Show d, Eq d, Typeable d)
     => e                            -- ^ Error tag of new thrown error.
-    -> GetPE s d a                 -- ^ Parser to run.
+    -> GetPE s d a                  -- ^ Parser to run.
     -> GetPE s e a
 onParseError e p = do
     s <- get
@@ -104,7 +112,7 @@ onParseError e p = do
 validate
     :: HasPosition s
     => (a -> Either d b)            -- ^ Validator.
-    -> GetPE s e a                 -- ^ Parser to run.
+    -> GetPE s e a                  -- ^ Parser to run.
     -> GetPE s (Either e d) b
 validate v p = do
     s <- get
@@ -133,8 +141,8 @@ failIff p =
 {- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds. -}
 {-# INLINE until #-}
 until
-    :: GetPE s e b                 -- ^ Closing parser.
-    -> GetPE s e a                 -- ^ Parser to run.
+    :: GetPE s e b                  -- ^ Closing parser.
+    -> GetPE s e a                  -- ^ Parser to run.
     -> Get s Void [a]
 until end p = many $ first initial (failIff end) *> p
 
@@ -146,7 +154,7 @@ A typical use case is to ensure all input was consumed, e. g. @'guardWith' p (co
 {-# INLINE guardWith #-}
 guardWith
     :: HasPosition s
-    => GetPE s e a                 -- ^ Parser to run.
+    => GetPE s e a                  -- ^ Parser to run.
     -> (a -> Get s Void Bool)       -- ^ Post-condition parser.
     -> GetPE s (Either ValidationError e) a
 guardWith p cond = do

@@ -31,7 +31,7 @@ spec = describe "Trisagion.Getters.Streamable tests" $ do
 
 -- Tests.
 spec_eoi :: Spec
-spec_eoi = describe "Trisagion.Getters.Streamable.eoi tests" $ do
+spec_eoi = describe "eoi tests" $ do
     it "Success case" $ do
         testGetSuccess
             eoi
@@ -47,7 +47,7 @@ spec_eoi = describe "Trisagion.Getters.Streamable.eoi tests" $ do
             0
 
 spec_one :: Spec
-spec_one = describe "Trisagion.Getters.Streamable.one tests" $ do
+spec_one = describe "one tests" $ do
     it "Success case" $ do
         testGetSuccess
             one
@@ -63,7 +63,7 @@ spec_one = describe "Trisagion.Getters.Streamable.one tests" $ do
             0
 
 spec_peek :: Spec
-spec_peek = describe "Trisagion.Getters.Streamable.peek tests" $ do
+spec_peek = describe "peek tests" $ do
     it "Success case" $ do
         testGetSuccess
             peek
@@ -79,7 +79,7 @@ spec_peek = describe "Trisagion.Getters.Streamable.peek tests" $ do
             0
 
 spec_satisfy :: Spec
-spec_satisfy = describe "Trisagion.Getters.Streamable.satisfy tests" $ do
+spec_satisfy = describe "satisfy tests" $ do
     it "Success case with satisfied predicate" $ do
         testGetSuccess
             (satisfy ('1' /=))
@@ -102,7 +102,7 @@ spec_satisfy = describe "Trisagion.Getters.Streamable.satisfy tests" $ do
             0
 
 spec_matchElem :: Spec
-spec_matchElem = describe "Trisagion.Getters.Streamable.matchElem tests" $ do
+spec_matchElem = describe "matchElem tests" $ do
     it "Success case with matching element" $ do
         testGetSuccess
             (matchElem '0')
@@ -125,7 +125,7 @@ spec_matchElem = describe "Trisagion.Getters.Streamable.matchElem tests" $ do
             0
 
 spec_oneOf :: Spec
-spec_oneOf = describe "Trisagion.Getters.Streamable.oneOf tests" $ do
+spec_oneOf = describe "oneOf tests" $ do
     it "Success case with satisfied element-hood" $ do
         testGetSuccess
             (oneOf "01")

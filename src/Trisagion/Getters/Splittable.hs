@@ -26,16 +26,14 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets)
 import Data.MonoTraversable (MonoFoldable (..), Element)
 
 -- Package.
-import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
 import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get, skip, eval)
-import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate)
+import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate, throwParseErrorWithStream)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
 
@@ -52,10 +50,10 @@ isolateWith
 isolateWith h p = do
     xs <- get
     case h xs of
-        Nothing               -> throwError $ makeParseErrorNoBacktrace xs (Left InsufficientInputError)
+        Nothing               -> absurd <$> throwParseErrorWithStream xs (Left InsufficientInputError)
         Just (prefix, suffix) ->
             case eval p prefix of
-                Left e -> throwError $ makeParseErrorNoBacktrace prefix (Right e)
+                Left e -> absurd <$> throwParseErrorWithStream prefix (Right e)
                 Right x -> put suffix $> x
 
 
@@ -143,5 +141,5 @@ atLeastOneWith p = do
             b <- gets onull
             -- Either not enough input or malformed one.
             if b
-                then throwError $ makeParseErrorNoBacktrace s (Left InsufficientInputError)
-                else throwError $ makeParseErrorNoBacktrace s (Right ValidationError)
+                then absurd <$> throwParseErrorWithStream s (Left InsufficientInputError)
+                else absurd <$> throwParseErrorWithStream s (Right ValidationError)
