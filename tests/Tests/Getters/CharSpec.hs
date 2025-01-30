@@ -78,7 +78,7 @@ spec_cr = describe "cr tests" $ do
             0
 
 spec_spaces :: Spec
-spec_spaces = describe "spaces" $ do
+spec_spaces = describe "spaces tests" $ do
     it "Success cases" $ do
         testGetSuccess
             spaces
@@ -114,7 +114,7 @@ spec_spaces = describe "spaces" $ do
             0
 
 spec_notSpaces :: Spec
-spec_notSpaces = describe "notSpaces" $ do
+spec_notSpaces = describe "notSpaces tests" $ do
     it "Success case" $ do
         testGetSuccess
             notSpaces
@@ -137,7 +137,7 @@ spec_notSpaces = describe "notSpaces" $ do
             0
 
 spec_sign :: Spec
-spec_sign = describe "sign" $ do
+spec_sign = describe "sign tests" $ do
     it "Success cases" $ do
         testGetSuccess
             sign
@@ -166,7 +166,7 @@ spec_sign = describe "sign" $ do
             0
 
 spec_positive :: Spec
-spec_positive = describe "positive" $ do
+spec_positive = describe "positive tests" $ do
     it "Success cases" $ do
         testGetSuccess
             positive
@@ -202,13 +202,19 @@ spec_positive = describe "positive" $ do
             0
 
 spec_signed :: Spec
-spec_signed = describe "signed" $ do
+spec_signed = describe "signed tests" $ do
     it "Success cases" $ do
         testGetSuccess
             (signed positive)
             "123"
             123
             3
+
+        testGetSuccess
+            (signed positive)
+            "00123"
+            123
+            5
 
         testGetSuccess
             (signed positive)

@@ -106,7 +106,7 @@ spec_word32Le = describe "word32Le tests" $ do
             0
 
 spec_word32Be :: Spec
-spec_word32Be = describe "Tests for word32Be" $ do
+spec_word32Be = describe "word32Be tests" $ do
     it "Success cases" $ do
        testGetSuccess
             word32Be
