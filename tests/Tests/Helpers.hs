@@ -1,7 +1,8 @@
 module Tests.Helpers (
     -- * Testing helpers.
     testGetSuccess,
-testGetError) where
+    testGetError,
+) where
 
 -- Imports.
 -- Testing.
@@ -14,6 +15,7 @@ import Trisagion.Streams.Counter (Counter, initialize)
 import Trisagion.Types.Result (Result, withResult)
 import Trisagion.Types.ParseError (ParseError, withParseError)
 import Trisagion.Get (Get, run)
+import Trisagion.Getters.ParseError (GetPE)
 
 
 {- | Extract success info on a parsed result. -}
@@ -29,10 +31,10 @@ note(s):
 
     * returns 'Nothing' likewise for the case of a @'Fail' :: 'ParseError'@.
 -}
-extractError :: HasPosition s => Result s (ParseError s e) a -> Maybe (e, PositionOf s)
+extractError :: Result s (ParseError (PositionOf s) e) a -> Maybe (e, PositionOf s)
 extractError =
     withResult
-        (withParseError Nothing (\ _ s err -> Just (err, getPosition s)))
+        (withParseError Nothing (\ _ s err -> Just (err, s)))
         (\ _ _ -> Nothing)
 
 
@@ -50,8 +52,8 @@ testGetSuccess p input x position = extractSuccess result `shouldBe` Just (x, po
 
 {- | Test parser failure by testing equality of error tag and stream position. -}
 testGetError
-    :: (Streamable s, Show e, Eq e)
-    => Get (Counter s) (ParseError (Counter s) e) a
+    :: (Show e, Eq e)
+    => GetPE (Counter s) e a        -- ^ Parser to test.
     -> s                            -- ^ Initial input, usually @'String'@.
     -> e                            -- ^ Error tag.
     -> PositionOf (Counter s)       -- ^ Position of stream in thrown error.

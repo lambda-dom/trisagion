@@ -12,7 +12,7 @@ module Trisagion.Getters.Streamable (
     -- * @'Streamable' s => 'Get' s e a@ parsers.
     eoi,
 
-    -- * @'HasPosition' s => 'Parser' s e a@ parsers.
+    -- * @'HasPosition' s => 'GetPE' s e a@ parsers.
     one,
     peek,
     satisfy,
@@ -35,7 +35,7 @@ import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Get (Get, lookAhead)
-import Trisagion.Getters.ParseError (Parser, ValidationError (..), throwParseError, validate)
+import Trisagion.Getters.ParseError (GetPE, ValidationError (..), throwParseError, validate)
 
 
 {- | The @InputError@ error type.
@@ -65,7 +65,7 @@ eoi = gets onull
 {-# INLINE one #-}
 one
     :: HasPosition s
-    => Parser s InputError (Element s)
+    => GetPE s InputError (Element s)
 one = do
     xs <- get
     case getOne xs of
@@ -84,7 +84,7 @@ peek = lookAhead one
 satisfy
     :: HasPosition s
     => (Element s -> Bool)          -- ^ @'Element' s@ predicate.
-    -> Parser s (Either InputError ValidationError) (Element s)
+    -> GetPE s (Either InputError ValidationError) (Element s)
 satisfy p = validate v one
     where
         v x = if p x then Right x else Left ValidationError
@@ -94,7 +94,7 @@ satisfy p = validate v one
 matchElem
     :: (HasPosition s, Eq (Element s))
     => Element s                    -- ^ Matching @'Element' s@.
-    -> Parser s (Either InputError (MatchError (Element s))) (Element s)
+    -> GetPE s (Either InputError (MatchError (Element s))) (Element s)
 matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
 
 {- | Parse one @'Element' s@ that is an element of the foldable. -}
@@ -102,5 +102,5 @@ matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
 oneOf
     :: (HasPosition s, Eq (Element s), Foldable t)
     => t (Element s)                -- ^ Foldable of @'Element' s@ against which to test inclusion.
-    -> Parser s (Either InputError (MatchError (t (Element s)))) (Element s)
+    -> GetPE s (Either InputError (MatchError (t (Element s)))) (Element s)
 oneOf xs = first (fmap (fmap (const $ MatchError xs))) $ satisfy (`elem` xs)

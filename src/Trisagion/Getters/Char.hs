@@ -42,7 +42,7 @@ import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get)
 import qualified Trisagion.Get as Getters (maybe)
-import Trisagion.Getters.ParseError (Parser, ValidationError (..), validate)
+import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate)
 import Trisagion.Getters.Streamable (InputError, MatchError, matchElem, satisfy, one) 
 import Trisagion.Getters.Splittable (takeWith, atLeastOneWith)
 
@@ -56,14 +56,14 @@ data Sign = Negative | Positive
 {-# INLINE lf #-}
 lf
     :: (HasPosition s, Element s ~ Char)
-    => Parser s (Either InputError (MatchError Char)) Char
+    => GetPE s (Either InputError (MatchError Char)) Char
 lf = matchElem '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr
     :: (HasPosition s, Element s ~ Char)
-    => Parser s (Either InputError (MatchError Char)) Char
+    => GetPE s (Either InputError (MatchError Char)) Char
 cr = matchElem '\r'
 
 {- | Parse a, possibly null, prefix of whitespace. -}
@@ -80,7 +80,7 @@ notSpaces = takeWith (not . isSpace)
 {-# INLINE sign #-}
 sign
     :: (HasPosition s, Element s ~ Char)
-    => Parser s (Either InputError ValidationError) Sign
+    => GetPE s (Either InputError ValidationError) Sign
 sign = validate v one
     where
         v x = case x of
@@ -92,14 +92,14 @@ sign = validate v one
 {-# INLINE digit #-}
 digit
     :: (HasPosition s, Element s ~ Char)
-    => Parser s (Either InputError ValidationError) Char
+    => GetPE s (Either InputError ValidationError) Char
 digit = satisfy isDigit
 
 {- | Parse a positive, integer number in decimal format. -}
 {-# INLINE positive #-}
 positive
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element s ~ Char, Element (PrefixOf s) ~ Char)
-    => Parser s (Either InputError ValidationError) Word
+    => GetPE s (Either InputError ValidationError) Word
 positive = do
         digits <- atLeastOneWith isDigit
         let
@@ -115,8 +115,8 @@ positive = do
 {-# INLINE signed #-}
 signed
     :: (HasPosition s, Element s ~ Char)
-    => Parser s (Either InputError ValidationError) Word
-    -> Parser s (Either InputError ValidationError) Int
+    => GetPE s (Either InputError ValidationError) Word
+    -> GetPE s (Either InputError ValidationError) Int
 signed p = do
     sgn <- first absurd (fromMaybe Positive <$> Getters.maybe sign)
     number <- fromIntegral <$> p
@@ -139,8 +139,8 @@ note(s):
 {-# INLINE lineComment #-}
 lineComment
     :: (HasPosition s, Splittable s, Element s ~ Char)
-    => Parser s e (PrefixOf s)      -- ^ Parser for beginning comment.
-    -> Parser s e (PrefixOf s)
+    => GetPE s e (PrefixOf s)      -- ^ Parser for beginning comment.
+    -> GetPE s e (PrefixOf s)
 lineComment p = do
     _ <- p
     first absurd $ takeWith (/= '\n') <* Getters.maybe cr

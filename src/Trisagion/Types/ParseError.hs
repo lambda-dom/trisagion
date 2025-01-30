@@ -11,6 +11,7 @@ module Trisagion.Types.ParseError (
     -- ** Constructors.
     makeParseError,
     makeParseErrorNoBacktrace,
+    makeParseErrorWithStream,
 
     -- ** Prisms.
     getState,
@@ -87,6 +88,7 @@ makeParseError
 makeParseError b s = ParseError (Just b) (getPosition s)
 
 {- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
+{-# INLINE makeParseErrorNoBacktrace #-}
 makeParseErrorNoBacktrace
     :: forall s e . (HasPosition s)
     => s
@@ -95,6 +97,16 @@ makeParseErrorNoBacktrace
 makeParseErrorNoBacktrace s =
     let b = Nothing :: Maybe (ParseError (PositionOf s) Void) in
         ParseError b (getPosition s)
+
+{- | Constructor helper to create t'ParseError' values with no backtrace and specified stream (position). -}
+{-# INLINE makeParseErrorWithStream #-}
+makeParseErrorWithStream
+    :: s
+    -> e
+    -> ParseError s e
+makeParseErrorWithStream pos =
+    let b = Nothing :: Maybe (ParseError s Void) in
+        ParseError b pos
 
 
 {- | Getter for the error state component. -}

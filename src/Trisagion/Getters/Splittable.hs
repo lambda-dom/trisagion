@@ -35,7 +35,7 @@ import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
 import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get, skip, eval)
-import Trisagion.Getters.ParseError (Parser, ValidationError (..), validate)
+import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
 
@@ -48,7 +48,7 @@ isolateWith
     :: HasPosition s
     => (s -> Maybe (s, s))          -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
     -> Get s e a                    -- ^ Parser to run.
-    -> Parser s (Either InputError e) a
+    -> GetPE s (Either InputError e) a
 isolateWith h p = do
     xs <- get
     case h xs of
@@ -91,7 +91,7 @@ note(s):
 {-# INLINE takeExact #-}
 takeExact
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
-    => Word -> Parser s InputError (PrefixOf s)
+    => Word -> GetPE s InputError (PrefixOf s)
 takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takePrefix n)
     where
         v prefix =
@@ -109,7 +109,7 @@ note(s):
 {-# INLINE match #-}
 match
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
-    => PrefixOf s -> Parser s (Either InputError (MatchError (PrefixOf s))) (PrefixOf s)
+    => PrefixOf s -> GetPE s (Either InputError (MatchError (PrefixOf s))) (PrefixOf s)
 match xs = validate v (takeExact (fromIntegral $ olength xs))
     where
         v prefix =
@@ -133,7 +133,7 @@ dropWith = skip . takeWith
 {-# INLINE atLeastOneWith #-}
 atLeastOneWith
     :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
-    => (Element s -> Bool) -> Parser s (Either InputError ValidationError) (PrefixOf s)
+    => (Element s -> Bool) -> GetPE s (Either InputError ValidationError) (PrefixOf s)
 atLeastOneWith p = do
     s <- get
     xs <- first absurd $ takeWith p
