@@ -70,7 +70,7 @@ library
         Trisagion.Getters.Streamable
         Trisagion.Getters.Splittable
         Trisagion.Getters.Word8
-        -- Trisagion.Getters.Char
+        Trisagion.Getters.Char
 
 test-suite trisagion-tests
     import: common-fields
@@ -90,4 +90,4 @@ test-suite trisagion-tests
         Tests.Getters.StreamableSpec
         Tests.Getters.SplittableSpec
         Tests.Getters.Word8Spec
-        -- Tests.Getters.CharSpec
+        Tests.Getters.CharSpec
