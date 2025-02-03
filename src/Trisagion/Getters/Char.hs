@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Getters.Char
 
-Parsers @('HasPosition' s, 'Element' s ~ Char) => 'Get' s@.
+Parsers @('Streamable' s, 'Element' s ~ Char) => 'Get' s@.
 -}
 
 module Trisagion.Getters.Char (
@@ -23,7 +23,7 @@ module Trisagion.Getters.Char (
     signed,
 
     -- * Other lexemes.
-    lineComment,
+    comment,
 ) where
 
 -- Imports.
@@ -38,11 +38,12 @@ import Data.Void (Void, absurd)
 import Data.MonoTraversable (MonoFoldable (..), Element)
 
 -- Package.
-import Trisagion.Typeclasses.HasPosition (HasPosition)
+import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get)
 import qualified Trisagion.Get as Getters (maybe)
-import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate)
+import Trisagion.Getters.ParseError (ValidationError (..), validate)
 import Trisagion.Getters.Streamable (InputError, MatchError, matchElem, satisfy, one) 
 import Trisagion.Getters.Splittable (takeWith, atLeastOneWith)
 
@@ -55,15 +56,15 @@ data Sign = Negative | Positive
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
 lf
-    :: (HasPosition s, Element s ~ Char)
-    => GetPE s (Either InputError (MatchError Char)) Char
+    :: (Streamable s, Element s ~ Char)
+    => Get s (ParseError s (Either InputError (MatchError Char))) Char
 lf = matchElem '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr
-    :: (HasPosition s, Element s ~ Char)
-    => GetPE s (Either InputError (MatchError Char)) Char
+    :: (Streamable s, Element s ~ Char)
+    => Get s (ParseError s (Either InputError (MatchError Char))) Char
 cr = matchElem '\r'
 
 {- | Parse a, possibly null, prefix of whitespace. -}
@@ -79,8 +80,8 @@ notSpaces = takeWith (not . isSpace)
 {- | Parse a number sign. -}
 {-# INLINE sign #-}
 sign
-    :: (HasPosition s, Element s ~ Char)
-    => GetPE s (Either InputError ValidationError) Sign
+    :: (Streamable s, Element s ~ Char)
+    => Get s (ParseError s (Either InputError ValidationError)) Sign
 sign = validate v one
     where
         v x = case x of
@@ -91,15 +92,15 @@ sign = validate v one
 {- | Parse a decimal digit. -}
 {-# INLINE digit #-}
 digit
-    :: (HasPosition s, Element s ~ Char)
-    => GetPE s (Either InputError ValidationError) Char
+    :: (Streamable s, Element s ~ Char)
+    => Get s (ParseError s (Either InputError ValidationError)) Char
 digit = satisfy isDigit
 
 {- | Parse a positive, integer number in decimal format. -}
 {-# INLINE positive #-}
 positive
-    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Element s ~ Char, Element (PrefixOf s) ~ Char)
-    => GetPE s (Either InputError ValidationError) Word
+    :: (Splittable s, MonoFoldable (PrefixOf s), Element s ~ Char, Element (PrefixOf s) ~ Char)
+    => Get s (ParseError s (Either InputError ValidationError)) Word
 positive = do
         digits <- atLeastOneWith isDigit
         let
@@ -114,9 +115,9 @@ positive = do
 {- | Transform a @'Word'@ parser into an @'Int'@-parser for signed numbers. -}
 {-# INLINE signed #-}
 signed
-    :: (HasPosition s, Element s ~ Char)
-    => GetPE s (Either InputError ValidationError) Word
-    -> GetPE s (Either InputError ValidationError) Int
+    :: (Streamable s, Element s ~ Char)
+    => Get s (ParseError s (Either InputError ValidationError)) Word
+    -> Get s (ParseError s (Either InputError ValidationError)) Int
 signed p = do
     sgn <- first absurd (fromMaybe Positive <$> Getters.maybe sign)
     number <- fromIntegral <$> p
@@ -136,11 +137,12 @@ note(s):
     @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
     solution) or complicating and downgrading the implementation significantly.
 -}
-{-# INLINE lineComment #-}
-lineComment
-    :: (HasPosition s, Splittable s, Element s ~ Char)
-    => GetPE s e (PrefixOf s)      -- ^ Parser for beginning comment.
-    -> GetPE s e (PrefixOf s)
-lineComment p = do
+{-# INLINE comment #-}
+comment
+    :: (Splittable s, Element s ~ Char)
+    -- | Parser for beginning comment prefix.
+    => Get s (ParseError s e) (PrefixOf s)  
+    -> Get s (ParseError s e) (PrefixOf s)
+comment p = do
     _ <- p
     first absurd $ takeWith (/= '\n') <* Getters.maybe cr

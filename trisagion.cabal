@@ -58,9 +58,8 @@ library
     exposed-modules:
         Trisagion.Lib.NonEmpty
         Trisagion.Typeclasses.Streamable
-        Trisagion.Typeclasses.Splittable
         Trisagion.Typeclasses.HasPosition
-        Trisagion.Streams.Position
+        Trisagion.Typeclasses.Splittable
         Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Types.ParseError

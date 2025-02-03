@@ -14,7 +14,8 @@ import Lib.Helpers
 import Trisagion.Getters.Streamable
 
 -- Package.
-import Trisagion.Types.ParseError (makeParseErrorWithStream)
+import Trisagion.Streams.Counter (initialize)
+import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
 import Trisagion.Getters.ParseError (ValidationError(..))
 
 
@@ -75,7 +76,7 @@ spec_peek = describe "peek tests" $ do
         testGetSuccess
             peek
             ""
-            (Left $ makeParseErrorWithStream 0 (InputError 1))
+            (Left $ makeParseErrorNoBacktrace (initialize "") (InputError 1))
             0
 
 spec_satisfy :: Spec

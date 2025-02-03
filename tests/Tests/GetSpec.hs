@@ -19,9 +19,10 @@ import Data.Bifunctor (Bifunctor(..))
 import Data.List.NonEmpty (NonEmpty (..))
 
 -- Package.
-import Trisagion.Types.ParseError (makeParseErrorWithStream)
+import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), matchElem, one, satisfy)
 import Trisagion.Getters.ParseError (ValidationError (..))
+import Trisagion.Streams.Counter (initialize)
 
 
 -- Main module test driver.
@@ -50,14 +51,14 @@ spec_observe = describe "observe tests" $ do
         testGetSuccess
             (observe (matchElem '1'))
             "0123"
-            (Left $ makeParseErrorWithStream 0 (Right $ MatchError '1'))
+            (Left $ makeParseErrorNoBacktrace (initialize "0123") (Right $ MatchError '1'))
             0
 
     it "End of input case" $ do
         testGetSuccess
             (observe one)
             ""
-            (Left $ makeParseErrorWithStream 0 (InputError 1))
+            (Left $ makeParseErrorNoBacktrace (initialize "") (InputError 1))
             0
 
 spec_lookAhead :: Spec
@@ -73,14 +74,14 @@ spec_lookAhead = describe "lookAhead tests" $ do
         testGetSuccess
             (lookAhead (matchElem '1'))
             "0123"
-            (Left $ makeParseErrorWithStream 0 (Right $ MatchError '1'))
+            (Left $ makeParseErrorNoBacktrace (initialize "0123") (Right $ MatchError '1'))
             0
 
     it "End of input case" $ do
         testGetSuccess
             (lookAhead one)
             ""
-            (Left $ makeParseErrorWithStream 0 (InputError 1))
+            (Left $ makeParseErrorNoBacktrace (initialize "") (InputError 1))
             0
 
 spec_maybe :: Spec

@@ -282,17 +282,17 @@ zipWith f p q = f <$> p <*> q
 {-# INLINE before #-}
 before
     :: Get s e b                -- ^ Parser to run first.
-    -> Get s e a                -- ^ Parser to run second.
+    -> Get s e a                -- ^ Parser to run.
     -> Get s e a
-before b p = b *> p
+before = (*>)
 
 {- | The parser @'after' a p@ parses @p@ and @a@ in succession, returning the result of @p@. -}
 {-# INLINE after #-}
 after
     :: Get s e b                -- ^ Parser to run after.
-    -> Get s e a                -- ^ Parser to run first.
+    -> Get s e a                -- ^ Parser to run.
     -> Get s e a
-after a p = p <* a
+after = flip (<*)
 
 {- | The parser @'between' o c p@ parses @o@, @p@ and @c@ in succession, returning the result of @p@. -}
 {-# INLINE between #-}
