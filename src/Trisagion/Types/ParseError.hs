@@ -18,6 +18,7 @@ module Trisagion.Types.ParseError (
     getBacktrace,
 
     -- * Elimination functions.
+    withParseError,
     initial,
 ) where
 
@@ -135,6 +136,12 @@ getBacktrace f = go
         go Fail               = []
         go (ParseError r s e) = f s e : maybe [] go r
 
+
+{- | Case analysis elimination function for the t'ParseError' type. -}
+{-# INLINE withParseError #-}
+withParseError :: b -> (forall d . Maybe (ParseError s d) -> s -> e -> b) -> ParseError s e -> b
+withParseError x _ Fail               = x
+withParseError _ f (ParseError b s e) = f b s e
 
 {- | The universal property of the initial monoid @t'ParseError' s 'Void'@. -}
 {-# INLINE initial #-}

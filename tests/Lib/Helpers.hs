@@ -16,7 +16,6 @@ import Trisagion.Streams.Counter (Counter, initialize)
 import Trisagion.Types.Result (Result (..), withResult)
 import Trisagion.Types.ParseError (ParseError, withParseError)
 import Trisagion.Get (Get, run)
-import Trisagion.Getters.ParseError (GetPE)
 
 
 {- | Extract success info on a parsed result. -}
@@ -32,10 +31,10 @@ note(s):
 
     * returns 'Nothing' likewise for the case of a @'Fail' :: 'ParseError'@.
 -}
-extractError :: Result s (ParseError (PositionOf s) e) a -> Maybe (e, PositionOf s)
+extractError :: HasPosition s => Result s (ParseError s e) a -> Maybe (e, PositionOf s)
 extractError =
     withResult
-        (withParseError Nothing (\ _ s err -> Just (err, s)))
+        (withParseError Nothing (\ _ s err -> Just (err, getPosition s)))
         (\ _ _ -> Nothing)
 
 
@@ -47,14 +46,15 @@ testGetSuccess
     -> a                            -- ^ Parsed result.
     -> PositionOf (Counter s)       -- ^ Position of updated stream.
     -> Expectation
-testGetSuccess p input x position = extractSuccess result `shouldBe` Just (x, position)
+testGetSuccess p input x s = extractSuccess result `shouldBe` Just (x, s)
     where
         result = run p (initialize input)
 
 {- | Test parser failure by testing equality of error tag and stream position. -}
 testGetError
-    :: (Show e, Eq e)
-    => GetPE (Counter s) e a        -- ^ Parser to test.
+    :: (Streamable s, Show e, Eq e)
+    -- | Parser to test.
+    => Get (Counter s) (ParseError (Counter s) e) a
     -> s                            -- ^ Initial input, usually @'String'@.
     -> e                            -- ^ Error tag.
     -> PositionOf (Counter s)       -- ^ Position of stream in thrown error.
@@ -65,8 +65,9 @@ testGetError p input err position = extractError result `shouldBe` Just (err, po
 
 {- | Test parser @Fail@ errors by testing error equality via @'shouldBe'@. -}
 testGetFail
-    :: (Show e, Eq e)
-    => GetPE (Counter s) e a        -- ^ Parser to test.
+    :: (Streamable s, Show e, Eq e)
+    -- | Parser to test.
+    => Get (Counter s) (ParseError (Counter s) e) a
     -> s                            -- ^ Parser input
     -> Expectation
 testGetFail p input = extractError result `shouldBe` Nothing

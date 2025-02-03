@@ -15,7 +15,7 @@ import Trisagion.Getters.ParseError
 import qualified Trisagion.Getters.ParseError as Getters (until)
 
 -- Base.
-import Data.Bifunctor (Bifunctor(..))
+import Data.Bifunctor (Bifunctor (..))
 
 -- Package.
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), one, matchElem)
