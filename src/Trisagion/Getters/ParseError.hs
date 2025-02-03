@@ -64,7 +64,7 @@ p = do
     x <- p -- ^ Can throw here.
 @
 
-Can be re-written as:
+Can now be re-written as:
 
 @
 p = onParseError e q

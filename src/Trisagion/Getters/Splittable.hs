@@ -30,10 +30,10 @@ import Control.Monad.State (MonadState (..), gets)
 import Data.MonoTraversable (MonoFoldable (..), Element)
 
 -- Package.
-import Trisagion.Typeclasses.HasPosition (HasPosition)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Get (Get, skip, eval)
-import Trisagion.Getters.ParseError (GetPE, ValidationError (..), validate, throwParseErrorWithStream)
+import Trisagion.Getters.ParseError (ValidationError (..), validate, throwParseError)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
 
@@ -43,17 +43,16 @@ Any unconsumed input in the prefix is silently discarded. If such behavior is un
 parser to run with an appropriate check -- see 'Trisagion.Getters.ParseError.guardWith'.
 -}
 isolateWith
-    :: HasPosition s
-    => (s -> Maybe (s, s))          -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
+    :: (s -> Maybe (s, s))          -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
     -> Get s e a                    -- ^ Parser to run.
-    -> GetPE s (Either InputError e) a
+    -> Get s (ParseError s (Either InputError e)) a
 isolateWith h p = do
     xs <- get
     case h xs of
-        Nothing               -> absurd <$> throwParseErrorWithStream xs (Left InsufficientInputError)
+        Nothing               -> absurd <$> throwParseError xs (Left InsufficientInputError)
         Just (prefix, suffix) ->
             case eval p prefix of
-                Left e -> absurd <$> throwParseErrorWithStream prefix (Right e)
+                Left e -> absurd <$> throwParseError prefix (Right e)
                 Right x -> put suffix $> x
 
 
@@ -88,8 +87,8 @@ note(s):
 -}
 {-# INLINE takeExact #-}
 takeExact
-    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
-    => Word -> GetPE s InputError (PrefixOf s)
+    :: (Splittable s, MonoFoldable (PrefixOf s))
+    => Word -> Get s (ParseError s InputError) (PrefixOf s)
 takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takePrefix n)
     where
         v prefix =
@@ -106,8 +105,8 @@ note(s):
 -}
 {-# INLINE match #-}
 match
-    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
-    => PrefixOf s -> GetPE s (Either InputError (MatchError (PrefixOf s))) (PrefixOf s)
+    :: (Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
+    => PrefixOf s -> Get s (ParseError s (Either InputError (MatchError (PrefixOf s)))) (PrefixOf s)
 match xs = validate v (takeExact (fromIntegral $ olength xs))
     where
         v prefix =
@@ -130,8 +129,8 @@ dropWith = skip . takeWith
 {- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
 {-# INLINE atLeastOneWith #-}
 atLeastOneWith
-    :: (HasPosition s, Splittable s, MonoFoldable (PrefixOf s))
-    => (Element s -> Bool) -> GetPE s (Either InputError ValidationError) (PrefixOf s)
+    :: (Splittable s, MonoFoldable (PrefixOf s))
+    => (Element s -> Bool) -> Get s (ParseError s (Either InputError ValidationError)) (PrefixOf s)
 atLeastOneWith p = do
     s <- get
     xs <- first absurd $ takeWith p
@@ -141,5 +140,5 @@ atLeastOneWith p = do
             b <- gets onull
             -- Either not enough input or malformed one.
             if b
-                then absurd <$> throwParseErrorWithStream s (Left InsufficientInputError)
-                else absurd <$> throwParseErrorWithStream s (Right ValidationError)
+                then absurd <$> throwParseError s (Left InsufficientInputError)
+                else absurd <$> throwParseError s (Right ValidationError)
