@@ -10,6 +10,7 @@ module Trisagion.Getters.ParseError (
 
     -- * Handling t'ParseError'.
     throwParseError,
+    withPosition,
     onParseError,
     validate,
 
@@ -36,6 +37,7 @@ import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace, makeParseError, initial)
+import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Get (Get, handleError, lookAhead, many)
 
 
@@ -87,6 +89,14 @@ onParseError e p = do
     handleError
         p
         (\ b -> throwError $ makeParseError b s e)
+
+{- | For streamables with a notion of position, capture the position instead of the stream itself. -}
+{-# INLINE withPosition #-}
+withPosition
+    :: HasPosition s
+    => Get s (ParseError s e) a     -- ^ Parser to run.
+    -> Get s (ParseError (PositionOf s) e) a
+withPosition = first (first getPosition)
 
 {- | Run the parser and return the result, validating it. -}
 {-# INLINE validate #-}
