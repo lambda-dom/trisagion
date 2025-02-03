@@ -65,7 +65,7 @@ library
         Trisagion.Types.ParseError
         Trisagion.Types.Result
         Trisagion.Get
-        -- Trisagion.Getters.ParseError
+        Trisagion.Getters.ParseError
         -- Trisagion.Getters.Streamable
         -- Trisagion.Getters.Splittable
         -- Trisagion.Getters.Word8

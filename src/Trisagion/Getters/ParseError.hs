@@ -10,7 +10,6 @@ module Trisagion.Getters.ParseError (
 
     -- * Handling t'ParseError'.
     throwParseError,
-    throwParseErrorCurrent,
     onParseError,
     validate,
 
@@ -40,10 +39,6 @@ import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace, makePa
 import Trisagion.Get (Get, handleError, lookAhead, many)
 
 
-{- | Type alias for the @'Get' s ('ParseError' ('PositionOf' s) e) a@ parser monad. -}
--- type GetPE s e a = Get s (ParseError (PositionOf s) e) a
-
-
 {- | The @ValidationError@ error type.
 
 Error raised on failed validations against a predicate.
@@ -59,33 +54,22 @@ The backtrace is a @'Nothing'@ of type @'Maybe' ('ParseError' s 'Void')@.
 throwParseError :: s -> e -> Get s (ParseError s e) Void
 throwParseError s = throwError . makeParseErrorNoBacktrace s
 
-{- | Parser that throws @t'ParseError' ('PositionOf' s) e@ with specified error tag.
-
-The state component is the current parser state and the backtrace is a @'Nothing'@ of type
-@'Maybe' ('ParseError' s 'Void')@.
--}
-{-# INLINE throwParseError #-}
-throwParseErrorCurrent :: e -> Get s (ParseError s e) Void
-throwParseErrorCurrent e = do
-    s <- get
-    throwParseError s e
-
 {- | Parser that swallows a thrown error as a backtrace for a new error.
 
 Combinator is useful to add contextual information, e. g. with a parser like:
 
 @
-aParser = do
+p = do
     ...
     x <- p -- ^ Can throw here.
 @
 
-Re-written as:
+Can be re-written as:
 
 @
-aParser = onParseError e q
+p = onParseError e q
     where
-        -- If q errors with b, capture the stream position and throw e with b as backtrace.
+        -- If q errors with b, capture the stream and throw e with b as backtrace.
         q = do
             ...
             x <- p -- ^ Can throw here.
@@ -154,7 +138,8 @@ guardWith
     -> Get s (ParseError s (Either ValidationError e)) a
 guardWith p cond = do
     x <- first (fmap Right) p
+    s <- get
     b <- first absurd $ cond x
     if b
         then pure x
-        else absurd <$> throwParseErrorCurrent (Left ValidationError)
+        else absurd <$> throwParseError s (Left ValidationError)
