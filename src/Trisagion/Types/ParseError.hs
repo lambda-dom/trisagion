@@ -59,8 +59,8 @@ instance Functor (ParseError s) where
 
 {- | The 'Bifunctor' instance.
 
-A typical use case, is for streams with a notion of position (see 'Trisagion.Typeclasses.HasPosition.HasPosition'),
-capure the position of the stream, instead of the stream itself:
+A typical use case is, for streams with a notion of position (see 'Trisagion.Typeclasses.HasPosition.HasPosition'),
+to capture the position of the stream instead of the stream itself:
 
 @
 capture :: 'ParseError' s e -> 'ParseError' (PositionOf s) e
@@ -131,7 +131,7 @@ getTag (ParseError _ _ e) = Just e
 getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
 getBacktrace f = go
     where
-        go :: ParseError s d -> [a]
+        go :: ParseError s c -> [a]
         go Fail               = []
         go (ParseError r s e) = f s e : maybe [] go r
 
