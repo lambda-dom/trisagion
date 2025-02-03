@@ -139,7 +139,11 @@ getBacktrace f = go
 
 {- | Case analysis elimination function for the t'ParseError' type. -}
 {-# INLINE withParseError #-}
-withParseError :: b -> (forall d . Maybe (ParseError s d) -> s -> e -> b) -> ParseError s e -> b
+withParseError
+    :: a
+    -> (forall d . Maybe (ParseError s d) -> s -> e -> a)
+    -> ParseError s e
+    -> a
 withParseError x _ Fail               = x
 withParseError _ f (ParseError b s e) = f b s e
 
