@@ -11,30 +11,21 @@ module Trisagion.Types.ParseError (
     -- ** Constructors.
     makeParseError,
     makeParseErrorNoBacktrace,
-    makeParseErrorWithStream,
 
     -- ** Prisms.
     getState,
     getTag,
     getBacktrace,
 
-    -- ** Elimination functions.
-    withParseError,
+    -- * Elimination functions.
     initial,
-
-    -- ** Generalized mapping.
-    mapWith,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Data (Typeable, (:~:) (Refl), eqT)
-
--- Libraries.
+import Data.Bifunctor (Bifunctor (..))
+import Data.Data (Typeable, type (:~:) (..), eqT)
 import Data.Void (Void)
-
--- Package.
-import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 
 
 {- | The @ParseError s e@ error type. -}
@@ -48,9 +39,9 @@ data ParseError s e where
         -> !e                       -- ^ Error tag.
         -> ParseError s e
 
+
 -- Instances.
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
-
 instance (Eq s, Eq e) => Eq (ParseError s e) where
     (==) :: ParseError s e -> ParseError s e -> Bool
     (==) (ParseError (b :: Maybe (ParseError s d)) s e) (ParseError (b' :: Maybe (ParseError s d')) s' e') =
@@ -63,7 +54,28 @@ instance (Eq s, Eq e) => Eq (ParseError s e) where
 instance Functor (ParseError s) where
     {-# INLINE fmap #-}
     fmap :: (d -> e) -> ParseError s d -> ParseError s e
-    fmap = mapWith id id
+    fmap _ Fail                 = Fail
+    fmap f (ParseError b s err) = ParseError b s (f err)
+
+{- | The 'Bifunctor' instance.
+
+A typical use case, is for streams with a notion of position (see 'Trisagion.Typeclasses.HasPosition.HasPosition'),
+capure the position of the stream, instead of the stream itself:
+
+@
+capture :: 'ParseError' s e -> 'ParseError' (PositionOf s) e
+capture = first getPosition
+@
+-}
+instance Bifunctor ParseError where
+    {-# INLINE bimap #-}
+    bimap :: forall s t d e . (s -> t) -> (d -> e) -> ParseError s d -> ParseError t e
+    bimap _ _ Fail               = Fail
+    bimap f g (ParseError b s e) = ParseError (go <$> b) (f s) (g e)
+        where
+            go :: ParseError s c -> ParseError t c
+            go Fail                      = Fail
+            go (ParseError bt state err) = ParseError (go <$> bt) (f state) err
 
 instance Semigroup (ParseError s e) where
     {-# INLINE (<>) #-}
@@ -77,79 +89,56 @@ instance Monoid (ParseError s e) where
     mempty = Fail
 
 
-{- | Constructor helper to create a t'ParseError' capturing the position of the stream. -}
+{- | Constructor helper to create t'ParseError' values. -}
 {-# INLINE makeParseError #-}
 makeParseError
-    :: (HasPosition s, Show d, Eq d, Typeable d)
-    => ParseError (PositionOf s) d
-    -> s
-    -> e
-    -> ParseError (PositionOf s) e
-makeParseError b s = ParseError (Just b) (getPosition s)
+    :: (Typeable d, Eq d, Show d)
+    => ParseError s d               -- ^ Backtrace.
+    -> s                            -- ^ State component.
+    -> e                            -- ^ Error tag.
+    -> ParseError s e
+makeParseError b = ParseError (Just b)
 
-{- | Constructor helper to create a t'ParseError' capturing the position of the stream and with no backtrace. -}
+{- | Constructor helper to create a t'ParseError' capturing the stream and with no backtrace.
+
+note(s):
+
+    * The backtrace is a @'Nothing'@ of type @'Maybe' (t'ParseError' s 'Void')@.
+-}
 {-# INLINE makeParseErrorNoBacktrace #-}
 makeParseErrorNoBacktrace
-    :: forall s e . (HasPosition s)
-    => s
-    -> e
-    -> ParseError (PositionOf s) e
-makeParseErrorNoBacktrace s =
-    let b = Nothing :: Maybe (ParseError (PositionOf s) Void) in
-        ParseError b (getPosition s)
-
-{- | Constructor helper to create t'ParseError' values with no backtrace and specified stream (position). -}
-{-# INLINE makeParseErrorWithStream #-}
-makeParseErrorWithStream
-    :: s
-    -> e
+    :: s                            -- ^ State component.
+    -> e                            -- ^ Error tag.
     -> ParseError s e
-makeParseErrorWithStream pos =
+makeParseErrorNoBacktrace =
     let b = Nothing :: Maybe (ParseError s Void) in
-        ParseError b pos
+        ParseError b
 
 
-{- | Getter for the error state component. -}
+{- | Getter for the state component. -}
 {-# INLINE getState #-}
 getState :: ParseError s e -> Maybe s
-getState = withParseError Nothing (\ _ s _ -> Just s)
+getState Fail               = Nothing
+getState (ParseError _ s _) = Just s
 
 {- | Getter for the error tag. -}
 {-# INLINE getTag #-}
 getTag :: ParseError s e -> Maybe e
-getTag = withParseError Nothing (\ _ _ e -> Just e)
+getTag Fail               = Nothing
+getTag (ParseError _ _ e) = Just e
 
 {- | Getter for the backtrace of an error as an elimination function. -}
-getBacktrace :: (forall d . s -> d -> a) -> ParseError s e -> [a]
-getBacktrace _ Fail               = []
-getBacktrace f (ParseError r s e) = f s e : maybe [] (getBacktrace f) r
+getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
+getBacktrace f = go
+    where
+        go :: ParseError s d -> [a]
+        go Fail               = []
+        go (ParseError r s e) = f s e : maybe [] go r
 
-
-{- | Case analysis elimination function for the t'ParseError' type. -}
-{-# INLINE withParseError #-}
-withParseError
-    :: a
-    -> (forall d . Maybe (ParseError s d) -> s -> e -> a)
-    -> ParseError s e
-    -> a
-withParseError _ f (ParseError b s e) = f b s e
-withParseError x _ Fail               = x
 
 {- | The universal property of the initial monoid @t'ParseError' s 'Void'@. -}
 {-# INLINE initial #-}
-initial :: Monoid e => ParseError s Void -> e
+initial :: Monoid m => ParseError s Void -> m
 initial e =
     case e of
         Fail -> mempty
-
-
-{- | Generalized @'fmap'@ to provide monofunctoriality over the state and the backtrace. -}
-{-# INLINE mapWith #-}
-mapWith
-    :: (forall c . ParseError s c -> ParseError s c)    -- ^ Map over the backtrace.
-    -> (s -> s)                                         -- ^ Map over the state.
-    -> (d -> e)                                         -- ^ Map over the error tag.
-    -> ParseError s d
-    -> ParseError s e
-mapWith h g f (ParseError b s e) = ParseError (h <$> b) (g s) (f e)
-mapWith _ _ _ Fail               = Fail
