@@ -31,7 +31,6 @@ import Data.MonoTraversable (MonoFoldable (..), Element)
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Get (Get, lookAhead)
 import Trisagion.Getters.ParseError (ValidationError (..), throwParseError, validate)
 
@@ -62,7 +61,7 @@ eoi = gets onull
 {- | Parse the first @'Element' s@ from the streamable. -}
 {-# INLINE one #-}
 one
-    :: HasPosition s
+    :: Streamable s
     => Get s (ParseError s InputError) (Element s)
 one = do
     xs <- get
@@ -73,14 +72,14 @@ one = do
 {- | Extract the first @'Element' s@ from the streamable but without consuming input. -}
 {-# INLINE peek #-}
 peek
-    :: HasPosition s
+    :: Streamable s
     => Get s Void (Either (ParseError s InputError) (Element s))
 peek = lookAhead one
 
 {- | Parse one @'Element' s@ satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
-    :: HasPosition s
+    :: Streamable s
     => (Element s -> Bool)          -- ^ @'Element' s@ predicate.
     -> Get s (ParseError s (Either InputError ValidationError)) (Element s)
 satisfy p = validate v one
@@ -90,7 +89,7 @@ satisfy p = validate v one
 {- | Parse one matching @'Element' s@. -}
 {-# INLINE matchElem #-}
 matchElem
-    :: (HasPosition s, Eq (Element s))
+    :: (Streamable s, Eq (Element s))
     => Element s                    -- ^ Matching @'Element' s@.
     -> Get s (ParseError s (Either InputError (MatchError (Element s)))) (Element s)
 matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
@@ -98,7 +97,7 @@ matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
 {- | Parse one @'Element' s@ that is an element of the foldable. -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (HasPosition s, Eq (Element s), Foldable t)
+    :: (Streamable s, Eq (Element s), Foldable t)
     => t (Element s)                -- ^ Foldable of @'Element' s@ against which to test inclusion.
     -> Get s (ParseError s (Either InputError (MatchError (t (Element s))))) (Element s)
 oneOf xs = first (fmap (fmap (const $ MatchError xs))) $ satisfy (`elem` xs)
