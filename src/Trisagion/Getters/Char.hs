@@ -23,7 +23,7 @@ module Trisagion.Getters.Char (
     signed,
 
     -- * Other lexemes.
-    lineComment,
+    comment,
 ) where
 
 -- Imports.
@@ -137,11 +137,12 @@ note(s):
     @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
     solution) or complicating and downgrading the implementation significantly.
 -}
-{-# INLINE lineComment #-}
-lineComment
+{-# INLINE comment #-}
+comment
     :: (Splittable s, Element s ~ Char)
-    => Get s (ParseError s e) (PrefixOf s)  -- ^ Parser for beginning comment.
+    -- | Parser for beginning comment prefix.
+    => Get s (ParseError s e) (PrefixOf s)  
     -> Get s (ParseError s e) (PrefixOf s)
-lineComment p = do
+comment p = do
     _ <- p
     first absurd $ takeWith (/= '\n') <* Getters.maybe cr
