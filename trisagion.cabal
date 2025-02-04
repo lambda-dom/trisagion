@@ -30,6 +30,7 @@ common common-fields
     build-depends:
         -- GHC 9.6
         base >=4.18 && <4.19,
+        mtl >=2.3 && <2.4,
     ghc-options:
         -Wall
         -Wcompat
@@ -48,7 +49,6 @@ library
     hs-source-dirs:
         src
     build-depends:
-        mtl >=2.3 && <2.4,
         mono-traversable >=1.0 && <1.1,
         bytestring >=0.11 && <0.13,
         text >=2.0 && <2.2,
