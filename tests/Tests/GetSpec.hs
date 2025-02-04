@@ -52,13 +52,13 @@ spec = describe "Trisagion.Get tests" $ do
 -- Tests.
 spec_alternative :: Spec
 spec_alternative = describe "Alternative tests" $ do
-    it "empty case" $ do
+    it "Empty case" $ do
         let p = empty :: Get s (ParseError s Void) Void
         testGetFail
             p
             ""
 
-    it "left identity" $ do
+    it "Left identity" $ do
         let
             q :: Get s (ParseError s ()) Void
             q = do
