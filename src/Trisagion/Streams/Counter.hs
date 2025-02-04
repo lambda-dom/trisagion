@@ -27,7 +27,11 @@ import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
-{- | Wrapper around a 'Streamable' adding an offset to track current position. -}
+{- | Wrapper around a 'Streamable' adding an offset to track current position.
+
+The implementation initializes the counter to @0@ and then updates it on every 'Splittable' operation
+by computing the length of the prefix.
+-}
 data Counter s = Counter !Word !s
     deriving stock (Eq, Show)
 

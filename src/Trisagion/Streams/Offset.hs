@@ -27,9 +27,9 @@ import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position.
 
-note(s):
-
-    * Requires efficient implementation of 'olength'; e. g. streamables like @Text@ are not appropriate.
+The implementation initializes the offset to the length of the streamable and on each call to @getPosition@
+takes the difference. This not only requires efficient implementation of 'olength', but can force all
+the streamable into memory.
 -}
 data Offset s = Offset !Word !s
     deriving stock (Eq, Show)
