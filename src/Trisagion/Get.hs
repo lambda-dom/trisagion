@@ -14,6 +14,19 @@ module Trisagion.Get (
     eval,
     exec,
 
+    -- * Re-exported names.
+    -- ** Alternative parsers.
+    empty,
+    (<|>),
+
+    -- ** State parsers.
+    get,
+    put,
+
+    -- ** Error parsers.
+    throwError,
+    catchError,
+
     -- * Parser combinators.
     -- ** Error parsers.
     handleError,

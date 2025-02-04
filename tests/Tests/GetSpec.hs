@@ -18,13 +18,9 @@ import Trisagion.Get
 import qualified Trisagion.Get as Get (maybe, zip, zipWith, either, sequence, repeat)
 
 -- Base.
-import Control.Applicative (Alternative ((<|>), empty))
 import Data.Bifunctor (Bifunctor(..))
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Void (Void)
-
--- Libraries.
-import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace)
