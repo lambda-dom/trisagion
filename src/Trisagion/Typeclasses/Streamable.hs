@@ -5,7 +5,9 @@ The @Streamable@ typeclass.
 -}
 
 module Trisagion.Typeclasses.Streamable (
-    -- * Typeclasses.
+    -- * The 'Streamable' typeclass.
+    -- 
+    -- $streamable
     Streamable (..),
 ) where
 
@@ -27,6 +29,44 @@ import qualified Data.Vector as Vector (uncons)
 
 -- Packages.
 import qualified Trisagion.Lib.NonEmpty as NonEmpty (uncons)
+
+
+-- $streamable
+--
+-- To describe the three laws for the 'Streamable' typeclass, we start with a definition.
+--
+-- __Definition__: Let @s@ and @t@ be two monofunctors with @'Element' s ~ 'Element' t ~ a@. A
+-- function @h :: s -> t@ is /natural/ if for every @f :: a -> a@ we have the equality
+--
+-- @
+--   omap f . h = h . omap f
+-- @
+--
+-- Since @s@ is not polymorphic we do not have free theorems to rely on, so naturality must be
+-- explicitly required:
+--
+-- __Naturality__: The map @'getOne' :: s -> 'Maybe' ('Element' s, s)@ is natural.
+--
+-- In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('Element' s, s)@ is:
+--
+-- @
+--   omap :: ('Element' s -> 'Element' s) -> 'Maybe' ('Element' s, s) -> 'Maybe' ('Element' s, s)
+--   omap f = fmap (bimap f (omap f))
+-- @
+-- 
+-- Given the function @'getOne' :: s -> 'Maybe' ('Element' s, s)@ we can define the function
+-- @s -> [Element s]@ by @'Data.List.unfoldr' 'getOne'@. This justifies the 'MonoFoldable' constraint,
+-- and becomes the second law:
+--
+-- __Foldability__:
+--
+-- prop> otoList = unfoldr getOne
+--
+-- Finally, the third law says that 'getOne' /really/ is uncons-ing.
+--
+-- __Unconsing__:
+--
+-- prop> otoList = maybe [] (\ (x, xs) -> x : otoList xs) . getOne
 
 
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
