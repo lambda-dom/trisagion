@@ -5,7 +5,9 @@ The @Splittable@ typeclass.
 -}
 
 module Trisagion.Typeclasses.Splittable (
-    -- * Typeclasses.
+    -- * The 'Splittable' typeclass.
+    --
+    -- $splittable
     Splittable (..),
 ) where
 
@@ -29,6 +31,54 @@ import qualified Data.Vector as Vector (span, splitAt, empty)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 
 
+-- $splittable
+--
+-- Mirroring the laws for the 'Streamable' typeclass, the first law is:
+--
+-- __Naturality__: both 'getAt' and 'getWith' are natural.
+--
+-- For the second law, let @(prefix, suffix)@ be @'getAt' n xs@ for arbitrary @n@ and @xs@. Since
+-- @s@ is a @MonoFoldable@ both @xs@ and @suffix@ can be converted to lists. Given that, as per the
+-- name, @suffix@ is supposed to be a suffix of @xs@ there is a unique list @l@ such that:
+--
+-- @
+--   otoList xs = l ++ otoList suffix
+-- @
+--
+-- It follows that @l@ is equal to:
+--
+-- @
+--   l = take (olength xs - olength suffix) (otoList xs)
+-- @
+--
+-- Therefore, assuming the constraints,
+--
+-- @
+--   MonoFunctor (PrefixOf s), Element (PrefixOf s) ~ Element s, MonoFoldable (PrefixOf s)
+-- @
+--
+-- which are satisfied by all instances of @'PrefixOf' s@ defined in the library as following from
+-- the constraint @PrefixOf s ~ s@, the second typeclass law can be expressed as:
+--
+-- __Prefix__:
+--
+-- prop> otoList = uncurry (++) . bimap otoList otoList . getAt n
+-- prop> otoList = uncurry (++) . bimap otoList otoList . getWith p
+--
+-- The third set of laws simply says that 'getAt' is 'take' on lists and 'getWith', 'takeWhile':
+--
+-- __Foldability__:
+--
+-- prop> otoList . getAt n = take n . otoList
+-- prop> otoList . getWith p = takeWhile p . otoList
+--
+-- The fourth and final law is a compatibility condition between 'getOne' and 'getAt':
+--
+-- __Compatibility__:
+--
+-- prop> maybe [] singleton . getOne = otoList . getAt 1
+
+
 {- | The @Splittable@ typeclass of monomorphic splittable functors. -}
 class Streamable s => Splittable s where
     {-# MINIMAL getAt, getWith #-}
@@ -44,7 +94,15 @@ class Streamable s => Splittable s where
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     getWith :: (Element s -> Bool) -> s -> (PrefixOf s, s)
 
-    {- | Get the remainder of the stream as a prefix. -}
+    {- | Get the remainder of the stream as a prefix.
+
+    By default, this is defined by @'getWith' ('const' 'True')@.
+
+    note(s):
+
+    * The existence of this function implies (but is stronger than) the existence of a conversion
+    function @s -> 'PrefixOf' s@.
+    -}
     getRemainder :: s -> (PrefixOf s, s)
     getRemainder = getWith (const True)
 

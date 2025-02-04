@@ -45,7 +45,7 @@ import qualified Trisagion.Lib.NonEmpty as NonEmpty (uncons)
 -- Since @s@ is not polymorphic we do not have free theorems to rely on, so naturality must be
 -- explicitly required:
 --
--- __Naturality__: The map @'getOne' :: s -> 'Maybe' ('Element' s, s)@ is natural.
+-- __Naturality__: The function @'getOne' :: s -> 'Maybe' ('Element' s, s)@ is natural.
 --
 -- In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('Element' s, s)@ is:
 --
