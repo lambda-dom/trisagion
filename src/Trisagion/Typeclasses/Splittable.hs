@@ -17,7 +17,6 @@ import Data.Kind (Type)
 import Data.Word (Word8)
 
 -- Libraries.
-import Data.MonoTraversable (Element)
 import Data.Sequence (Seq)
 import Data.Vector (Vector)
 import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty)
@@ -28,7 +27,7 @@ import qualified Data.Sequence as Seq (spanl, splitAt, empty)
 import qualified Data.Vector as Vector (span, splitAt, empty)
 
 -- Package.
-import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.Streamable (ElementOf, Streamable (..))
 
 
 -- $splittable
@@ -54,7 +53,7 @@ import Trisagion.Typeclasses.Streamable (Streamable (..))
 -- Therefore, assuming the constraints,
 --
 -- @
---   MonoFunctor (PrefixOf s), Element (PrefixOf s) ~ Element s, MonoFoldable (PrefixOf s)
+--   MonoFunctor (PrefixOf s), 'ElementOf' (PrefixOf s) ~ 'ElementOf' s, MonoFoldable (PrefixOf s)
 -- @
 --
 -- which are satisfied by all instances of @'PrefixOf' s@ defined in the library as following from
@@ -92,7 +91,7 @@ class Streamable s => Splittable s where
     {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
     
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
-    getWith :: (Element s -> Bool) -> s -> (PrefixOf s, s)
+    getWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 
     {- | Get the remainder of the stream as a prefix.
 

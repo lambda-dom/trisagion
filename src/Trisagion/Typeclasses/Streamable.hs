@@ -5,6 +5,10 @@ The @Streamable@ typeclass.
 -}
 
 module Trisagion.Typeclasses.Streamable (
+    -- * Re-exports.
+    -- ** 'MonoFunctor' re-exports.
+    ElementOf,
+
     -- * The 'Streamable' typeclass.
     -- 
     -- $streamable
@@ -29,6 +33,10 @@ import qualified Data.Vector as Vector (uncons)
 
 -- Packages.
 import qualified Trisagion.Lib.NonEmpty as NonEmpty (uncons)
+
+
+{- | A type alias for @'Element' s@.-}
+type ElementOf s = Element s
 
 
 -- $streamable
@@ -74,7 +82,7 @@ class (MonoFunctor s, MonoFoldable s) => Streamable s where
     {-# MINIMAL getOne #-}
 
     {- | Get, or uncons, the first element of the streamable. -}
-    getOne :: s -> Maybe (Element s, s)
+    getOne :: s -> Maybe (ElementOf s, s)
 
 
 -- Instances.
