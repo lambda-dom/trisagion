@@ -38,7 +38,7 @@ import Trisagion.Typeclasses.Streamable (ElementOf, Streamable (..))
 --
 -- For the second law, let @(prefix, suffix)@ be @'getAt' n xs@ for arbitrary @n@ and @xs@. Since
 -- @s@ is a @MonoFoldable@ both @xs@ and @suffix@ can be converted to lists. Given that, as per the
--- name, @suffix@ is supposed to be a suffix of @xs@ there is a unique list @l@ such that:
+-- name, @suffix@ is supposed to be a suffix of @xs@ there should be a unique list @l@ such that:
 --
 -- @
 --   otoList xs = l ++ otoList suffix
@@ -57,21 +57,15 @@ import Trisagion.Typeclasses.Streamable (ElementOf, Streamable (..))
 -- @
 --
 -- which are satisfied by all instances of @'PrefixOf' s@ defined in the library as following from
--- the constraint @PrefixOf s ~ s@, the second typeclass law can be expressed as:
+-- the constraint @PrefixOf s ~ s@, the second typeclass law just says that at the level of lists
+-- 'getAt' is 'Data.List.splitAt' and 'getWith', 'Data.List.span' .
 --
--- __Prefix__:
+-- __List identities__:
 --
--- prop> otoList = uncurry (++) . bimap otoList otoList . getAt n
--- prop> otoList = uncurry (++) . bimap otoList otoList . getWith p
+-- prop> bimap otoList otoList . getAt n = splitAt n . otoList
+-- prop> bimap otoList otoList . getWith p = span p . otoList
 --
--- The third set of laws simply says that 'getAt' is 'take' on lists and 'getWith', 'takeWhile':
---
--- __Foldability__:
---
--- prop> otoList . getAt n = take n . otoList
--- prop> otoList . getWith p = takeWhile p . otoList
---
--- The fourth and final law is a compatibility condition between 'getOne' and 'getAt':
+-- The third and final law is a compatibility condition between 'getOne' and 'getAt':
 --
 -- __Compatibility__:
 --

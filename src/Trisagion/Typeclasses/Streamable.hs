@@ -63,8 +63,8 @@ type ElementOf s = Element s
 -- @
 -- 
 -- Given the function @'getOne' :: s -> 'Maybe' ('Element' s, s)@ we can define the function
--- @s -> [Element s]@ by @'Data.List.unfoldr' 'getOne'@. This justifies the 'MonoFoldable' constraint,
--- and becomes the second law:
+-- @s -> [Element s]@ by @'Data.List.unfoldr' 'getOne'@. This justifies the @'MonoFoldable' s@
+-- constraint and becomes the second law:
 --
 -- __Foldability__:
 --
