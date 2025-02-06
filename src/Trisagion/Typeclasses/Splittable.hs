@@ -34,11 +34,15 @@ import Trisagion.Typeclasses.Streamable (ElementOf, Streamable (..))
 --
 -- Mirroring the laws for the 'Streamable' typeclass, the first law is:
 --
--- __Naturality__: both 'getAt' and 'getWith' are natural.
+-- __Naturality__: For every @n@ and every @p@, both '@getAt' n@ and @'getWith' p@ are natural.
 --
+-- The first law implicitly assumes the constraint @MonoFunctor (PrefixOf s)@ with
+-- @ElementOf (PrefixOf s) ~ ElementOf s@, which is verified in all practical cases.
+-- 
 -- For the second law, let @(prefix, suffix)@ be @'getAt' n xs@ for arbitrary @n@ and @xs@. Since
--- @s@ is a @MonoFoldable@ both @xs@ and @suffix@ can be converted to lists. Given that, as per the
--- name, @suffix@ is supposed to be a suffix of @xs@ there should be a unique list @l@ such that:
+-- @xs@ is a @MonoFoldable@ both @xs@ and @suffix@ can be converted to lists. Given that, and since
+-- as per the name @suffix@ is supposed to be a suffix of @xs@, there should be a unique list @l@
+-- such that:
 --
 -- @
 --   otoList xs = l ++ otoList suffix
@@ -50,15 +54,16 @@ import Trisagion.Typeclasses.Streamable (ElementOf, Streamable (..))
 --   l = take (olength xs - olength suffix) (otoList xs)
 -- @
 --
--- Therefore, assuming the constraints,
+-- so it is not much of a stretch to assume that prefixes can be converted to lists. Therefore,
+-- assuming the constraints,
 --
 -- @
 --   MonoFunctor (PrefixOf s), 'ElementOf' (PrefixOf s) ~ 'ElementOf' s, MonoFoldable (PrefixOf s)
 -- @
 --
--- which are satisfied by all instances of @'PrefixOf' s@ defined in the library as following from
--- the constraint @PrefixOf s ~ s@, the second typeclass law just says that at the level of lists
--- 'getAt' is 'Data.List.splitAt' and 'getWith', 'Data.List.span' .
+-- which are satisfied by all instances of @'PrefixOf' s@ defined in the library, the second
+-- typeclass law just says that at the level of lists 'getAt' is 'Data.List.splitAt' and 'getWith',
+-- 'Data.List.span' .
 --
 -- __List identities__:
 --

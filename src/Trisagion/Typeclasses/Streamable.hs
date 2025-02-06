@@ -43,7 +43,7 @@ type ElementOf s = Element s
 --
 -- To describe the three laws for the 'Streamable' typeclass, we start with a definition.
 --
--- __Definition__: Let @s@ and @t@ be two monofunctors with @'Element' s ~ 'Element' t ~ a@. A
+-- __Definition__: Let @s@ and @t@ be two monofunctors with @a ~ 'Element' s ~ 'Element' t@. A
 -- function @h :: s -> t@ is /natural/ if for every @f :: a -> a@ we have the equality
 --
 -- @
@@ -62,15 +62,15 @@ type ElementOf s = Element s
 --   omap f = fmap (bimap f (omap f))
 -- @
 -- 
--- Given the function @'getOne' :: s -> 'Maybe' ('Element' s, s)@ we can define the function
--- @s -> [Element s]@ by @'Data.List.unfoldr' 'getOne'@. This justifies the @'MonoFoldable' s@
--- constraint and becomes the second law:
+-- Given the function @'getOne' :: s -> 'Maybe' ('Element' s, s)@ we can define @s -> [Element s]@
+-- by @'Data.List.unfoldr' 'getOne'@. This justifies the @'MonoFoldable' s@ constraint and becomes
+-- the second law:
 --
 -- __Foldability__:
 --
 -- prop> otoList = unfoldr getOne
 --
--- Finally, the third law says that 'getOne' /really/ is uncons-ing.
+-- Finally, the third law says that 'getOne' really is uncons-ing.
 --
 -- __Unconsing__:
 --
