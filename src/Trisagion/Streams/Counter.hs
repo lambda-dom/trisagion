@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 {- |
 Module: Trisagion.Streams.Counter
 
@@ -25,7 +27,11 @@ import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
-{- | Wrapper around a 'Streamable' adding an offset to track current position. -}
+{- | Wrapper around a 'Streamable' adding an offset to track current position.
+
+The implementation initializes the counter to @0@ and then updates it on every 'Splittable' operation
+by computing the length of the prefix.
+-}
 data Counter s = Counter !Word !s
     deriving stock (Eq, Show)
 
@@ -73,32 +79,28 @@ instance Streamable s => Streamable (Counter s) where
 
 {- | 'Splittable' instance.
 
-Naively, the instance requires computing the length of the prefix, which is @O(n)@ for some types,
-e. g. @Text@. This in its turn, requires the constraint @'MonoFoldable' ('PrefixOf' s)@ which needs
-@UndecidableInstances@. The constraint, and the scary-sounding name extension, can be sidestepped
-by computing the difference between the length of the input and the suffix, which is the route we
-take, but makes performance even worse.
+The instance requires computing the length of the prefix, which is @O(n)@ for some types like @Text@.
+This in its turn, requires a @'MonoFoldable' ('PrefixOf' s)@ constraint and the @UndecidableInstances@
+extension to keep GHC happy.
 -}
-instance Splittable s => Splittable (Counter s) where
+instance (Splittable s, MonoFoldable (PrefixOf s))  => Splittable (Counter s) where
     type PrefixOf (Counter s) = PrefixOf s
 
     {-# INLINE getAt #-}
     getAt :: Word -> Counter s -> (PrefixOf (Counter s), Counter s)
-    getAt n ys@(Counter offset xs) =
+    getAt n (Counter offset xs) =
         let
             (prefix, suffix) = getAt n xs
-            delta = olength ys - olength suffix
         in
-            (prefix, Counter (offset + fromIntegral delta) suffix)
+            (prefix, Counter (offset + fromIntegral (olength prefix)) suffix)
 
     {-# INLINE getWith #-}
     getWith :: (Element (Counter s) -> Bool) -> Counter s -> (PrefixOf (Counter s), Counter s)
-    getWith p ys@(Counter offset xs) =
+    getWith p (Counter offset xs) =
         let
             (prefix, suffix) = getWith p xs
-            delta = olength ys - olength suffix
         in
-            (prefix, Counter (offset + fromIntegral delta) suffix)
+            (prefix, Counter (offset + fromIntegral (olength prefix)) suffix)
 
 
 instance Streamable s => HasPosition (Counter s) where

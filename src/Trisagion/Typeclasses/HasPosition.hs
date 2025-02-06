@@ -24,5 +24,5 @@ class Streamable s => HasPosition s where
     {- | The type of the streamable's position. -}
     type PositionOf s :: Type
 
-    {- | Return the current position of the stream. -}
+    {- | Getter for the current position of the stream. -}
     getPosition :: s -> PositionOf s

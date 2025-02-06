@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Alternative law, left identity" #-}
+
 module Tests.GetSpec (
     -- * Tests.
     spec,
@@ -17,17 +20,19 @@ import qualified Trisagion.Get as Get (maybe, zip, zipWith, either, sequence, re
 -- Base.
 import Data.Bifunctor (Bifunctor(..))
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Void (Void)
 
 -- Package.
-import Trisagion.Types.ParseError (makeParseErrorNoBacktrace)
+import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), matchElem, one, satisfy)
-import Trisagion.Getters.ParseError (ValidationError (..))
+import Trisagion.Getters.ParseError (ValidationError (..), throwParseError)
 import Trisagion.Streams.Counter (initialize)
 
 
 -- Main module test driver.
 spec :: Spec
 spec = describe "Trisagion.Get tests" $ do
+    spec_alternative
     spec_observe
     spec_lookAhead
     spec_maybe
@@ -45,6 +50,26 @@ spec = describe "Trisagion.Get tests" $ do
 
 
 -- Tests.
+spec_alternative :: Spec
+spec_alternative = describe "Alternative tests" $ do
+    it "Empty case" $ do
+        let p = empty :: Get s (ParseError s Void) Void
+        testGetFail
+            p
+            ""
+
+    it "Left identity" $ do
+        let
+            q :: Get s (ParseError s ()) Void
+            q = do
+                s <- get
+                throwParseError s ()
+        testGetError
+            (empty <|> q)
+            ""
+            ()
+            0
+
 spec_observe :: Spec
 spec_observe = describe "observe tests" $ do
     it "Failure case" $ do

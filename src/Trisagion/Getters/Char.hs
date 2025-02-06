@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Getters.Char
 
-Parsers @('Streamable' s, 'Element' s ~ Char) => 'Get' s@.
+Parsers @('Streamable' s, 'ElementOf' s ~ Char) => 'Get' s@.
 -}
 
 module Trisagion.Getters.Char (
@@ -35,11 +35,11 @@ import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Data.MonoTraversable (MonoFoldable (..), Element)
+import Data.MonoTraversable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Streamable (Streamable, ElementOf)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Get (Get)
 import qualified Trisagion.Get as Getters (maybe)
@@ -56,31 +56,31 @@ data Sign = Negative | Positive
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
 lf
-    :: (Streamable s, Element s ~ Char)
+    :: (Streamable s, ElementOf s ~ Char)
     => Get s (ParseError s (Either InputError (MatchError Char))) Char
 lf = matchElem '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr
-    :: (Streamable s, Element s ~ Char)
+    :: (Streamable s, ElementOf s ~ Char)
     => Get s (ParseError s (Either InputError (MatchError Char))) Char
 cr = matchElem '\r'
 
 {- | Parse a, possibly null, prefix of whitespace. -}
 {-# INLINE spaces #-}
-spaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
+spaces :: (Splittable s, ElementOf s ~ Char) => Get s Void (PrefixOf s)
 spaces = takeWith isSpace
 
 {- | Parse a, possibly null, prefix of non-whitespace characters. -}
 {-# INLINE notSpaces #-}
-notSpaces :: (Splittable s, Element s ~ Char) => Get s Void (PrefixOf s)
+notSpaces :: (Splittable s, ElementOf s ~ Char) => Get s Void (PrefixOf s)
 notSpaces = takeWith (not . isSpace)
 
 {- | Parse a number sign. -}
 {-# INLINE sign #-}
 sign
-    :: (Streamable s, Element s ~ Char)
+    :: (Streamable s, ElementOf s ~ Char)
     => Get s (ParseError s (Either InputError ValidationError)) Sign
 sign = validate v one
     where
@@ -92,14 +92,14 @@ sign = validate v one
 {- | Parse a decimal digit. -}
 {-# INLINE digit #-}
 digit
-    :: (Streamable s, Element s ~ Char)
+    :: (Streamable s, ElementOf s ~ Char)
     => Get s (ParseError s (Either InputError ValidationError)) Char
 digit = satisfy isDigit
 
 {- | Parse a positive, integer number in decimal format. -}
 {-# INLINE positive #-}
 positive
-    :: (Splittable s, MonoFoldable (PrefixOf s), Element s ~ Char, Element (PrefixOf s) ~ Char)
+    :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
     => Get s (ParseError s (Either InputError ValidationError)) Word
 positive = do
         digits <- atLeastOneWith isDigit
@@ -115,7 +115,7 @@ positive = do
 {- | Transform a @'Word'@ parser into an @'Int'@-parser for signed numbers. -}
 {-# INLINE signed #-}
 signed
-    :: (Streamable s, Element s ~ Char)
+    :: (Streamable s, ElementOf s ~ Char)
     => Get s (ParseError s (Either InputError ValidationError)) Word
     -> Get s (ParseError s (Either InputError ValidationError)) Int
 signed p = do
@@ -139,7 +139,7 @@ note(s):
 -}
 {-# INLINE comment #-}
 comment
-    :: (Splittable s, Element s ~ Char)
+    :: (Splittable s, ElementOf s ~ Char)
     -- | Parser for beginning comment prefix.
     => Get s (ParseError s e) (PrefixOf s)  
     -> Get s (ParseError s e) (PrefixOf s)

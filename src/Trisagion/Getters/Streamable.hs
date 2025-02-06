@@ -25,13 +25,13 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.State (MonadState (..), gets)
-import Data.MonoTraversable (MonoFoldable (..), Element)
+import Control.Monad.State (gets)
+import Data.MonoTraversable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.Get (Get, lookAhead)
+import Trisagion.Typeclasses.Streamable (Streamable (..), ElementOf)
+import Trisagion.Get (Get, lookAhead, get, put)
 import Trisagion.Getters.ParseError (ValidationError (..), throwParseError, validate)
 
 
@@ -58,46 +58,46 @@ newtype MatchError a = MatchError a
 eoi :: Streamable s => Get s Void Bool
 eoi = gets onull
 
-{- | Parse the first @'Element' s@ from the streamable. -}
+{- | Parse the first @'ElementOf' s@ from the streamable. -}
 {-# INLINE one #-}
 one
     :: Streamable s
-    => Get s (ParseError s InputError) (Element s)
+    => Get s (ParseError s InputError) (ElementOf s)
 one = do
     xs <- get
     case getOne xs of
         Just (y, ys) -> put ys $> y
         Nothing      -> absurd <$> throwParseError xs (InputError 1)
 
-{- | Extract the first @'Element' s@ from the streamable but without consuming input. -}
+{- | Extract the first @'ElementOf' s@ from the streamable but without consuming input. -}
 {-# INLINE peek #-}
 peek
     :: Streamable s
-    => Get s Void (Either (ParseError s InputError) (Element s))
+    => Get s Void (Either (ParseError s InputError) (ElementOf s))
 peek = lookAhead one
 
-{- | Parse one @'Element' s@ satisfying a predicate. -}
+{- | Parse one @'ElementOf' s@ satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
     :: Streamable s
-    => (Element s -> Bool)          -- ^ @'Element' s@ predicate.
-    -> Get s (ParseError s (Either InputError ValidationError)) (Element s)
+    => (ElementOf s -> Bool)          -- ^ @'ElementOf' s@ predicate.
+    -> Get s (ParseError s (Either InputError ValidationError)) (ElementOf s)
 satisfy p = validate v one
     where
         v x = if p x then Right x else Left ValidationError
 
-{- | Parse one matching @'Element' s@. -}
+{- | Parse one matching @'ElementOf' s@. -}
 {-# INLINE matchElem #-}
 matchElem
-    :: (Streamable s, Eq (Element s))
-    => Element s                    -- ^ Matching @'Element' s@.
-    -> Get s (ParseError s (Either InputError (MatchError (Element s)))) (Element s)
+    :: (Streamable s, Eq (ElementOf s))
+    => ElementOf s                    -- ^ Matching @'ElementOf' s@.
+    -> Get s (ParseError s (Either InputError (MatchError (ElementOf s)))) (ElementOf s)
 matchElem x = first (fmap (fmap (const $ MatchError x))) $ satisfy (== x)
 
-{- | Parse one @'Element' s@ that is an element of the foldable. -}
+{- | Parse one @'ElementOf' s@ that is an element of the foldable. -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (Streamable s, Eq (Element s), Foldable t)
-    => t (Element s)                -- ^ Foldable of @'Element' s@ against which to test inclusion.
-    -> Get s (ParseError s (Either InputError (MatchError (t (Element s))))) (Element s)
+    :: (Streamable s, Eq (ElementOf s), Foldable t)
+    => t (ElementOf s)                -- ^ Foldable of @'ElementOf' s@ against which to test inclusion.
+    -> Get s (ParseError s (Either InputError (MatchError (t (ElementOf s))))) (ElementOf s)
 oneOf xs = first (fmap (fmap (const $ MatchError xs))) $ satisfy (`elem` xs)

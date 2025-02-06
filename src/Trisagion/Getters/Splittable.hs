@@ -26,13 +26,14 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.State (MonadState (..), gets)
-import Data.MonoTraversable (MonoFoldable (..), Element)
+import Control.Monad.State (gets)
+import Data.MonoTraversable (MonoFoldable (..))
 
 -- Package.
+import Trisagion.Typeclasses.Streamable (ElementOf)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Get (Get, skip, eval)
+import Trisagion.Get (Get, skip, eval, get, put)
 import Trisagion.Getters.ParseError (ValidationError (..), validate, throwParseError)
 import Trisagion.Getters.Streamable (InputError (..), MatchError (..), )
 
@@ -116,21 +117,21 @@ match xs = validate v (takeExact (fromIntegral $ olength xs))
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE takeWith #-}
-takeWith :: Splittable s => (Element s -> Bool) -> Get s Void (PrefixOf s)
+takeWith :: Splittable s => (ElementOf s -> Bool) -> Get s Void (PrefixOf s)
 takeWith p = do
     (prefix, suffix) <- gets $ getWith p
     put suffix $> prefix
 
 {- | Drop the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE dropWith #-}
-dropWith :: Splittable s => (Element s -> Bool) -> Get s Void ()
+dropWith :: Splittable s => (ElementOf s -> Bool) -> Get s Void ()
 dropWith = skip . takeWith
 
 {- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
 {-# INLINE atLeastOneWith #-}
 atLeastOneWith
     :: (Splittable s, MonoFoldable (PrefixOf s))
-    => (Element s -> Bool) -> Get s (ParseError s (Either InputError ValidationError)) (PrefixOf s)
+    => (ElementOf s -> Bool) -> Get s (ParseError s (Either InputError ValidationError)) (PrefixOf s)
 atLeastOneWith p = do
     s <- get
     xs <- first absurd $ takeWith p

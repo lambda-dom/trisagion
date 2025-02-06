@@ -48,8 +48,8 @@ library
     hs-source-dirs:
         src
     build-depends:
-        mtl >=2.3 && <2.4,
         mono-traversable >=1.0 && <1.1,
+        mtl >=2.3 && <2.4,
         bytestring >=0.11 && <0.13,
         text >=2.0 && <2.2,
         containers >=0.6 && <0.8,
@@ -58,8 +58,8 @@ library
     exposed-modules:
         Trisagion.Lib.NonEmpty
         Trisagion.Typeclasses.Streamable
-        Trisagion.Typeclasses.HasPosition
         Trisagion.Typeclasses.Splittable
+        Trisagion.Typeclasses.HasPosition
         Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Types.ParseError
