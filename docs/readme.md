@@ -17,7 +17,7 @@ serialize (Serializer f) = f
 
 What constraints should be put on `s` to serve as an adequate output type? By Quine's dictum "No entity without identity", which even if not true of being in general, it certainly is of mathematicals, we (implicitly) require `Eq s`, but a discussion of what else is needed will be deferred to a later chapter. For now, we content ourselves with noting that the paradigmatical examples of `s` we have in mind are `ByteString`, `Text` and `[Char]`.
 
-We will also delay any extra elaboration of the `Serializer` type for latter, but we do mention one extra wrinkle; the type signature for `Serializer` suggests that given `a` and `s`there is a unique serializer `Serializer s a`. But this is not quite right, as there is an implicit dependency on an /encoding format/, so what we should have is,
+We will also delay any extra elaboration of the `Serializer` type for latter, but we do mention one extra wrinkle; the type signature for `Serializer` suggests that given `a` and `s`there is a unique serializer `Serializer s a`. But this is not quite right, as there is an implicit dependency on an _encoding format_, so what we should have is,
 
 ```haskell
 makeSerializer :: Format s -> Serializer s a
@@ -27,11 +27,15 @@ where `Format s` is some (G)ADT describing the encoding format.
 
 # B. Parsers.
 
-Dually to serializing, _parsing_ is a function `s -> a` that given some input `xs :: s` returns a decoded value `x :: a`. To make the dependency on the encoding explicit we have as in section [Formats, output types and serializers](#a-formats-output-types-and-serializers),
+Dually to serializing, _parsing_ is a function `s -> a` that given some input `xs :: s` returns a decoded value `x :: a`. Wrapping in newtypes,
 
 ```haskell
 newtype Parser s a = Parser (s -> a)
+```
 
+To make the dependency on the encoding explicit we have as in section [Formats, output types and serializers](#a-formats-output-types-and-serializers),
+
+```haskell
 makeParser :: Format s -> Parser s a
 ```
 
@@ -71,7 +75,7 @@ eval p = fmap fst . run p
 
 Fixing the format `Format s`, and minus the error handling, `eval` is the inverse of `serialize`.
 
-## A. 3. One implication and one design decision.
+## B. 2. One implication and one design decision.
 
 An immediate implication of the type signature of a parsing function is that it is all-or-nothing: _either_ it throws an error _or_ (exclusive or) it succeeds, returning the pair of the parsed result and the rest of the input.
 
@@ -87,7 +91,7 @@ type Parser = ParserT Identity
 
 as is done in say, the [Megaparsec](https://hackage.haskell.org/package/megaparsec) library. In this library, we explicitely do _not_ make such a generalization; all code is pure (meaning: effect free). This design forces prospective library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `run`. The expectation is that, for the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
 
-## A. 4. A small improvement: the type `Result s e a`.
+## B. 3. A small improvement: the type `Result s e a`.
 
 File(s):
 
