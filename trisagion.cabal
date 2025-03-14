@@ -48,3 +48,5 @@ library
         -Wunused-packages
     other-modules:
     exposed-modules:
+        Trisagion.Types.Result
+        Trisagion.Parser
