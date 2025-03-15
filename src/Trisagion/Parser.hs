@@ -52,6 +52,19 @@ instance Applicative (Parser s e) where
     (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
     (<*>) p q = embed $ withResult Error (\ f -> withResult Error (Success . f) . run q) . run p
 
+{- | The 'Monad' instance.
+
+The bind combinator @p >>= f@ first runs @p@ and then the parser obtained by applying the monadic
+function @f@ to the result.
+
+note(s):
+
+    * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
+-}
+instance Monad (Parser s e) where
+    (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
+    (>>=) p h = embed $ withResult Error (run . h) . run p
+
 
 {- | Embed a parsing function in the t'Parser' monad. -}
 embed :: (s -> Result s e a) -> Parser s e a

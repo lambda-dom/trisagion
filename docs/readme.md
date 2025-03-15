@@ -176,3 +176,118 @@ value = pure
 ```
 
 One could also retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo, none are provided and Haskell is pure. That much is true, but it is still valuable to signal such, and signal it loudly, to the users. So where possible, if a parser does not throw an error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.
+
+#### A. 3. 1. 4. Equivalent descriptions of `Applicative`.
+
+As is well known, the `Applicative` typeclass is equivalent to `f` being lax-monoidal for products [^1]:
+
+```haskell
+zip :: Applicative f => f a -> f b -> f (a, b)
+zip p q = (,) <$> p <*> q
+
+unit :: Applicative f => () -> f ()
+unit = pure
+```
+
+Given the latter, then `<*>` of `Applicative` can be regained,
+
+```haskell
+(<*>) :: f (a -> b) -> f a -> f b
+(<*>) = zip . (uncurry ($))
+```
+
+and `pure` is,
+
+```haskell
+pure :: a -> f a
+pure x = fmap (point x) . unit . terminal
+```
+
+with `terminal` the unique function `a -> ()` given by `const ()` and `point` the isomorphism `a -> (() -> a)` given by `\ x -> const x`. The laws for the typeclasses guarantee that we get the same results either way.
+
+The reason for this piece of category-theoretic trivia is that once we get to serializers, we will see that it is the lax-monoidal version of `Applicative` that dualizes well.
+
+note(s):
+
+  * There is a third equivalent description of `Applicative` as monoids for the monoidal structure of Day convolution, but Day convolution is a sophisticated category-theoretic device that for our particular purposes does not add anything new.
+
+[^1]: See for example [Lax monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor).
+
+#### A. 3. 1. 5. Zipping and unzipping.
+
+The universal properties yield canonical maps,
+
+```haskell
+unzip :: Functor f => f (a, b) -> (f a, f b)
+unzip = fmap fst &&& fmap snd
+
+cozip :: Functor f => Either (f a) (f b) -> f (Either a b)
+cozip = either (fmap Left) (fmap Right)
+```
+
+where `(&&&)` is the representability isomorphism implied by the universal property of products:
+
+```haskell
+(&&&) :: (c -> a) -> (c -> b) -> c -> (a, b)
+(&&&) f g x = (f x, g x)
+```
+
+In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
+
+If `unzip` and `terminal :: f () -> ()` are isomorphisms then `f` is said to _preserve products_. `Parser s e a` does _not_ preserve products; we will not show this (it is not very difficult anyways) but it is an instructive exercise to see that `zip`, or more precise its uncurried version, is _not_ an inverse to `unzip`, and this can be done for any monad. First, `zip` can be defined for any monad -- see [The Monad typeclass](#a-3-2-the-monad-typeclass) for the `Monad` instance for `Parser s e a` -- as
+
+```haskell
+zip :: Monad f => f a -> f b -> f (a, b)
+zip p q = do
+    x <- p
+    y <- q
+    pure (x, y)
+```
+
+Then,
+
+```haskell
+uncurry zip . unzip p = do
+    x <- fst <$> p
+    y <- snd <$> p
+    pure (x, y)
+```
+
+which is equal to `p` only if running `p` is idempotent. For the converse,
+
+```haskell
+unzip . uncurry zip (p, q)
+    = unzip $ zip p q
+    = unzip $ do
+        x <- p
+        y <- q
+        pure (x, y)
+    = (p', q')
+        where
+            p' = do
+                x <- p
+                _ <- q
+                pure x
+
+            q' = do
+                _ <- p
+                y <- q
+                pure y
+```
+
+which is clearly not equal to `(p, q)`.
+
+### A. 3. 2. The `Monad` typeclass.
+
+The `Monad` instance for `Parser s e a` is readily given:
+
+```haskell
+instance Monad (Parser s e) where
+    (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
+    (>>=) p h = embed $ \ s ->
+        case run p s of
+            Left e       -> Left e
+            Right (x, t) -> run (h x) t
+```
+
+[^2]: The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
