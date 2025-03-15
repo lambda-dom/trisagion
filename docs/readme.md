@@ -93,16 +93,52 @@ data Result s e a
 
 This introduces strictness where lazyness is almost surely not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case.
 
+note(s):
+
+  * In what follows, all the code examples we give we keep using `Either e (a, s)` as the return type of a parsing function.
+
 ## A. 2. Some definitions.
 
 Given a parser `p :: Parser s e a` what is the relation of the input with the remainder, if any?
 
 __Definition__: A parser `p :: Parser s e a` is _normal_ is for every input `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
 
-There is one obvious problem with this definition. Being a suffix is not a definable relation for an arbitrary type `s`. However, it is certainly well-defined for types like `ByteString` and `Text`, so, as the reader is probably already expecting, we leave for later the working out of the operations needed to define such a relation.
+There is one obvious problem with this definition, in that being a suffix is not a definable relation for an arbitrary type `s`. However, it is certainly well-defined for types like `ByteString` and `Text`, so, as the reader is probably already expecting given the times we have used the same sentence, we leave for later the working out of what is needed to define such a relation.
 
-__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one input `xs :: s` for which, on success, the remainder is (equal to) `xs`. The parser `p` _never consumes input_ if for every input `xs`, on success the remainder is (equal to) `xs`.
+__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one input `xs :: s` for which parsing succeeds and the remainder is (equal to) `xs`. The parser `p` _never consumes input_ if for every input `xs`, on success the remainder is (equal to) `xs`.
 
 ## A. 3. Parser typeclasses.
 
 ### A. 3. 1. Products.
+
+Let us start with the case of a product type, a type of the form
+
+```haskell
+data T a_0 ... a_n = T a_0 ... a_n
+```
+
+Assume there are parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`. A natural idea for a format for `T` is to lay out the `a_i` consecutively one after another. Dually, to construct a parser for `T` we have to apply the parsers `p_i` consecutively and then apply the `T` constructor to the results. This is naturally done via the `Functor` and `Applicative` typeclasses:
+
+```haskell
+p :: Parser s e (T a_0 ... a_n)
+p = T <$> p_0 <*> ... <*> p_n
+```
+
+#### A. 3. 1. 1. The `Applicative` typeclass.
+
+The `Functor` instance for `Parser s e a` is stock-derivable and the `Applicative` instance is readily given:
+
+```haskell
+instance Applicative (Parser s e) where
+    pure :: a -> Parser s e a
+    pure x = embed $ \ s -> Right (x, s)
+
+    (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
+    (<*>) p q = embed $ \ s ->
+        case run p s of
+            Left e       -> Left e
+            Right (f, t) ->
+                case run q t of
+                    Left e'      -> Left e'
+                    Right (x, u) -> Right (f x, u)
+```
