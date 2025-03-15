@@ -15,11 +15,17 @@ module Trisagion.Parser (
     run,
     eval,
     exec,
+
+    -- * Error parsers.
+    catchErrorWith,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), withResult)
@@ -65,6 +71,34 @@ instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
     (>>=) p h = embed $ withResult Error (run . h) . run p
 
+{- | The 'MonadError' instance.
+
+The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
+unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
+the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
+returned by @p@.
+
+The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
+difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
+continuation to depend on the specific error that was thrown.
+
+note(s):
+
+    * The monad analogy is not precise, because even if we make the obvious generalization of
+    @'catchError'@ to a type-changing version (see 'catchErrorWith'), it does not satisfy the
+    associativity law.
+-}
+instance MonadError e (Parser s e) where
+    throwError :: e -> Parser s e a
+    throwError e = embed $ const (Error e)
+
+    catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
+    catchError p h = embed $ \ s ->
+        -- Case statement instead of 'withResult' to make use of sharing in the Success branch.
+        case run p s of
+            r@(Success {}) -> r
+            Error e        -> run (h e) s
+
 
 {- | Embed a parsing function in the t'Parser' monad. -}
 embed :: (s -> Result s e a) -> Parser s e a
@@ -86,3 +120,11 @@ eval p = withResult Left (\ x _ -> Right x) . run p
 {- | Run the parser on the input and return the remainder, discarding the parsed value. -}
 exec :: Parser s e a -> s -> Either e s
 exec p = withResult Left (\ _ s -> Right s) . run p
+
+
+{- | Type-changing version of 'catchError'. -}
+catchErrorWith
+    :: Parser s e a                     -- ^ Parser to try.
+    -> (e -> Parser s d a)              -- ^ Error handler.
+    -> Parser s d a
+catchErrorWith p h = embed $ \ s -> withResult (flip run s . h) Success $ run p s

@@ -277,6 +277,8 @@ unzip . uncurry zip (p, q)
 
 which is clearly not equal to `(p, q)`.
 
+[^2]: The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
+
 ### A. 3. 2. The `Monad` typeclass.
 
 The `Monad` instance for `Parser s e a` is readily given:
@@ -290,4 +292,63 @@ instance Monad (Parser s e) where
             Right (x, t) -> run (h x) t
 ```
 
-[^2]: The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
+### A. 3. 3. Coproducts.
+
+In section [Products](#a-3-1-products), we tackled parsing product types, in this section we tackle parsing of coproducts, that is, types of the form
+
+```haskell
+data T a_0 ... a_n
+    = T_0 a_0
+    ...
+    | T_n a_n
+```
+
+The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` [^3] can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [Products](#a-3-1-products).
+
+Assuming the existence of parsers `p_i :: Parser s e a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
+
+```haskell
+tag :: T a_0 ... a_n -> Word
+tag x = case x of
+    T_0 _ -> 0
+    ...
+    T_n _ -> n
+```
+
+This piece of bloatware can derived automatically using Haskell's generics or (God forbid) template Haskell, but we will not dwell on this detail here. To parse this format, we assume the existence of a parser for `Word` [^4]
+
+```haskell
+word :: Parser s e Word
+```
+
+With this parser on hand, we have
+
+```haskell
+parser :: Parser s e (T a_0 ... a_n)
+parser = do
+    i <- first f word
+    case i of
+        i | 0 == i -> bimap f_0 T_0 p_0
+        ...
+        i | n == i -> bimap f_n T_n p_n
+        _          -> throwError e
+```
+
+where `f :: e' -> e` and `f_i :: e_i -> e` are appropriate error conversion functions. The new ingredient needed is the `throwError e` parser that just throws an error if the tag is out of bounds.
+
+#### A. 3. 3. 1. The `MonadError` typeclass.
+
+Fortunately, the [mtl package](https://hackage.haskell.org/package/mtl) has a typeclass for monads with a notion of error handling, so we do not need to come up with something of our own.
+
+The `catchError` method of `MonadError` does not change the error type, but it is easy (and more importantly, useful), to implement a type-changing version:
+
+```haskell
+catchErrorWith
+    :: Parser s e a             -- ^ Parser to try.
+    -> (e -> Parser s d a)      -- ^ Error handler.
+    -> Parser s d a
+catchErrorWith p h = embed $ \ s -> either (flip run s . h) Right $ run p s
+```
+
+[^3]: This includes the no-argument case since the nullary product is just the terminal `()`.
+[^4]: Once we nail down the constraints on the type `s`, we will be in a position to write such a parser.
