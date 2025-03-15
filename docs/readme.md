@@ -142,3 +142,37 @@ instance Applicative (Parser s e) where
                     Left e'      -> Left e'
                     Right (x, u) -> Right (f x, u)
 ```
+
+#### A. 3. 1. 2. Errors and `Bifunctor`.
+
+The attentive reader will surely have noticed that while the parsers `p_i` have types ` s e_i a_i`, the argument parsers for `(<*>)` are required to all have the same type. So at a minimum, and assuming we have conversion functions `f_i :: e_i -> e` for some type `e`, we need a `Bifunctor` instance for `Parser s e a` to write
+
+```haskell
+p :: Parser s e (T a_0 ... a_n)
+p = T <$> (first f_0 p_0) <*> ... <*> (first f_n p_n)
+```
+
+The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the chapter dedicated to errors, we will see another way to deal with this problem that does not rely on coming up with a unifier `e`.
+
+Note that as with the input type `s`, there are still no constraints on the error type `e`.
+
+#### A. 3. 1. 3. The parser `pure x`.
+
+File(s):
+
+  * [Combinators.hs](../src/Trisagion/Parsers/Combinators.hs)
+
+For a value `x`, the parser `pure x` does not throw an error and never consumes input. The two are inextricably linked, because if a parser does not throw an error then it must do something when there is no input to be had, which of course, requires that it does not consume input. However, even if the two are linked only the former can be reflected in the type signature, e. g. by:
+
+```haskell
+pure :: a -> Parser s Void a
+```
+
+Since the type signature of `pure` is already fixed, we instead provide an error-free version of it:
+
+```haskell
+value :: a -> Parser s Void a
+value = pure
+```
+
+One could also retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo, none are provided and Haskell is pure. That much is true, but it is still valuable to signal such, and signal it loudly, to the users. So where possible, if a parser does not throw an error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.

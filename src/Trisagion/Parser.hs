@@ -22,7 +22,7 @@ module Trisagion.Parser (
 import Data.Bifunctor (Bifunctor (..))
 
 -- Package.
-import Trisagion.Types.Result (Result, withResult)
+import Trisagion.Types.Result (Result (..), withResult)
 
 
 {- | The @Parser@ monad. -}
