@@ -427,3 +427,173 @@ The `empty` parser is also easily implemented with a call to `throwError` with t
 #### A. 3. 4. 4. The `Monoid e` constraint.
 
 What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with them into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
+
+#### A. 3. 4. 5. The `either` parser and an alternative to `Alternative`.
+
+With the `Alternative` typeclass, we can write an `either` parser, that is more deserving of the name choice:
+
+```haskell
+either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (Either a b)
+either p q = (Left <$> p) <|> (Right <$> q)
+```
+
+Expanding that definition of `(<|>)` inside `either` we get its direct implementation:
+
+```haskell
+either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (Either a b)
+either p q = do
+    first absurd (observe p) >>=
+        either
+            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) (pure . Left))
+            (pure . Right)
+```
+
+Uncurry-ing `either`, we get a natural transformation `(Parser s e a, Parser s e b) -> Parser s e (Either a b)`. Since there is also a map
+
+```haskell
+unit :: Monoid e => () -> Parser s e Void
+unit = const (throwError mempty)
+```
+
+this gives a (symmetric) lax-monoidal structure to `Parser s e` between products and coproducts [^5]. Considering the _codiagonal_,
+
+```haskell
+codiagonal :: Either a a -> a
+codiagonal = either id id
+```
+
+we have the equality
+
+```haskell
+(<|>) = fmap codiagonal . either
+```
+
+The upshot of all this is that the `Alternative` typeclass is a red herring, choice is really a lax-monoidal structure. Let us go through the steps one by one to make this clearer.
+
+[^5]: The coherence laws hold up; exercise to the interested reader.
+
+#### A. 3. 4. 6. Monoidal categories and monoids.
+
+Monoidal structures are to categories as monoids are to sets, that is, just as a monoid is a binary function satisfying some equational laws, a monoidal structure is a bifunctor `(:*:)` and an object `k`, the _unit_ object, together with natural isomorphisms
+
+```haskell
+associator  :: a :*: (b :*: c) -> (a :*: b) :*: c
+leftUnitor  :: k :*: a -> a
+rightUnitor :: a :*: k -> a
+```
+
+satisfying a bunch of equations, the so called _coherence laws_ [^6].
+
+The value of any abstraction is in the list of examples it covers and the things you can do with it, both the new concepts that can be expressed and the theorems that can be derived. Starting with the examples, the two most important for us, are the monoidal structures given by products and coproducts respectively. As for concepts that can be expressed, one can now generalize the notion of monoid to a monoid in a monoidal category. The classical notion is recovered by using the product monoidal structure.
+
+[^6]: See [Monoidal categories](https://ncatlab.org/nlab/show/monoidal+category) for the full story.
+
+#### A. 3. 4. 7. Why you never heard of monoids for coproducts.
+
+We start with an existence theorem.
+
+__Theorem__: The codiagonal `Either a a -> a` together with the unique initial `absurd :: Void -> a` is a monoid for the coproduct monoidal structure.
+
+__Proof__: standard exercise in universal property juggling.
+
+Let us call this monoid structure on `a` the _trivial_ one.
+
+__Theorem__: For each `a` there is only one monoid structure for coproducts, the trivial one.
+
+__Proof__: Since `Void` is initial, there is only one function `Void -> a`. By the universal property of coproducts, a function `Either a a -> a` is of the form `either f g` for functions `f :: a -> a` and `g :: a -> a`. Now plug this in the two identity laws to get `f = id` and `g = id`.
+
+#### A. 3. 4. 8. Monoids and lax-monoidal functors.
+
+Just as there is a notion of _monoid morphism_, a function that is suitably compatible with monoid structures, there is a notion of _monoidal functor_, a functor `f` together with natural isomorphisms,
+
+```haskell
+u :: f a :+: f b -> f (a :*: b)
+e :: j -> f k
+```
+
+where the objects `j` and `k` are the unit objects for `(:+:)` and `(:*:)` respectively, satisfying some equations [^7] . If we drop the requirements that the natural transformations are isomorphisms we obtain the notion of _lax monoidal functor_.
+
+__Theorem__: Let `f` be a lax monoidal functor between monoidal structures `(:+:)` and `(:*:)` and
+
+```haskell
+m :: a :*: a -> a
+v :: k -> a
+```
+
+a `(:*:)`-monoid structure on `a`. Then
+
+```haskell
+m' :: f a :+: f a -> f a
+m' = fmap m . u
+
+v' :: j -> f a
+v' = fmap v . e
+```
+
+is a `(:+:)`-monoid structure on `f a`.
+
+__Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor), proposition 3. 1. and references therein.
+
+[^7]: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor) for them.
+
+#### A. 3. 4. 9. The punchline.
+
+Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoid and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
+
+```haskell
+u :: Monoid e => (Parser s e a, Parser s e b) -> Parser s e (Either a b)
+u = uncurry (either)
+
+e :: Monoid e => () -> Parser s e Void
+e = unit
+```
+
+make `Parser s e` a lax monoidal functor between `(,)` and `Either`. By the preservation theorem, the functions
+
+```haskell
+m :: Monoid e => (Parser s e a, Parser s e a) -> Parser s e a
+m = fmap codiagonal . uncurry (either)
+
+v :: Monoid e => () -> Parser s e Void
+v = const (throwError mempty)
+```
+
+give a monoid structure on `f a`, which is just the `Alternative` instance.
+
+#### A. 3. 4. 10. More laws.
+
+Since every function is automatically a monoid morphism for the trivial monoid structures, it follows that, for every function `f` and parsers `p` and `q`:
+
+```haskell
+fmap f (p <|> q) = (fmap f p) <|> (fmap f q)
+fmap f empty = empty
+```
+
+But this is also a consequence of naturality of `(<|>)`, and thus a consequence of the free theorem [^8]. Slightly more substantive (because it does not follow from any free theorem):
+
+__Theorem__: The `Alternative` instance for `Parser s e a` satisfies _right absorption_, that is, for every `x :: Parser s e a`:
+
+```haskell
+empty <*> x = empty
+```
+
+If the monoid structure on the error type `e` is idempotent (that is, for all `x :: e`, `x <> x = x`), then, it satisfies both left and _right distributivity_, that is:
+
+```haskell
+f <*> (x <|> y) = (f <*> x) <|> (f <*> y)
+(f <|> g) <*> x = (f <*> x) <|> (g <*> y)
+```
+__Proof__: Follows from the definition of `(<*>)` as
+
+```haskell
+p <*> q = do
+    f <- p
+    x <- q
+    pure (f x)
+```
+
+and doing a case by case analysis on the failures.
+
+As we will see in the next section, the monoid law that we will use in the library, embodying the short-circuiting accumulation strategy, is idempotent.
+
+[^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
