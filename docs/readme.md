@@ -366,7 +366,7 @@ data T a_0 ... a_n
     | T_n a_n
 ```
 
-Assuming parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s`, at most only one of the parsers `Parser s e_i a_i` will succeed. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
+Assume parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s`, at most only one of the parsers `Parser s e_i a_i` will succeed. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
 
 ```haskell
 p :: Parser s e (T a_0 ... a_n)
@@ -395,3 +395,35 @@ instance MonadState s (Parser s e) where
 ```
 
 The `put` parser allows arbitrary transformations on the input `s`; in particular it provides a way, _the only_ way, to construct non-normal parsers. In this library it is used exclusively to implement backtracking and the primitive parsers requiring constraints on the input type, so normalcy is provably not violated.
+
+#### A. 3. 4. 2. Backtracking and the `observe` parser.
+
+With the `MonadState` instance in our hands, the implementation of `observe` is now a standard try-catch:
+
+```haskell
+observe :: Parser s e a -> Parser s Void (Either e a)
+observe p = do
+    s <- get
+    catchErrorWith
+        (Right <$> p)
+        (\ e -> put s $> Left e)
+```
+
+#### A. 3. 4. 3. The `Alternative` typeclass.
+
+We now have all the ingredients to implement choice: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however: what to do if _both_ parsers error out? One obvious answer is to "combine the errors" and combining errors can be seen as a code word for a `Monoid` constraint on the error type `e`. With this:
+
+```haskell
+(<|>) :: Monoid e => Parser s e a -> Parser s e a -> Parser s e a
+(<|>) p q = do
+    first absurd (observe p) >>=
+        either
+            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) pure)
+            pure
+```
+
+The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that this is indeed a monoid, but as we will see next, it implies much more.
+
+#### A. 3. 4. 4. The `Monoid e` constraint.
+
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with them into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.

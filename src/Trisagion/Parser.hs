@@ -22,6 +22,7 @@ module Trisagion.Parser (
 
 -- Imports.
 -- Base.
+import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
 
 -- Libraries.
@@ -71,6 +72,37 @@ note(s):
 instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
     (>>=) p h = embed $ withResult Error (run . h) . run p
+
+{- | The 'Alternative' instance.
+
+The @'empty'@ parser fails unconditionally with the monoid unit for @e@. The parser  @p \<|\> q@
+represents choice. First run @p@ and if successful return the result. If it throws an error,
+backtrack and run @q@ on the same input.
+
+The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
+
+prop> pure x <|> p = pure x
+prop> empty >>= f = empty
+
+But /not/ the right zero law @f >>= const empty = empty@, because of short-circuiting.
+
+note(s):
+
+    * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+-}
+instance Monoid e => Alternative (Parser s e) where
+    empty :: Parser s e a
+    empty = embed $ const (Error mempty)
+
+    (<|>) :: Parser s e a -> Parser s e a -> Parser s e a
+    (<|>) p q = embed $ \ s ->
+        -- Case statements instead of withResult to make use of sharing in the Success branch.
+        case run p s of
+            r@(Success {}) -> r
+            Error e        ->
+                case run q s of
+                    r'@(Success {}) -> r'
+                    Error e'        -> Error $ e <> e'
 
 {- | The 'MonadError' instance.
 
