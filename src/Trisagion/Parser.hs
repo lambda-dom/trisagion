@@ -26,6 +26,7 @@ import Data.Bifunctor (Bifunctor (..))
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), withResult)
@@ -98,6 +99,26 @@ instance MonadError e (Parser s e) where
         case run p s of
             r@(Success {}) -> r
             Error e        -> run (h e) s
+
+{- | The 'MonadState' instance.
+
+The @'get'@ parser allows probing the t'Parser' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The @'put'@ parser allows arbitrary state modifications. Provides monofunctoriality to @'Parser' s e a@
+in @s@ via @'Control.MonadState.modify'@.
+-}
+instance MonadState s (Parser s e) where
+    get :: Parser s e s
+    get = embed $ \ s -> Success s s
+
+    put :: s -> Parser s e ()
+    put s = embed $ const (Success () s)
 
 
 {- | Embed a parsing function in the t'Parser' monad. -}

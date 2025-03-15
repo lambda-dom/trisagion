@@ -336,6 +336,9 @@ parser = do
 
 where `f :: e' -> e` and `f_i :: e_i -> e` are appropriate error conversion functions. The new ingredient needed is the `throwError e` parser that just throws an error if the tag is out of bounds.
 
+[^3]: This includes the no-argument case since the nullary product is just the terminal `()`.
+[^4]: Once we nail down the constraints on the type `s`, we will be in a position to write such a parser.
+
 #### A. 3. 3. 1. The `MonadError` typeclass.
 
 Fortunately, the [mtl package](https://hackage.haskell.org/package/mtl) has a typeclass for monads with a notion of error handling, so we do not need to come up with something of our own.
@@ -350,5 +353,45 @@ catchErrorWith
 catchErrorWith p h = embed $ \ s -> either (flip run s . h) Right $ run p s
 ```
 
-[^3]: This includes the no-argument case since the nullary product is just the terminal `()`.
-[^4]: Once we nail down the constraints on the type `s`, we will be in a position to write such a parser.
+### A. 3. 4. Coproducts: Take II.
+
+In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) something else is needed and that something else is _choice_.
+
+Getting back to our coproduct type
+
+```haskell
+data T a_0 ... a_n
+    = T_0 a_0
+    ...
+    | T_n a_n
+```
+
+Assuming parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s`, at most only one of the parsers `Parser s e_i a_i` will succeed. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
+
+```haskell
+p :: Parser s e (T a_0 ... a_n)
+p = (bimap f_0 T_0) <|> ... <|> (bimap f_n T_n)
+```
+
+where `(<|>)` is the choice operator. In order to accomplish this, we will rely on implementing a parser combinator
+
+```haskell
+observe :: Parser s e a -> Parser s Void (Either e a)
+```
+
+that implements backtracking. Specifically, the `observe` parser runs the argument parser and if it succeeds return the result as a `Right` while if it errors, backtrack and return the error as a `Left`. In order to implement the backtracking bit, we need to be able to probe and change the input state `s` of the parser, so let us start with that first.
+
+#### A. 3. 4. 1. The `MonadState` typeclass.
+
+Probing the state of the parser monad is abstracted out in the `MonadState` typeclass, also available from the [mtl package](https://hackage.haskell.org/package/mtl). The instance implementation is as easy as:
+
+```haskell
+instance MonadState s (Parser s e) where
+    get :: Parser s e s
+    get = embed $ \ s -> Right (s, s)
+
+    put :: s -> Parser s e ()
+    put s = embed $ const (Right ((), s))
+```
+
+The `put` parser allows arbitrary transformations on the input `s`; in particular it provides a way, _the only_ way, to construct non-normal parsers. In this library it is used exclusively to implement backtracking and the primitive parsers requiring constraints on the input type, so normalcy is provably not violated.
