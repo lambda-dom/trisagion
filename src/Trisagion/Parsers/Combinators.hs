@@ -28,6 +28,11 @@ module Trisagion.Parsers.Combinators (
     choose,
     many,
     some,
+    untilEnd,
+
+    -- * List parsers.
+    sepBy,
+    sepBy1,
 ) where
 
 -- Imports.
@@ -39,7 +44,7 @@ import qualified Prelude as Base (either)
 import Control.Applicative (Alternative ((<|>)), asum)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -173,3 +178,21 @@ precise type signature.
 some :: Parser s e a -> Parser s e (NonEmpty a)
 some p = zipWith (:|) p (first absurd $ many p)
 
+{- | The parser @'untilEnd' end p@ runs @p@ zero or more times until @end@ succeeds, returning the results of @p@ and @end@. -}
+untilEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
+untilEnd end p = go
+    where
+        go = do
+            r <- either end p
+            case r of
+                Left e -> pure $ e :| []
+                Right x -> (x <|) <$> go
+
+
+{- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
+sepBy :: Parser s e a -> Parser s e b -> Parser s Void [b]
+sepBy sep = many . before sep
+
+{- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
+sepBy1 sep p = zipWith (:|) p (first absurd $ sepBy sep p)
