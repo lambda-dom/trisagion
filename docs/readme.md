@@ -613,6 +613,10 @@ One advantage over the list-accumulation strategy is that this monoid is idempot
 
 ### A. 4. 1. First attempt.
 
+File(s):
+
+  * [ParseError.hs](../src/Trisagion/Types/ParseError.hs)
+
 The `ParseError e` type is a thin wrapper around `e` to implement the short-circuit accumulation strategy:
 
 ```haskell
@@ -675,7 +679,7 @@ class HasPosition s where
     getPosition :: s -> PositionOf s
 ```
 
-As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. Even more, every type `s` has such a notion of position by simply returning itself!
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. Even more, every type `s` has an `HasPosition` instance by simply returning itself as the current position!
 
 ```haskell
 instance HasPosition s
@@ -685,7 +689,7 @@ instance HasPosition s
     getPosition = id
 ```
 
-And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so for the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside to having the error type carry a reference to the input stream is that it potentially keeps it alive in memory for much longer. I have gone back and forth on this, and ended going for the most flexible solution: the error type carries a reference to the input stream, but we also keep the typeclass. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside of having the error carry a reference to the input stream is that it potentially keeps it alive in memory for much longer than necessary. I have gone back and forth on this, and ended going for the most flexible solution: the error carries a reference to the input stream, but we also keep the typeclass `HasPosition`. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
 
 ### A. 4. 3. Backtraces.
 
