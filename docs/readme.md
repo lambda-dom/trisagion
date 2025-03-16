@@ -152,7 +152,7 @@ p :: Parser s e (T a_0 ... a_n)
 p = T <$> (first f_0 p_0) <*> ... <*> (first f_n p_n)
 ```
 
-The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the chapter dedicated to errors, we will see another way to deal with this problem that does not rely on coming up with a unifier `e`.
+The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the section [On Errors](#a-4-on-errors) we will see another way to deal with this problem that does not rely on coming up with a cone `e_i -> e`.
 
 Note that as with the input type `s`, there are still no constraints on the error type `e`.
 
@@ -234,7 +234,7 @@ where `(&&&)` is the representability isomorphism implied by the universal prope
 
 In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
 
-If `unzip` and `terminal :: f () -> ()` are isomorphisms then `f` is said to _preserve products_. `Parser s e a` does _not_ preserve products; we will not show this (it is not very difficult anyways) but it is an instructive exercise to see that `zip`, or more precise its uncurried version, is _not_ an inverse to `unzip`, and this can be done for any monad. First, `zip` can be defined for any monad -- see [The Monad typeclass](#a-3-2-the-monad-typeclass) for the `Monad` instance for `Parser s e a` -- as
+If `unzip` and `terminal :: f () -> ()` are isomorphisms then `f` is said to _preserve products_. `Parser s e a` does _not_ preserve products; we will not show this (it is not very difficult anyways) but it is an instructive exercise to see that `zip`, or more precise its uncurried version, is _not_ an inverse of `unzip`, and the proof works for every monad. First, `zip` can be re-defined -- see [The Monad typeclass](#a-3-2-the-monad-typeclass) for the `Monad` instance for `Parser s e a` -- as
 
 ```haskell
 zip :: Monad f => f a -> f b -> f (a, b)
@@ -253,7 +253,7 @@ uncurry zip . unzip p = do
     pure (x, y)
 ```
 
-which is equal to `p` only if running `p` is idempotent. For the converse,
+which is equal to `p` only if running `p` is idempotent. For the other direction,
 
 ```haskell
 unzip . uncurry zip (p, q)
@@ -305,7 +305,7 @@ data T a_0 ... a_n
 
 The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` [^3] can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [Products](#a-3-1-products).
 
-Assuming the existence of parsers `p_i :: Parser s e a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
+Assuming the existence of parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
 
 ```haskell
 tag :: T a_0 ... a_n -> Word
@@ -353,9 +353,9 @@ catchErrorWith
 catchErrorWith p h = embed $ \ s -> either (flip run s . h) Right $ run p s
 ```
 
-### A. 3. 4. Coproducts: Take II.
+### A. 3. 4. Coproducts and choice.
 
-In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) something else is needed and that something else is _choice_.
+In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) often something else is needed and that something else is _choice_.
 
 Getting back to our coproduct type
 
@@ -366,20 +366,20 @@ data T a_0 ... a_n
     | T_n a_n
 ```
 
-Assume parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s`, at most only one of the parsers `Parser s e_i a_i` will succeed. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
+Assume parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s` at most one of the parsers `Parser s e_i a_i` succeeds. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
 
 ```haskell
 p :: Parser s e (T a_0 ... a_n)
 p = (bimap f_0 T_0) <|> ... <|> (bimap f_n T_n)
 ```
 
-where `(<|>)` is the choice operator. In order to accomplish this, we will rely on implementing a parser combinator
+where `(<|>)` is the choice operator. To implement choice, we rely on the parser combinator
 
 ```haskell
 observe :: Parser s e a -> Parser s Void (Either e a)
 ```
 
-that implements backtracking. Specifically, the `observe` parser runs the argument parser and if it succeeds return the result as a `Right` while if it errors, backtrack and return the error as a `Left`. In order to implement the backtracking bit, we need to be able to probe and change the input state `s` of the parser, so let us start with that first.
+implementing backtracking. Specifically, the `observe` parser runs the argument parser and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
 
 #### A. 3. 4. 1. The `MonadState` typeclass.
 
@@ -411,22 +411,22 @@ observe p = do
 
 #### A. 3. 4. 3. The `Alternative` typeclass.
 
-We now have all the ingredients to implement choice: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however: what to do if _both_ parsers error out? One obvious answer is to "combine the errors" and combining errors can be seen as a code word for a `Monoid` constraint on the error type `e`. With this:
+We now have all the ingredients to implement choice via `(<|>)` of the `Alternative` typeclass: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however, namely, what to do if _both_ parsers error out? One obvious answer is "combine the errors" and "combine the errors" is a code word for a `Monoid` constraint on the error type `e`. With this setup:
 
 ```haskell
 (<|>) :: Monoid e => Parser s e a -> Parser s e a -> Parser s e a
-(<|>) p q = do
+(<|>) p q =
     first absurd (observe p) >>=
         either
-            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) pure)
+            (\ e -> first absurd (observe q) >>= either (throwError . (e <>)) pure)
             pure
 ```
 
-The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that this is indeed a monoid, but as we will see next, it implies much more.
+The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that with this structure `Parser s e a` is indeed a monoid, but as we will see next, it implies much more.
 
 ##### A. 3. 4. 3. 1. The `Monoid e` constraint.
 
-What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with them into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with it into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
 
 ##### A. 3. 4. 3. 2. The `either` parser and an alternative to `Alternative`.
 
@@ -441,10 +441,10 @@ Expanding that definition of `(<|>)` inside `either` we get its direct implement
 
 ```haskell
 either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (Either a b)
-either p q = do
+either p q =
     first absurd (observe p) >>=
         either
-            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) (pure . Left))
+            (\ e -> first absurd (observe q) >>= either (throwError . (e <>)) (pure . Left))
             (pure . Right)
 ```
 
@@ -538,7 +538,7 @@ __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functo
 
 ##### A. 3. 4. 3. 6. The punchline.
 
-Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoid and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
+Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
 
 ```haskell
 u :: Monoid e => (Parser s e a, Parser s e b) -> Parser s e (Either a b)
@@ -600,4 +600,42 @@ As we will see in the next section, the monoid law that we will use in the libra
 
 ## A. 4. On Errors.
 
-As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed, the error accumulation strategy.
+As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either you accumulate all errors in a container like a list or you short-circuit at the first error. In its turn, short-circuiting completely determines the monoid operation:
+
+```haskell
+(<>) :: Eq e => e -> e -> e
+(<>) x y
+    | x == mempty = y
+    | otherwise   = x
+```
+
+### A. 4. 1. First attempt.
+
+The `ParseError e` type is a thin wrapper around `e` to implement the short-circuit accumulation strategy:
+
+```haskell
+data ParseError e
+    = Fail
+    | ParseError !e
+    deriving stock (Eq, Show, Functor)
+```
+
+For the `Monoid` instance, we have as discussed above:
+
+```haskell
+instance Semigroup (ParseError e) where
+    (<>) :: ParseError e -> ParseError e -> ParseError e
+    (<>) Fail x = x
+    (<>) x    _ = x
+
+instance Monoid (ParseError e) where
+    mempty :: ParseError e
+    mempty = Fail
+```
+
+A little bit of staring and the reader should be able to convince of himself that this type is monoid isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+
+### A. 4. 2. What is in an error?
+
+### A. 4. 3. Backtraces.
+
