@@ -424,11 +424,11 @@ We now have all the ingredients to implement choice: try the first parser and re
 
 The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that this is indeed a monoid, but as we will see next, it implies much more.
 
-#### A. 3. 4. 4. The `Monoid e` constraint.
+##### A. 3. 4. 3. 1. The `Monoid e` constraint.
 
 What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with them into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
 
-#### A. 3. 4. 5. The `either` parser and an alternative to `Alternative`.
+##### A. 3. 4. 3. 2. The `either` parser and an alternative to `Alternative`.
 
 With the `Alternative` typeclass, we can write an `either` parser, that is more deserving of the name choice:
 
@@ -472,7 +472,7 @@ The upshot of all this is that the `Alternative` typeclass is a red herring, cho
 
 [^5]: The coherence laws hold up; exercise to the interested reader.
 
-#### A. 3. 4. 6. Monoidal categories and monoids.
+##### A. 3. 4. 3. 3. Monoidal categories and monoids.
 
 Monoidal structures are to categories as monoids are to sets, that is, just as a monoid is a binary function satisfying some equational laws, a monoidal structure is a bifunctor `(:*:)` and an object `k`, the _unit_ object, together with natural isomorphisms
 
@@ -488,7 +488,7 @@ The value of any abstraction is in the list of examples it covers and the things
 
 [^6]: See [Monoidal categories](https://ncatlab.org/nlab/show/monoidal+category) for the full story.
 
-#### A. 3. 4. 7. Why you never heard of monoids for coproducts.
+##### A. 3. 4. 3. 4. Why you never heard of monoids for coproducts.
 
 We start with an existence theorem.
 
@@ -502,7 +502,7 @@ __Theorem__: For each `a` there is only one monoid structure for coproducts, the
 
 __Proof__: Since `Void` is initial, there is only one function `Void -> a`. By the universal property of coproducts, a function `Either a a -> a` is of the form `either f g` for functions `f :: a -> a` and `g :: a -> a`. Now plug this in the two identity laws to get `f = id` and `g = id`.
 
-#### A. 3. 4. 8. Monoids and lax-monoidal functors.
+##### A. 3. 4. 3. 5. Monoids and lax-monoidal functors.
 
 Just as there is a notion of _monoid morphism_, a function that is suitably compatible with monoid structures, there is a notion of _monoidal functor_, a functor `f` together with natural isomorphisms,
 
@@ -536,7 +536,7 @@ __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functo
 
 [^7]: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor) for them.
 
-#### A. 3. 4. 9. The punchline.
+##### A. 3. 4. 3. 6. The punchline.
 
 Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoid and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
 
@@ -560,7 +560,7 @@ v = const (throwError mempty)
 
 give a monoid structure on `f a`, which is just the `Alternative` instance.
 
-#### A. 3. 4. 10. More laws.
+##### A. 3. 4. 3. 7. More laws.
 
 Since every function is automatically a monoid morphism for the trivial monoid structures, it follows that, for every function `f` and parsers `p` and `q`:
 
@@ -597,3 +597,7 @@ and doing a case by case analysis on the failures.
 As we will see in the next section, the monoid law that we will use in the library, embodying the short-circuiting accumulation strategy, is idempotent.
 
 [^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
+
+## A. 4. On Errors.
+
+As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed, the error accumulation strategy.
