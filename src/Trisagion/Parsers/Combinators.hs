@@ -22,16 +22,24 @@ module Trisagion.Parsers.Combinators (
     zipWith,
     repeat,
     sequence,
+
+    -- * 'Control.Applicative.Alternative' parsers.
+    either,
+    choose,
+    many,
+    some,
 ) where
 
 -- Imports.
 -- Prelude.
 import Prelude hiding (either, maybe, repeat, sequence, zip, zipWith)
-import Prelude as Base (either)
+import qualified Prelude as Base (either)
 
 -- Base.
+import Control.Applicative (Alternative ((<|>)), asum)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -122,4 +130,46 @@ repeat n p = go n
 {- | Sequence a traversable of parsers and return the traversable of results. -}
 sequence :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 sequence = sequenceA
+
+
+{- | Run the first parser and if it fails run the second. Return the result as an @'Either'@.
+
+note(s):
+
+    * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
+-}
+either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (Either a b)
+either q p = (Left <$> q) <|> (Right <$> p)
+
+{- | Run the parsers in succession, returning the result of the first successful one. -}
+choose :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
+choose = asum
+
+{- | Run the parser zero or more times until it fails, returning the list of results.
+
+The difference with @'Control.Applicative.many'@ from 'Control.Applicative.Alternative' is the more
+precise type signature.
+
+note(s):
+
+    * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
+    does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
+    variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
+-}
+many :: Parser s e a -> Parser s Void [a]
+many p = go
+    where
+        go = do
+            r <- maybe p
+            case r of
+                Nothing -> pure []
+                Just x  -> (x :) <$> go
+
+{- | Run the parser one or more times and return the results as a @'NonEmpty'@.
+
+The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
+precise type signature.
+-}
+some :: Parser s e a -> Parser s e (NonEmpty a)
+some p = zipWith (:|) p (first absurd $ many p)
 
