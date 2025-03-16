@@ -577,7 +577,7 @@ __Theorem__: The `Alternative` instance for `Parser s e a` satisfies _right abso
 empty <*> x = empty
 ```
 
-If the monoid structure on the error type `e` is idempotent (that is, for all `x :: e`, `x <> x = x`), then, it satisfies both left and _right distributivity_, that is:
+If the monoid structure on the error type `e` is idempotent (that is, for all `x :: e`, `x <> x = x`), then, it satisfies both _left_ and _right distributivity_:
 
 ```haskell
 f <*> (x <|> y) = (f <*> x) <|> (f <*> y)
@@ -594,7 +594,7 @@ p <*> q = do
 
 and doing a case by case analysis on the failures.
 
-As we will see in the next section, the monoid law that we will use in the library, embodying the short-circuiting accumulation strategy, is idempotent.
+As we will see in the next section, the monoid law that we will use in the library is idempotent.
 
 [^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
@@ -608,6 +608,8 @@ As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass),
     | x == mempty = y
     | otherwise   = x
 ```
+
+One advantage over the list-accumulation strategy is that this monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-3-4-3-7-more-laws).
 
 ### A. 4. 1. First attempt.
 
@@ -636,6 +638,54 @@ instance Monoid (ParseError e) where
 A little bit of staring and the reader should be able to convince of himself that this type is monoid isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
 
 ### A. 4. 2. What is in an error?
+
+File(s):
+
+  * [HasPosition.hs](../src/Trisagion/Typeclasses/HasPosition.hs)
+
+`ParseError e` is just a newtype-wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
+
+```haskell
+data ParseError s e
+    = Fail
+    | ParseError !s !e
+    deriving stock (Eq, Show, Functor)
+```
+
+But now we face a problem: for binary parsers with input type `ByteString`, a `Word` offset is a reasonable notion of position, while for text parsers with input type `Text`, something like
+
+```haskell
+data Position = Position {
+    line   :: !Word,
+    column :: !Word,
+}
+```
+
+is more useful. So we do what every self-respecting Haskeller does and introduce a typeclass to abstract over the notions of position.
+
+```haskell
+{- | The typeclass for input streams with a notion of current position. -}
+class HasPosition s where
+    {-# MINIMAL getPosition #-}
+
+    {- | The type of the stream's position. -}
+    type PositionOf s :: Type
+
+    {- | Getter for the current position of the stream. -}
+    getPosition :: s -> PositionOf s
+```
+
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. Even more, every type `s` has such a notion of position by simply returning itself!
+
+```haskell
+instance HasPosition s
+    type PositionOf s = s
+
+    getPosition :: s -> s
+    getPosition = id
+```
+
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so for the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside to having the error type carry a reference to the input stream is that it potentially keeps it alive in memory for much longer. I have gone back and forth on this, and ended going for the most flexible solution: the error type carries a reference to the input stream, but we also keep the typeclass. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
 
 ### A. 4. 3. Backtraces.
 

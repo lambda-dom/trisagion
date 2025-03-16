@@ -50,5 +50,6 @@ library
     exposed-modules:
         Trisagion.Types.Result
         Trisagion.Types.ParseError
+        Trisagion.Typeclasses.HasPosition
         Trisagion.Parser
         Trisagion.Parsers.Combinators
