@@ -738,9 +738,9 @@ data ParseError s e where
         -> ParseError s e
 ```
 
-The reader can read up on existentials, but the short of it is that we can set _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
+The reader can read up on existentials, but the short of it is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
 
-With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of the new, hopefully contextually more useful, error:
+With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of a new, contextually more useful, error:
 
 ```haskell
 onParseError
@@ -770,3 +770,18 @@ parser = do
 without having to unify the error types of `p` and `q`.
 
 #### A. 4. 3. 1. The backtrace getter.
+
+A `ParseError` looks like
+
+>  error -> backtrace1 -> ... -> Nothing
+
+So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
+
+```haskell
+getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
+getBacktrace f = go
+    where
+        go :: ParseError s c -> [a]
+        go Fail               = []
+        go (ParseError b s e) = f s e : maybe [] go b
+```
