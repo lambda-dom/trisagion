@@ -11,6 +11,8 @@ license-file:       LICENSE
 maintainer:         grodrigues.math@gmail.com
 copyright:          2025 G. Rodrigues
 build-type:         Simple
+tested-with:
+    GHC == {9.6.6}
 extra-source-files:
 extra-doc-files:
     LICENSE
@@ -34,6 +36,12 @@ library
         -- GHC 9.6
         base >=4.18 && <4.19,
         mtl >=2.3 && <2.4,
+        bytestring >=0.11 && <0.13,
+        text >=2.0 && <2.2,
+        containers >=0.6 && <0.8,
+        vector >=0.13 && <0.14,
+        -- Non-hackage libraries.
+        mono >=0.1 && <0.2,
     ghc-options:
         -Wall
         -Wcompat
@@ -51,6 +59,8 @@ library
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.HasPosition
+        Trisagion.Typeclasses.Streamable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
+        Trisagion.Parsers.Streamable

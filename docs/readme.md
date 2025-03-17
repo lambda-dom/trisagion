@@ -790,3 +790,93 @@ getBacktrace f = go
 
 #### A. 4. 3. 2. Anything else?
 
+## A. 4. Typeclasses for the input.
+
+We are at the point where we can finally tackle the constraints needed for the input type `s`; after all, at this point we cannot even get out one element from the input stream.
+
+### A. 4. 1. One out of `s`: the `Streamable` typeclass.
+
+The introductory description completely describes what we need from `s`: an `uncons` operation with the return type depending on `s`.
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic input streams. -}
+class Streamable s where
+    {-# MINIMAL getOne #-}
+
+    type ElementOf s :: Type
+
+    {- | Get, or uncons, the first element from the streamable. -}
+    getOne :: s -> Maybe (ElementOf s, s)
+```
+
+### A. 4. 2. The `MonoFunctor` constraint.
+
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws. So now we have:
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
+class MonoFunctor s => Streamable s where
+    {-# MINIMAL getOne #-}
+
+    {- | Get, or uncons, the first element from the streamable. -}
+    getOne :: s -> Maybe (ElementOf s, s)
+```
+
+### A. 4. 3. No free laws.
+
+Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available, and equational laws like naturality must be explicitly required.
+
+__Definition__: Let `s` and `t` be two monofunctors with `a ~ ElementOf s ~ ElementOf t`. A function `h :: s -> t` is _mononatural_ if for every `f :: a -> a` we have the equality `monomap f . h = h . monomap f`.
+
+notes(s):
+
+  * There are equivalent descriptions of monofunctoriality and mononaturality in terms of monoid actions, but these trivial reformulations do not yield anything important for our purposes.
+
+The first law for `Streamable` is that `getOne` is mononatural. In case it is not clear, the `MonoFunctor` structure of the codomain is
+
+```haskell
+monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (ElementOf s, s)
+monomap f = fmap (bimap f (monomap f))
+```
+
+### A. 4. 4. The `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists,
+
+```haskell
+toList :: Streamable s => s -> [ElementOf s]
+toList = unfoldr getOne
+```
+
+so that `Streamable` could / should have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+
+  1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
+
+  2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
+
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+
+### A. 4. 5. Two fundamental parsers.
+
+With the `Streamable` typeclass we can now extract one element from the input stream and check if the input stream has more elements to yield.
+
+```haskell
+eoi :: Streamable s => Parser s Void Bool
+eoi = gets isNull
+
+one :: Streamable s => Parser s (ParseError s InputError) (ElementOf s)
+one = do
+    xs <- get
+    case getOne xs of
+        Just (y, ys) -> put ys $> y
+        Nothing      -> absurd <$> throwParseError (InputError 1)
+```
+
+### A. 4. 6. Definable `isSuffix`.
+
+We can now close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
+
+```haskell
+isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffix xs ys = toList xs `isSuffixOf` toList ys
+```

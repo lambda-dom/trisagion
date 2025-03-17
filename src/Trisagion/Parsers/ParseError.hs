@@ -43,10 +43,10 @@ import Trisagion.Parsers.Combinators (lookAhead, many)
 
 {- | The @ValidationError@ error type.
 
-Error thrown on failed validations.
+Error thrown on failed validations against a predicate.
 -}
-data ValidationError = ValidationError
-    deriving stock (Eq, Show)
+newtype ValidationError a = ValidationError a
+    deriving stock (Eq, Show, Functor)
 
 
 {- | Parser that throws @'ParseError' s e@ with error tag @e@.
@@ -143,10 +143,10 @@ An example is to ensure all input was consumed, e. g. @'guardWith' (const eoi) p
 guardWith
     :: (a -> Parser s Void Bool)        -- ^ Post-condition.
     -> Parser s (ParseError s e) a      -- ^ Parser to run.
-    -> Parser s (ParseError s (Either ValidationError e)) a
+    -> Parser s (ParseError s (Either (ValidationError a) e)) a
 guardWith cond p = capture $ do
     x <- first (fmap Right) p
     b <- first absurd $ cond x
     if b
         then pure x
-        else absurd <$> throwParseError (Left ValidationError)
+        else absurd <$> throwParseError (Left (ValidationError x))

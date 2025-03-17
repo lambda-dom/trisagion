@@ -1,0 +1,8 @@
+-- tests: true
+packages:
+    .
+
+source-repository-package
+    type: git
+    location: https://github.com/lambda-dom/mono
+    tag: 5f631a81124a30b4a46d0d5030fa93aca306c57
