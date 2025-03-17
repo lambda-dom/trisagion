@@ -811,7 +811,7 @@ class Streamable s where
 
 ### A. 4. 2. The `MonoFunctor` constraint.
 
-All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as scaffolding. So now we have:
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws. So now we have:
 
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
@@ -821,3 +821,20 @@ class MonoFunctor s => Streamable s where
     {- | Get, or uncons, the first element from the streamable. -}
     getOne :: s -> Maybe (ElementOf s, s)
 ```
+
+### A. 4. 3. The `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists via
+
+```haskell
+toList :: Streamable s => s -> [ElementOf s]
+toList = unfoldr . getOne
+```
+
+So that `Streamable` could / should have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+
+  1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
+
+  2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
+
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
