@@ -315,7 +315,13 @@ tag x = case x of
     T_n _ -> n
 ```
 
-This piece of bloatware can derived automatically using Haskell's generics or (God forbid) template Haskell, but we will not dwell on this detail here. To parse this format, we assume the existence of a parser for `Word` [^4]
+This piece of bloatware can derived automatically using Haskell's generics or (God forbid) template Haskell, but we will not dwell on this detail here.
+
+note(s):
+
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or addition of new constructors. A more robust version would use the constructor names. Other refactorings of the `T` type like the deletion of constructors would need more sophisticated schemes like versioning to ensure backwards compatibility.
+
+To parse this format, we assume the existence of a parser for `Word` [^4]
 
 ```haskell
 word :: Parser s e Word
@@ -617,7 +623,7 @@ File(s):
 
   * [ParseError.hs](../src/Trisagion/Types/ParseError.hs)
 
-The `ParseError e` type is a thin wrapper around `e` to implement the short-circuit accumulation strategy:
+The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuit accumulation strategy:
 
 ```haskell
 data ParseError e
@@ -693,3 +699,74 @@ And this notion of position is not entirely silly, because if the current positi
 
 ### A. 4. 3. Backtraces.
 
+File(s):
+
+  * [ParseError.hs](../src/Trisagion/Parsers/ParseError.hs)
+
+Consider the following block
+
+```haskell
+parser = do
+    ...
+    x <- p  -- ^ Can throw here.
+    ...
+    y <- q  -- ^ Can throw here.
+    ...
+```
+
+`p` and `q` must have the same error type. If `p` and `q` have different error types `e1` and `e2`, we must find a type `e` and a cospan of conversion functions `e1 -> e <- e2` and write
+
+```haskell
+parser = do
+    ...
+    x <- first f1 p  -- ^ Can throw here.
+    ...
+    y <- first f2 q  -- ^ Can throw here.
+    ...
+```
+
+Another option would be to throw a different error `e'` with the thrown error from `p` attached like _exception backtraces_. The obvious problem is that the errors of `p` and `q` can be different so we must still find appropriate cospans; Haskell's GADT's and existentials to the rescue.
+
+```haskell
+data ParseError s e where
+    Fail :: ParseError s e
+    ParseError
+        :: (Typeable d, Eq d, Show d)
+        => !(Maybe (ParseError s d))    -- ^ Backtrace.
+        -> !s                           -- ^ Input stream.
+        -> !e                           -- ^ Error tag.
+        -> ParseError s e
+```
+
+The reader can read up on existentials, but the short of it is that we can set _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
+
+With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of the new, hopefully contextually more useful, error:
+
+```haskell
+onParseError
+    :: (Typeable d, Eq d, Show d)
+    => e                                -- ^ Error tag of new error.
+    -> Parser s (ParseError s d) a      -- ^ Parser to run.
+    -> Parser s (ParseError s e) a
+onParseError e p =
+    catchErrorWith
+        p
+        (\ b -> do
+            s <- get
+            throwError $ makeParseError b s e)
+```
+
+The above block can now be written as,
+
+```haskell
+parser = do
+    ...
+    x <- onParseError e1 p  -- ^ Can throw here.
+    ...
+    y <- onParseError e2 q  -- ^ Can throw here.
+    ...
+```
+
+without having to unify the error types of `p` and `q`.
+
+#### A. 4. 3. 1. The backtrace getter.

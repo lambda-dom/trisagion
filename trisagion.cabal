@@ -53,3 +53,4 @@ library
         Trisagion.Typeclasses.HasPosition
         Trisagion.Parser
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.ParseError

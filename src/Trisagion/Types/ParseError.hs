@@ -35,7 +35,7 @@ data ParseError s e where
     ParseError
         :: (Typeable d, Eq d, Show d)
         => !(Maybe (ParseError s d))    -- ^ Backtrace.
-        -> !s                           -- ^ Input state.
+        -> !s                           -- ^ Input stream.
         -> !e                           -- ^ Error tag.
         -> ParseError s e
 
@@ -92,7 +92,7 @@ note(s):
 makeParseError
     :: (Typeable d, Eq d, Show d)
     => ParseError s d                   -- ^ Backtrace.
-    -> s                                -- ^ Input state.
+    -> s                                -- ^ Input stream.
     -> e                                -- ^ Error tag.
     -> ParseError s e
 makeParseError b = ParseError (go b)
@@ -109,7 +109,7 @@ note(s):
     * The backtrace is a @'Nothing'@ of type @'Maybe' ('ParseError' s 'Void')@.
 -}
 makeParseErrorNoBacktrace
-    :: s                                -- ^ State component.
+    :: s                                -- ^ Input stream.
     -> e                                -- ^ Error tag.
     -> ParseError s e
 makeParseErrorNoBacktrace =
@@ -127,7 +127,7 @@ getTag :: ParseError s e -> Maybe e
 getTag Fail               = Nothing
 getTag (ParseError _ _ e) = Just e
 
-{- | Prism for the backtrace of an error as an elimination function. -}
+{- | Getter for the backtrace of an error as an elimination function. -}
 getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
 getBacktrace f = go
     where
