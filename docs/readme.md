@@ -822,16 +822,33 @@ class MonoFunctor s => Streamable s where
     getOne :: s -> Maybe (ElementOf s, s)
 ```
 
-### A. 4. 3. The `MonoFoldable` constraint.
+### A. 4. 3. No free laws.
 
-Given the `uncons` operation, we can define a conversion to lists via
+Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available, and equational laws like naturality must be explicitly required.
+
+__Definition__: Let `s` and `t` be two monofunctors with `a ~ ElementOf s ~ ElementOf t`. A function `h :: s -> t` is _mononatural_ if for every `f :: a -> a` we have the equality `monomap f . h = h . monomap f`.
+
+notes(s):
+
+  * There are equivalent descriptions of monofunctoriality and mononaturality in terms of monoid actions, but these trivial reformulations do not yield anything important for our purposes.
+
+The first law for `Streamable` is that `getOne` is mononatural. In case it is not clear, the `MonoFunctor` structure of the codomain is
+
+```haskell
+monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (ElementOf s, s)
+monomap f = fmap (bimap f (monomap f))
+```
+
+### A. 4. 4. The `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists,
 
 ```haskell
 toList :: Streamable s => s -> [ElementOf s]
-toList = unfoldr . getOne
+toList = unfoldr getOne
 ```
 
-So that `Streamable` could / should have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+so that `Streamable` could / should have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
 
   1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
 
@@ -839,6 +856,11 @@ So that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
 Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
 
-### A. 4. 4. No free laws.
-
 ### A. 4. 5. Definable `isSuffix`.
+
+We can now close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
+
+```haskell
+isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffix xs ys = toList xs `isSuffixOf` toList ys
+```
