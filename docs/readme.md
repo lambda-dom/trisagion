@@ -773,7 +773,7 @@ without having to unify the error types of `p` and `q`.
 
 A `ParseError` looks like
 
->  error -> backtrace1 -> ... -> Nothing
+>  error -> Just error_0 -> ... -> Just error_n -> Nothing
 
 So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
 
@@ -785,3 +785,6 @@ getBacktrace f = go
         go Fail               = []
         go (ParseError b s e) = f s e : maybe [] go b
 ```
+
+#### A. 4. 3. 2. Anything else?
+
