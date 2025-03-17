@@ -17,8 +17,21 @@ module Trisagion.Typeclasses.Streamable (
 -- Imports.
 -- Base.
 import Data.List (unfoldr, isSuffixOf)
+import qualified Data.List as List (uncons)
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NonEmpty (uncons)
+import Data.Word (Word8)
 
 -- Libraries.
+import Data.Sequence (Seq (..))
+import Data.Vector (Vector)
+import qualified Data.Text as Text (Text, uncons)
+import qualified Data.Text.Lazy as LazyText (Text, uncons)
+import qualified Data.ByteString as Bytes (ByteString, uncons)
+import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons)
+import qualified Data.Vector as Vector (uncons)
+
+-- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
 
 
@@ -75,3 +88,38 @@ isSuffix xs ys = toList xs `isSuffixOf` toList ys
 
 
 -- Instances.
+instance Streamable Bytes.ByteString where
+    getOne :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
+    getOne = Bytes.uncons
+
+instance Streamable LazyBytes.ByteString where
+    getOne :: LazyBytes.ByteString -> Maybe (Word8, LazyBytes.ByteString)
+    getOne = LazyBytes.uncons
+
+instance Streamable Text.Text where
+    getOne :: Text.Text -> Maybe (Char, Text.Text)
+    getOne = Text.uncons
+
+instance Streamable LazyText.Text where
+    getOne :: LazyText.Text -> Maybe (Char, LazyText.Text)
+    getOne = LazyText.uncons
+
+instance Streamable [a] where
+    getOne :: [a] -> Maybe (a, [a])
+    getOne = List.uncons
+
+instance Streamable (NonEmpty a) where
+    getOne :: NonEmpty a -> Maybe (a, NonEmpty a)
+    getOne xs =
+        case NonEmpty.uncons xs of
+            (_, Nothing) -> Nothing
+            (y, Just ys) -> Just (y, ys)
+
+instance Streamable (Seq a) where
+    getOne :: Seq a -> Maybe (a, Seq a)
+    getOne Empty      = Nothing
+    getOne (x :<| xs) = Just (x, xs)
+
+instance Streamable (Vector a) where
+    getOne :: Vector a -> Maybe (a, Vector a)
+    getOne = Vector.uncons
