@@ -856,7 +856,23 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
 Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
 
-### A. 4. 5. Definable `isSuffix`.
+### A. 4. 5. Two fundamental parsers.
+
+With the `Streamable` typeclass we can now extract one element from the input stream and check if the input stream has more elements to yield.
+
+```haskell
+eoi :: Streamable s => Parser s Void Bool
+eoi = gets isNull
+
+one :: Streamable s => Parser s (ParseError s InputError) (ElementOf s)
+one = do
+    xs <- get
+    case getOne xs of
+        Just (y, ys) -> put ys $> y
+        Nothing      -> absurd <$> throwParseError (InputError 1)
+```
+
+### A. 4. 6. Definable `isSuffix`.
 
 We can now close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
 
