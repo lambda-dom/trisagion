@@ -51,6 +51,7 @@ library
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.HasPosition
+        Trisagion.Typeclasses.Streamable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError

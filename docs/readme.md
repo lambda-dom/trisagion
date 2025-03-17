@@ -790,3 +790,34 @@ getBacktrace f = go
 
 #### A. 4. 3. 2. Anything else?
 
+## A. 4. Typeclasses for the input.
+
+We are at the point where we can finally tackle the constraints needed for the input type `s`; after all, at this point we cannot even get out one element from the input stream.
+
+### A. 4. 1. One out of `s`: the `Streamable` typeclass.
+
+The introductory description completely describes what we need from `s`: an `uncons` operation with the return type depending on `s`.
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic input streams. -}
+class Streamable s where
+    {-# MINIMAL getOne #-}
+
+    type ElementOf s :: Type
+
+    {- | Get, or uncons, the first element from the streamable. -}
+    getOne :: s -> Maybe (ElementOf s, s)
+```
+
+### A. 4. 2. The `MonoFunctor` constraint.
+
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as scaffolding. So now we have:
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
+class MonoFunctor s => Streamable s where
+    {-# MINIMAL getOne #-}
+
+    {- | Get, or uncons, the first element from the streamable. -}
+    getOne :: s -> Maybe (ElementOf s, s)
+```
