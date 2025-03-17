@@ -6,8 +6,6 @@ The @Streamable@ typeclass.
 
 module Trisagion.Typeclasses.Streamable (
     -- * Typeclasses.
-    -- 
-    -- $streamable
     Streamable (..),
 
     -- * Basic functions.
@@ -15,41 +13,6 @@ module Trisagion.Typeclasses.Streamable (
     isSuffix,
 ) where
 
--- $streamable
---
--- To describe the three laws for the 'Streamable' typeclass, we start with a definition.
---
--- __Definition__: Let @s@ and @t@ be two monofunctors with @a ~ 'ElementOf' s ~ 'ElementOf' t@. A
--- function @h :: s -> t@ is /mononatural/ if for every @f :: a -> a@ we have the equality
---
--- @
---   monomap f . h = h . monomap f
--- @
---
--- Since @s@ is not polymorphic we do not have free theorems to rely on, so naturality must be
--- explicitly required:
---
--- __Naturality__: The function @'getOne' :: s -> 'Maybe' ('ElementOf' s, s)@ is natural.
---
--- In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('ElementOf' s, s)@ is:
---
--- @
---   monomap :: ('ElementOf' s -> 'ElementOf' s) -> 'Maybe' ('ElementOf' s, s) -> 'Maybe' ('ElementOf' s, s)
---   monomap f = fmap (bimap f (monomap f))
--- @
--- 
--- Given @'getOne' :: s -> 'Maybe' ('ElementOf' s, s)@ we can define @'toList' ::s -> [ElementOf s]@
--- by @'Data.List.unfoldr' 'getOne'@.
---
--- __Foldability__:
---
--- prop> MonoFoldable s => monotoList = toList
---
--- Finally, the third law says that 'getOne' really is uncons-ing at the level of lists.
---
--- __Unconsing__:
---
--- prop> toList = maybe [] (\ (x, xs) -> x : toList xs) . getOne
 
 -- Imports.
 -- Base.
@@ -57,7 +20,42 @@ import Data.Kind (Type)
 import Data.List (unfoldr, isSuffixOf)
 
 
-{- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
+{- | The @Streamable@ typeclass of monomorphic, streamable functors.
+
+To describe the laws for the 'Streamable' typeclass, we start with a definition.
+
+__Definition__: Let @s@ and @t@ be two monofunctors with @a ~ 'ElementOf' s ~ 'ElementOf' t@. A
+function @h :: s -> t@ is /mononatural/ if for every @f :: a -> a@ we have the equality
+
+@
+monomap f . h = h . monomap f
+@
+
+Since @s@ is not polymorphic we do not have free theorems to rely on, so naturality must be
+explicitly required:
+
+__Naturality__: The function @'getOne' :: s -> 'Maybe' ('ElementOf' s, s)@ is natural.
+
+In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('ElementOf' s, s)@ is:
+
+@
+monomap :: ('ElementOf' s -> 'ElementOf' s) -> 'Maybe' ('ElementOf' s, s) -> 'Maybe' ('ElementOf' s, s)
+monomap f = fmap (bimap f (monomap f))
+@
+ 
+Given @'getOne' :: s -> 'Maybe' ('ElementOf' s, s)@ we can define @'toList' ::s -> [ElementOf s]@
+by @'Data.List.unfoldr' 'getOne'@.
+
+__Foldability__:
+
+prop> 'MonoFoldable' s => monotoList = toList
+
+Finally, the third law says that 'getOne' really is uncons-ing at the level of lists.
+
+__Unconsing__:
+
+prop> toList = maybe [] (\ (x, xs) -> x : toList xs) . getOne
+-}
 class Streamable s where
     {-# MINIMAL getOne #-}
 
