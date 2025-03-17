@@ -63,7 +63,7 @@ by @'Data.List.unfoldr' 'getOne'@.
 
 __Foldability__:
 
-prop> 'MonoFoldable' s => monotoList = toList
+prop> MonoFoldable s => monotoList = toList
 
 Finally, the third law says that 'getOne' really is uncons-ing at the level of lists.
 
