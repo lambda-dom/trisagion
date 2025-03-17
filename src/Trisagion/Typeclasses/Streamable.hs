@@ -16,8 +16,10 @@ module Trisagion.Typeclasses.Streamable (
 
 -- Imports.
 -- Base.
-import Data.Kind (Type)
 import Data.List (unfoldr, isSuffixOf)
+
+-- Libraries.
+import Data.MonoFunctor (MonoFunctor (..))
 
 
 {- | The @Streamable@ typeclass of monomorphic, streamable functors.
@@ -56,11 +58,8 @@ __Unconsing__:
 
 prop> toList = maybe [] (\ (x, xs) -> x : toList xs) . getOne
 -}
-class Streamable s where
+class MonoFunctor s => Streamable s where
     {-# MINIMAL getOne #-}
-
-    {- | The type of the elements of the monomorphic streamable. -}
-    type ElementOf s :: Type
 
     {- | Get, or uncons, the first element from the streamable. -}
     getOne :: s -> Maybe (ElementOf s, s)
