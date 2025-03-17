@@ -838,3 +838,7 @@ So that `Streamable` could / should have `MonoFoldable` as a superclass. There a
   2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
 
 Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+
+### A. 4. 4. No free laws.
+
+### A. 4. 5. Definable `isSuffix`.

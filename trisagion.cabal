@@ -11,6 +11,8 @@ license-file:       LICENSE
 maintainer:         grodrigues.math@gmail.com
 copyright:          2025 G. Rodrigues
 build-type:         Simple
+tested-with:
+    GHC == {9.6.6}
 extra-source-files:
 extra-doc-files:
     LICENSE
