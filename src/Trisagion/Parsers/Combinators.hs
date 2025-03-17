@@ -36,7 +36,7 @@ module Trisagion.Parsers.Combinators (
 ) where
 
 -- Imports.
--- Prelude.
+-- Prelude hiding.
 import Prelude hiding (either, maybe, repeat, sequence, zip, zipWith)
 import qualified Prelude as Base (either)
 

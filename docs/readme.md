@@ -152,7 +152,7 @@ p :: Parser s e (T a_0 ... a_n)
 p = T <$> (first f_0 p_0) <*> ... <*> (first f_n p_n)
 ```
 
-The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the chapter dedicated to errors, we will see another way to deal with this problem that does not rely on coming up with a unifier `e`.
+The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the section [On Errors](#a-4-on-errors) we will see another way to deal with this problem that does not rely on coming up with a cone `e_i -> e`.
 
 Note that as with the input type `s`, there are still no constraints on the error type `e`.
 
@@ -234,7 +234,7 @@ where `(&&&)` is the representability isomorphism implied by the universal prope
 
 In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
 
-If `unzip` and `terminal :: f () -> ()` are isomorphisms then `f` is said to _preserve products_. `Parser s e a` does _not_ preserve products; we will not show this (it is not very difficult anyways) but it is an instructive exercise to see that `zip`, or more precise its uncurried version, is _not_ an inverse to `unzip`, and this can be done for any monad. First, `zip` can be defined for any monad -- see [The Monad typeclass](#a-3-2-the-monad-typeclass) for the `Monad` instance for `Parser s e a` -- as
+If `unzip` and `terminal :: f () -> ()` are isomorphisms then `f` is said to _preserve products_. `Parser s e a` does _not_ preserve products; we will not show this (it is not very difficult anyways) but it is an instructive exercise to see that `zip`, or more precise its uncurried version, is _not_ an inverse of `unzip`, and the proof works for every monad. First, `zip` can be re-defined -- see [The Monad typeclass](#a-3-2-the-monad-typeclass) for the `Monad` instance for `Parser s e a` -- as
 
 ```haskell
 zip :: Monad f => f a -> f b -> f (a, b)
@@ -253,7 +253,7 @@ uncurry zip . unzip p = do
     pure (x, y)
 ```
 
-which is equal to `p` only if running `p` is idempotent. For the converse,
+which is equal to `p` only if running `p` is idempotent. For the other direction,
 
 ```haskell
 unzip . uncurry zip (p, q)
@@ -305,7 +305,7 @@ data T a_0 ... a_n
 
 The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` [^3] can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [Products](#a-3-1-products).
 
-Assuming the existence of parsers `p_i :: Parser s e a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
+Assuming the existence of parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
 
 ```haskell
 tag :: T a_0 ... a_n -> Word
@@ -315,7 +315,13 @@ tag x = case x of
     T_n _ -> n
 ```
 
-This piece of bloatware can derived automatically using Haskell's generics or (God forbid) template Haskell, but we will not dwell on this detail here. To parse this format, we assume the existence of a parser for `Word` [^4]
+This piece of bloatware can derived automatically using Haskell's generics or (God forbid) template Haskell, but we will not dwell on this detail here.
+
+note(s):
+
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or addition of new constructors. A more robust version would use the constructor names. Other refactorings of the `T` type like the deletion of constructors would need more sophisticated schemes like versioning to ensure backwards compatibility.
+
+To parse this format, we assume the existence of a parser for `Word` [^4]
 
 ```haskell
 word :: Parser s e Word
@@ -353,9 +359,9 @@ catchErrorWith
 catchErrorWith p h = embed $ \ s -> either (flip run s . h) Right $ run p s
 ```
 
-### A. 3. 4. Coproducts: Take II.
+### A. 3. 4. Coproducts and choice.
 
-In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) something else is needed and that something else is _choice_.
+In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) often something else is needed and that something else is _choice_.
 
 Getting back to our coproduct type
 
@@ -366,20 +372,20 @@ data T a_0 ... a_n
     | T_n a_n
 ```
 
-Assume parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s`, at most only one of the parsers `Parser s e_i a_i` will succeed. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
+Assume parsers `p_i :: Parser s e_i a_i`; assume furthermore that the formats for `a_i` are _disjoint_ in the sense that for every input `xs :: s` at most one of the parsers `Parser s e_i a_i` succeeds. Then we could get a parser for `T a_0 ... a_n` by trying each `p_i` in turn and returning the result of the first success; this can be written as,
 
 ```haskell
 p :: Parser s e (T a_0 ... a_n)
 p = (bimap f_0 T_0) <|> ... <|> (bimap f_n T_n)
 ```
 
-where `(<|>)` is the choice operator. In order to accomplish this, we will rely on implementing a parser combinator
+where `(<|>)` is the choice operator. To implement choice, we rely on the parser combinator
 
 ```haskell
 observe :: Parser s e a -> Parser s Void (Either e a)
 ```
 
-that implements backtracking. Specifically, the `observe` parser runs the argument parser and if it succeeds return the result as a `Right` while if it errors, backtrack and return the error as a `Left`. In order to implement the backtracking bit, we need to be able to probe and change the input state `s` of the parser, so let us start with that first.
+implementing backtracking. Specifically, the `observe` parser runs the argument parser and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
 
 #### A. 3. 4. 1. The `MonadState` typeclass.
 
@@ -411,22 +417,22 @@ observe p = do
 
 #### A. 3. 4. 3. The `Alternative` typeclass.
 
-We now have all the ingredients to implement choice: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however: what to do if _both_ parsers error out? One obvious answer is to "combine the errors" and combining errors can be seen as a code word for a `Monoid` constraint on the error type `e`. With this:
+We now have all the ingredients to implement choice via `(<|>)` of the `Alternative` typeclass: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however, namely, what to do if _both_ parsers error out? One obvious answer is "combine the errors" and "combine the errors" is a code word for a `Monoid` constraint on the error type `e`. With this setup:
 
 ```haskell
 (<|>) :: Monoid e => Parser s e a -> Parser s e a -> Parser s e a
-(<|>) p q = do
+(<|>) p q =
     first absurd (observe p) >>=
         either
-            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) pure)
+            (\ e -> first absurd (observe q) >>= either (throwError . (e <>)) pure)
             pure
 ```
 
-The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that this is indeed a monoid, but as we will see next, it implies much more.
+The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that with this structure `Parser s e a` is indeed a monoid, but as we will see next, it implies much more.
 
 ##### A. 3. 4. 3. 1. The `Monoid e` constraint.
 
-What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with them into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with it into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
 
 ##### A. 3. 4. 3. 2. The `either` parser and an alternative to `Alternative`.
 
@@ -441,10 +447,10 @@ Expanding that definition of `(<|>)` inside `either` we get its direct implement
 
 ```haskell
 either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (Either a b)
-either p q = do
+either p q =
     first absurd (observe p) >>=
         either
-            (\ e -> absurd (observe q) >>= either (throwError . (e <>)) (pure . Left))
+            (\ e -> first absurd (observe q) >>= either (throwError . (e <>)) (pure . Left))
             (pure . Right)
 ```
 
@@ -538,7 +544,7 @@ __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functo
 
 ##### A. 3. 4. 3. 6. The punchline.
 
-Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoid and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
+Combining sections [Why you never heard of coproducts](#a-3-4-7-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-3-4-8-monoids-and-lax-monoidal-functors), we have that the functions,
 
 ```haskell
 u :: Monoid e => (Parser s e a, Parser s e b) -> Parser s e (Either a b)
@@ -577,7 +583,7 @@ __Theorem__: The `Alternative` instance for `Parser s e a` satisfies _right abso
 empty <*> x = empty
 ```
 
-If the monoid structure on the error type `e` is idempotent (that is, for all `x :: e`, `x <> x = x`), then, it satisfies both left and _right distributivity_, that is:
+If the monoid structure on the error type `e` is idempotent (that is, for all `x :: e`, `x <> x = x`), then, it satisfies both _left_ and _right distributivity_:
 
 ```haskell
 f <*> (x <|> y) = (f <*> x) <|> (f <*> y)
@@ -594,10 +600,191 @@ p <*> q = do
 
 and doing a case by case analysis on the failures.
 
-As we will see in the next section, the monoid law that we will use in the library, embodying the short-circuiting accumulation strategy, is idempotent.
+As we will see in the next section, the monoid law that we will use in the library is idempotent.
 
 [^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
 ## A. 4. On Errors.
 
-As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed, the error accumulation strategy.
+As discussed in [The Alternative Typeclass](#a-3-4-3-the-alternative-typeclass), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either you accumulate all errors in a container like a list or you short-circuit at the first error. In its turn, short-circuiting completely determines the monoid operation:
+
+```haskell
+(<>) :: Eq e => e -> e -> e
+(<>) x y
+    | x == mempty = y
+    | otherwise   = x
+```
+
+One advantage over the list-accumulation strategy is that this monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-3-4-3-7-more-laws).
+
+### A. 4. 1. First attempt.
+
+File(s):
+
+  * [ParseError.hs](../src/Trisagion/Types/ParseError.hs)
+
+The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuit accumulation strategy:
+
+```haskell
+data ParseError e
+    = Fail
+    | ParseError !e
+    deriving stock (Eq, Show, Functor)
+```
+
+For the `Monoid` instance, we have as discussed above:
+
+```haskell
+instance Semigroup (ParseError e) where
+    (<>) :: ParseError e -> ParseError e -> ParseError e
+    (<>) Fail x = x
+    (<>) x    _ = x
+
+instance Monoid (ParseError e) where
+    mempty :: ParseError e
+    mempty = Fail
+```
+
+A little bit of staring and the reader should be able to convince of himself that this type is monoid isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+
+### A. 4. 2. What is in an error?
+
+File(s):
+
+  * [HasPosition.hs](../src/Trisagion/Typeclasses/HasPosition.hs)
+
+`ParseError e` is just a newtype-wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
+
+```haskell
+data ParseError s e
+    = Fail
+    | ParseError !s !e
+    deriving stock (Eq, Show, Functor)
+```
+
+But now we face a problem: for binary parsers with input type `ByteString`, a `Word` offset is a reasonable notion of position, while for text parsers with input type `Text`, something like
+
+```haskell
+data Position = Position {
+    line   :: !Word,
+    column :: !Word,
+}
+```
+
+is more useful. So we do what every self-respecting Haskeller does and introduce a typeclass to abstract over the notions of position.
+
+```haskell
+{- | The typeclass for input streams with a notion of current position. -}
+class HasPosition s where
+    {-# MINIMAL getPosition #-}
+
+    {- | The type of the stream's position. -}
+    type PositionOf s :: Type
+
+    {- | Getter for the current position of the stream. -}
+    getPosition :: s -> PositionOf s
+```
+
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. Even more, every type `s` has an `HasPosition` instance by simply returning itself as the current position!
+
+```haskell
+instance HasPosition s
+    type PositionOf s = s
+
+    getPosition :: s -> s
+    getPosition = id
+```
+
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside of having the error carry a reference to the input stream is that it potentially keeps it alive in memory for much longer than necessary. I have gone back and forth on this, and ended going for the most flexible solution: the error carries a reference to the input stream, but we also keep the typeclass `HasPosition`. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
+
+### A. 4. 3. Backtraces.
+
+File(s):
+
+  * [ParseError.hs](../src/Trisagion/Parsers/ParseError.hs)
+
+Consider the following block
+
+```haskell
+parser = do
+    ...
+    x <- p  -- ^ Can throw here.
+    ...
+    y <- q  -- ^ Can throw here.
+    ...
+```
+
+`p` and `q` must have the same error type. If `p` and `q` have different error types `e1` and `e2`, we must find a type `e` and a cospan of conversion functions `e1 -> e <- e2` and write
+
+```haskell
+parser = do
+    ...
+    x <- first f1 p  -- ^ Can throw here.
+    ...
+    y <- first f2 q  -- ^ Can throw here.
+    ...
+```
+
+Another option would be to throw a different error `e'` with the thrown error from `p` attached like _exception backtraces_. The obvious problem is that the errors of `p` and `q` can be different so we must still find appropriate cospans; Haskell's GADT's and existentials to the rescue.
+
+```haskell
+data ParseError s e where
+    Fail :: ParseError s e
+    ParseError
+        :: (Typeable d, Eq d, Show d)
+        => !(Maybe (ParseError s d))    -- ^ Backtrace.
+        -> !s                           -- ^ Input stream.
+        -> !e                           -- ^ Error tag.
+        -> ParseError s e
+```
+
+The reader can read up on existentials, but the short of it is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
+
+With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of a new, contextually more useful, error:
+
+```haskell
+onParseError
+    :: (Typeable d, Eq d, Show d)
+    => e                                -- ^ Error tag of new error.
+    -> Parser s (ParseError s d) a      -- ^ Parser to run.
+    -> Parser s (ParseError s e) a
+onParseError e p =
+    catchErrorWith
+        p
+        (\ b -> do
+            s <- get
+            throwError $ makeParseError b s e)
+```
+
+The above block can now be written as,
+
+```haskell
+parser = do
+    ...
+    x <- onParseError e1 p  -- ^ Can throw here.
+    ...
+    y <- onParseError e2 q  -- ^ Can throw here.
+    ...
+```
+
+without having to unify the error types of `p` and `q`.
+
+#### A. 4. 3. 1. The backtrace getter.
+
+A `ParseError` looks like
+
+>  error -> Just error_0 -> ... -> Just error_n -> Nothing
+
+So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
+
+```haskell
+getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
+getBacktrace f = go
+    where
+        go :: ParseError s c -> [a]
+        go Fail               = []
+        go (ParseError b s e) = f s e : maybe [] go b
+```
+
+#### A. 4. 3. 2. Anything else?
+
