@@ -11,6 +11,10 @@ module Trisagion.Parsers.Streamable (
     -- * Parsers @'Streamable' s => 'Parser' s e a@.
     eoi,
     one,
+    peek,
+    satisfy,
+    matchElem,
+    oneOf,
 ) where
 
 -- Imports.
@@ -28,7 +32,8 @@ import Data.MonoFunctor (ElementOf)
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Parser (Parser)
-import Trisagion.Parsers.ParseError (throwParseError)
+import Trisagion.Parsers.Combinators (lookAhead)
+import Trisagion.Parsers.ParseError (ValidationError (..), throwParseError, validate)
 
 
 {- | The @InputError@ error type.
@@ -54,3 +59,30 @@ one = do
     case getOne xs of
         Just (y, ys) -> put ys $> y
         Nothing      -> absurd <$> throwParseError (InputError 1)
+
+{- | Extract the first @'ElementOf' s@ from the streamable but without consuming input. -}
+peek :: Streamable s => Parser s Void (Either (ParseError s InputError) (ElementOf s))
+peek = lookAhead one
+
+{- | Parse one @'ElementOf' s@ satisfying a predicate. -}
+satisfy
+    :: Streamable s
+    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
+    -> Parser s (ParseError s (Either InputError (ValidationError (ElementOf s)))) (ElementOf s)
+satisfy p = validate v one
+    where
+        v x = if p x then Right x else Left $ ValidationError x
+
+{- | Parse one matching @'ElementOf' s@. -}
+matchElem
+    :: (Streamable s, Eq (ElementOf s))
+    => ElementOf s                      -- ^ Matching @'ElementOf' s@.
+    -> Parser s (ParseError s (Either InputError (ValidationError (ElementOf s)))) (ElementOf s)
+matchElem x = satisfy (== x)
+
+{- | Parse one @'ElementOf' s@ that is an element of a foldable. -}
+oneOf
+    :: (Streamable s, Eq (ElementOf s), Foldable t)
+    => t (ElementOf s)                -- ^ Foldable of @'ElementOf' s@ against which to test inclusion.
+    -> Parser s (ParseError s (Either InputError (ValidationError (ElementOf s)))) (ElementOf s)
+oneOf xs = satisfy (`elem` xs)
