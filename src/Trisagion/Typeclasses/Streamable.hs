@@ -29,7 +29,11 @@ import qualified Data.Text as Text (Text, uncons)
 import qualified Data.Text.Lazy as LazyText (Text, uncons)
 import qualified Data.ByteString as Bytes (ByteString, uncons)
 import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons)
+import qualified Data.ByteString.Short as ShortBytes (ShortByteString, uncons)
 import qualified Data.Vector as Vector (uncons)
+import qualified Data.Vector.Strict as StrictVector (Vector, uncons)
+import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, uncons)
+import qualified Data.Vector.Storable as StorableVector (Vector, Storable, uncons)
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
@@ -96,6 +100,10 @@ instance Streamable LazyBytes.ByteString where
     getOne :: LazyBytes.ByteString -> Maybe (Word8, LazyBytes.ByteString)
     getOne = LazyBytes.uncons
 
+instance Streamable ShortBytes.ShortByteString where
+    getOne :: ShortBytes.ShortByteString -> Maybe (Word8, ShortBytes.ShortByteString)
+    getOne = ShortBytes.uncons
+
 instance Streamable Text.Text where
     getOne :: Text.Text -> Maybe (Char, Text.Text)
     getOne = Text.uncons
@@ -123,3 +131,15 @@ instance Streamable (Seq a) where
 instance Streamable (Vector a) where
     getOne :: Vector a -> Maybe (a, Vector a)
     getOne = Vector.uncons
+
+instance Streamable (StrictVector.Vector a) where
+    getOne :: StrictVector.Vector a -> Maybe (a, StrictVector.Vector a)
+    getOne = StrictVector.uncons
+
+instance UnboxedVector.Unbox a => Streamable (UnboxedVector.Vector a) where
+    getOne :: UnboxedVector.Vector a -> Maybe (a, UnboxedVector.Vector a)
+    getOne = UnboxedVector.uncons
+
+instance StorableVector.Storable a => Streamable (StorableVector.Vector a) where
+    getOne :: StorableVector.Vector a -> Maybe (a, StorableVector.Vector a)
+    getOne = StorableVector.uncons
