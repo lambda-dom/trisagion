@@ -25,12 +25,12 @@ import Data.Word (Word8)
 
 -- Libraries.
 import Data.Sequence (Seq (..))
-import Data.Vector (Vector)
 import qualified Data.Text as Text (Text, uncons, null)
 import qualified Data.Text.Lazy as LazyText (Text, uncons, null)
 import qualified Data.ByteString as Bytes (ByteString, uncons, null)
 import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons, null)
 import qualified Data.ByteString.Short as ShortBytes (ShortByteString, uncons, null)
+import Data.Vector (Vector)
 import qualified Data.Vector as Vector (uncons)
 import qualified Data.Vector.Strict as StrictVector (Vector, uncons)
 import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, uncons, null)
