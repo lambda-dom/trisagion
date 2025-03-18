@@ -43,6 +43,7 @@ Error thrown when a parser requests more input than is available.
 data InputError
     -- | Generic failure case.
     = InsufficientInputError
+
     -- | Failure case when it is possible to determine the amount requested.
     | InputError Word
     deriving stock (Eq, Show)
@@ -56,7 +57,7 @@ eoi = gets isNull
 one :: Streamable s => Parser s (ParseError s InputError) (ElementOf s)
 one = do
     xs <- get
-    case getOne xs of
+    case splitOne xs of
         Just (y, ys) -> put ys $> y
         Nothing      -> absurd <$> throwParseError (InputError 1)
 
@@ -73,7 +74,7 @@ satisfy p = validate v one
     where
         v x = if p x then Right x else Left $ ValidationError x
 
-{- | Parse one matching @'ElementOf' s@. -}
+{- | Parse one element matching a @'ElementOf' s@. -}
 matchElem
     :: (Streamable s, Eq (ElementOf s))
     => ElementOf s                      -- ^ Matching @'ElementOf' s@.

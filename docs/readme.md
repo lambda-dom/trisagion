@@ -808,18 +808,18 @@ class Streamable s where
     type ElementOf s :: Type
 
     {- | Get, or uncons, the first element from the streamable. -}
-    getOne :: s -> Maybe (ElementOf s, s)
+    splitOne :: s -> Maybe (ElementOf s, s)
 ```
 
 #### A. 4. 1. 1. The `MonoFunctor` constraint.
 
-All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws. So now we have:
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws.
 
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
 class MonoFunctor s => Streamable s where
     {- | Get, or uncons, the first element from the streamable. -}
-    getOne :: s -> Maybe (ElementOf s, s)
+    splitOne :: s -> Maybe (ElementOf s, s)
 ```
 
 #### A. 4. 1. 2. No free laws.
@@ -832,7 +832,7 @@ notes(s):
 
   * There are equivalent descriptions of monofunctoriality and mononaturality in terms of monoid actions, but these trivial reformulations do not yield anything important for our purposes.
 
-The first law for `Streamable` is that `getOne` is mononatural. In case it is not clear, the `MonoFunctor` structure of the codomain is
+The first law for `Streamable` is that `splitOne` is mononatural. In case it is not clear, the `MonoFunctor` structure of the codomain is
 
 ```haskell
 monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (ElementOf s, s)
@@ -845,7 +845,7 @@ Given the `uncons` operation, we can define a conversion to lists,
 
 ```haskell
 toList :: Streamable s => s -> [ElementOf s]
-toList = unfoldr getOne
+toList = unfoldr splitOne
 ```
 
 so that `Streamable` could / should have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
@@ -858,7 +858,7 @@ Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should ho
 
 #### A. 4. 1. 4. Two fundamental parsers.
 
-With the `Streamable` typeclass we can now extract one element from the input stream and check if the input stream has more elements to yield.
+With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
 
 ```haskell
 eoi :: Streamable s => Parser s Void Bool
@@ -867,14 +867,14 @@ eoi = gets isNull
 one :: Streamable s => Parser s (ParseError s InputError) (ElementOf s)
 one = do
     xs <- get
-    case getOne xs of
+    case splitOne xs of
         Just (y, ys) -> put ys $> y
         Nothing      -> absurd <$> throwParseError (InputError 1)
 ```
 
 #### A. 4. 1. 5. Definable `isSuffix`.
 
-We can now close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
+We can also close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
 
 ```haskell
 isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
@@ -882,3 +882,65 @@ isSuffix xs ys = toList xs `isSuffixOf` toList ys
 ```
 
 ### A. 4. 2. Optimization: prefixes and the `Splittable` typeclass.
+
+The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut prefixes out of streams.
+
+#### A. 4. 2. 1. The `Splittable` class.
+
+Hence the `Splittable` typeclass.
+
+```haskell
+class Streamable s => Splittable s where
+    {-# MINIMAL spliAt, splitWith #-}
+
+    {- | The type of prefixes of the streamable. -}
+    type PrefixOf s :: Type
+
+    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
+    spliAt :: Word -> s -> (PrefixOf s, s)
+
+    {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
+
+    @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
+    splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
+```
+
+#### A. 4. 2. 2. The laws.
+
+To state the laws, we must assume something of `PrefixOf s` that is not expressed directly in the typeclass. The first constraint is that `PrefixOf s` is a monofunctor with the same type of elements as `s`, that is, `ElementOf (PrefixOf s) ~ ElementOf s`. With this assumption: for every `n` and every `p`, both `spliAt n` and `splitWith p` are mononatural.
+
+For the second law, put
+
+```haskell
+let (prefix, suffix) = spliAt n xs
+```
+
+for arbitrary `n` and `xs`. Given the `toList` function on `Streamable`, both `suffix` and `xs` can be converted to lists, and since as per the name `prefix` is supposed to be a prefix of `xs`, then there should be a unique list `l` such that
+
+```haskell
+monotoList xs = l ++ monotoList suffix
+```
+
+It follows that we have the equality,
+
+```haskell
+l = take (length xs - length suffix) (monotoList xs)
+```
+
+so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` on a `Streamable` do _not_ apply, that is, we are implicitly assuming that prefixes are _finite_ monofoldables -- as we will see below, some important parsers with a `Splittable s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `spliAt` is `splitAt` and `splitWith`, `span`:
+
+```haskell
+bimap monotoList monotoList . spliAt n = splitAt n . monotoList
+bimap monotoList monotoList . splitWith p = span p . monotoList
+```
+
+The third and final law is a compatibility condition between 'splitOne' and 'spliAt':
+
+```haskell
+maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList . spliAt 1
+```
+
+#### A. 4. 2. 3. Derived operations.
+
+#### A. 4. 2. 4. Isolating parsers.
+

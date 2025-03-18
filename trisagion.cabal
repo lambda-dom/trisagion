@@ -60,7 +60,9 @@ library
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.HasPosition
         Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.Splittable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
+        Trisagion.Parsers.Splittable
