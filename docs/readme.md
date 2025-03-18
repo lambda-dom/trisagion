@@ -883,39 +883,62 @@ isSuffix xs ys = toList xs `isSuffixOf` toList ys
 
 ### A. 4. 2. Optimization: prefixes and the `Splittable` typeclass.
 
-For the second law, let @(prefix, suffix)@ be @'getAt' n xs@ for arbitrary @n@ and @xs@. Since
-@xs@ is a @MonoFoldable@ both @xs@ and @suffix@ can be converted to lists. Given that, and since
-as per the name @suffix@ is supposed to be a suffix of @xs@, there should be a unique list @l@
-such that:
+The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut prefixes out of streams.
 
-@
-otoList xs = l ++ otoList suffix
-@
+#### A. 4. 2. 1. The `Splittable` class.
 
-It follows that @l@ is equal to:
+Hence the `Splittable` typeclass.
 
-@
-l = take (olength xs - olength suffix) (otoList xs)
-@
+```haskell
+class Streamable s => Splittable s where
+    {-# MINIMAL getAt, getWith #-}
+
+    {- | The type of prefixes of the streamable. -}
+    type PrefixOf s :: Type
+
+    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
+    getAt :: Word -> s -> (PrefixOf s, s)
+
+    {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
+    
+    @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
+    getWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
+```
+
+#### A. 4. 2. 2. The laws.
+
+To state the laws, we must assume something of `PrefixOf s` that is not expressed directly in the typeclass. The first constraint is that `PrefixOf s` is a monofunctor with the same type of elements as `s`, that is, `ElementOf (PrefixOf s) ~ ElementOf s`. With this assumption: for every `n` and every `p`, both `getAt n` and `getWith p` are mononatural.
+
+For the second law, put
+
+```haskell
+let (prefix, suffix) = getAt n xs
+```
+
+for arbitrary `n` and `xs`. Given the `toList` function on `Streamable`, both `suffix` and `xs` can be converted to lists, and since as per the name `prefix` is supposed to be a prefix of `xs`, then there should be a unique list `l` such that
+
+```haskell
+monotoList xs = l ++ monotoList suffix
+```
+
+It follows that we have the equality,
+
+```haskell
+l = take (length xs - length suffix) (monotoList xs)
+```
 
 so it is not much of a stretch to assume that prefixes can be converted to lists. Therefore,
-assuming the constraints,
+assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances
+defined by the library, the second typeclass law just says that at the level of lists `getAt` is
+`splitAt` and `getWith`, `span`:
 
-@
-MonoFunctor (PrefixOf s), 'ElementOf' (PrefixOf s) ~ 'ElementOf' s, MonoFoldable (PrefixOf s)
-@
-
-which are satisfied by all instances of @'PrefixOf' s@ defined in the library, the second
-typeclass law just says that at the level of lists 'getAt' is 'Data.List.splitAt' and 'getWith',
-'Data.List.span' .
-
-__List identities__:
-
-prop> bimap otoList otoList . getAt n = splitAt n . otoList
-prop> bimap otoList otoList . getWith p = span p . otoList
+```haskell
+bimap monotoList monotoList . getAt n = splitAt n . monotoList
+bimap monotoList monotoList . getWith p = span p . monotoList
+```
 
 The third and final law is a compatibility condition between 'getOne' and 'getAt':
 
-__Compatibility__:
-
-prop> maybe [] singleton . getOne = otoList . getAt 1
+```haskell
+maybe [] singleton . getOne = monotoList . getAt 1
+```
