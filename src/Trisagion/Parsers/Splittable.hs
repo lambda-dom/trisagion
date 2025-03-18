@@ -9,6 +9,10 @@ module Trisagion.Parsers.Splittable (
     takePrefix,
     dropPrefix,
     takeExact,
+    match,
+    takeWith,
+    dropWith,
+    atLeastOneWith,
 ) where
 
 -- Imports.
@@ -24,14 +28,16 @@ import Data.Void (Void, absurd)
 import Control.Monad.State (MonadState(..), gets)
 
 -- non-Hackage libraries.
+import Data.MonoFunctor (ElementOf)
 import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Typeclasses.Streamable (isNull)
 import Trisagion.Typeclasses.Splittable (Splittable(..))
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Combinators (skip)
-import Trisagion.Parsers.ParseError (validate)
+import Trisagion.Parsers.ParseError (ValidationError (..), validate, throwParseError, capture)
 import Trisagion.Parsers.Streamable (InputError (..))
 
 
@@ -62,7 +68,49 @@ takeExact
 takeExact n = first (fmap (either absurd id)) $ validate v (first absurd $ takePrefix n)
     where
         v prefix =
-            if monolength prefix < n
+            if monolength prefix /= n
                 then Left $ InputError n
                 else Right prefix
 
+{- | Parse a matching prefix.
+
+note(s):
+
+    * The implementation requires computing the length of the prefix.
+-}
+match
+    :: (Splittable s, MonoFoldable (PrefixOf s), Eq (PrefixOf s))
+    => PrefixOf s
+    -> Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) (PrefixOf s)
+match xs = validate v (takeExact (monolength xs))
+    where
+        v prefix =
+            if xs == prefix
+                then Right prefix
+                else Left $ ValidationError prefix
+
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
+takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
+takeWith p = do
+    (prefix, suffix) <- gets $ splitWith p
+    put suffix $> prefix
+
+{- | Drop the longest prefix whose elements satisfy a predicate. -}
+dropWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
+dropWith = skip . takeWith
+
+{- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
+atLeastOneWith
+    :: (Splittable s, MonoFoldable (PrefixOf s))
+    => (ElementOf s -> Bool)
+    -> Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) (PrefixOf s)
+atLeastOneWith p = capture $ do
+    xs <- first absurd $ takeWith p
+    if not (mononull xs)
+        then pure xs
+        else do
+            -- Either not enough input or malformed one.
+            b <- gets isNull
+            if b
+                then absurd <$> throwParseError (Left InsufficientInputError)
+                else absurd <$> throwParseError (Right $ ValidationError xs)

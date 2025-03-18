@@ -939,3 +939,8 @@ The third and final law is a compatibility condition between 'splitOne' and 'spl
 ```haskell
 maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList . spliAt 1
 ```
+
+#### A. 4. 2. 3. Derived operations.
+
+#### A. 4. 2. 4. Isolating parsers.
+
