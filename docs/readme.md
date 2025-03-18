@@ -742,6 +742,10 @@ data ParseError s e where
 
 The reader can read up on existentials, but the one-line summary is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
 
+note(s):
+
+  * The actual shape of `ParseError` in [ParseError.hs](../src/Trisagion/Parsers/ParseError.hs) is slightly different.
+
 With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of a new, contextually more useful, error:
 
 ```haskell
@@ -773,11 +777,11 @@ without having to unify the error types of `p` and `q`.
 
 #### A. 4. 3. 1. The backtrace getter.
 
-With backtraces, a `ParseError` looks like
+With backtraces, a `ParseError` looks like,
 
 >  error -> Just error_0 -> ... -> Just error_n -> Nothing
 
-So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
+with `error_i` _not_ equal to a `Fail` by normalization. So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
 
 ```haskell
 getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
@@ -801,8 +805,6 @@ The introductory description completely describes what we need from `s`: an `unc
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic input streams. -}
 class Streamable s where
-    {-# MINIMAL getOne #-}
-
     type ElementOf s :: Type
 
     {- | Get, or uncons, the first element from the streamable. -}
@@ -816,8 +818,6 @@ All the paradigmatic examples of input streams like `ByteString` and `Text` have
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
 class MonoFunctor s => Streamable s where
-    {-# MINIMAL getOne #-}
-
     {- | Get, or uncons, the first element from the streamable. -}
     getOne :: s -> Maybe (ElementOf s, s)
 ```
