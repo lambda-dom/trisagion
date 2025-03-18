@@ -742,6 +742,10 @@ data ParseError s e where
 
 The reader can read up on existentials, but the one-line summary is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`.
 
+note(s):
+
+  * The actual shape of `ParseError` in [ParseError.hs](../src/Trisagion/Parsers/ParseError.hs) is slightly different.
+
 With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of a new, contextually more useful, error:
 
 ```haskell
@@ -773,11 +777,11 @@ without having to unify the error types of `p` and `q`.
 
 #### A. 4. 3. 1. The backtrace getter.
 
-With backtraces, a `ParseError` looks like
+With backtraces, a `ParseError` looks like,
 
 >  error -> Just error_0 -> ... -> Just error_n -> Nothing
 
-So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
+with `error_i` _not_ equal to a `Fail` by normalization. So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
 
 ```haskell
 getBacktrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
@@ -801,28 +805,24 @@ The introductory description completely describes what we need from `s`: an `unc
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic input streams. -}
 class Streamable s where
-    {-# MINIMAL getOne #-}
-
     type ElementOf s :: Type
 
     {- | Get, or uncons, the first element from the streamable. -}
     getOne :: s -> Maybe (ElementOf s, s)
 ```
 
-### A. 4. 2. The `MonoFunctor` constraint.
+#### A. 4. 1. 1. The `MonoFunctor` constraint.
 
 All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws. So now we have:
 
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
 class MonoFunctor s => Streamable s where
-    {-# MINIMAL getOne #-}
-
     {- | Get, or uncons, the first element from the streamable. -}
     getOne :: s -> Maybe (ElementOf s, s)
 ```
 
-### A. 4. 3. No free laws.
+#### A. 4. 1. 2. No free laws.
 
 Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available, and equational laws like naturality must be explicitly required.
 
@@ -839,7 +839,7 @@ monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (Element
 monomap f = fmap (bimap f (monomap f))
 ```
 
-### A. 4. 4. The `MonoFoldable` constraint.
+#### A. 4. 1. 3. The `MonoFoldable` constraint.
 
 Given the `uncons` operation, we can define a conversion to lists,
 
@@ -856,7 +856,7 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
 Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
 
-### A. 4. 5. Two fundamental parsers.
+#### A. 4. 1. 4. Two fundamental parsers.
 
 With the `Streamable` typeclass we can now extract one element from the input stream and check if the input stream has more elements to yield.
 
@@ -872,7 +872,7 @@ one = do
         Nothing      -> absurd <$> throwParseError (InputError 1)
 ```
 
-### A. 4. 6. Definable `isSuffix`.
+#### A. 4. 1. 5. Definable `isSuffix`.
 
 We can now close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
 
@@ -880,3 +880,5 @@ We can now close one of the loopholes in the introduction, the isSuffix relation
 isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
 isSuffix xs ys = toList xs `isSuffixOf` toList ys
 ```
+
+### A. 4. 2. Optimization: prefixes and the `Splittable` typeclass.
