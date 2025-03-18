@@ -36,7 +36,7 @@ import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, makeParseErrorNoBacktrace, makeParseError, initial)
+import Trisagion.Types.ParseError (ParseError, makeBacktrace, makeParseError, initial)
 import Trisagion.Parser (Parser, catchErrorWith)
 import Trisagion.Parsers.Combinators (lookAhead, many)
 
@@ -51,11 +51,10 @@ newtype ValidationError a = ValidationError a
 
 {- | Parser that throws @'ParseError' s e@ with error tag @e@.
 
-The state component is the current parser state and the backtrace is a @'Nothing'@ of type
-@'Maybe' ('ParseError' s 'Void')@.
+The input stream is the current parser state.
 -}
 throwParseError :: e -> Parser s (ParseError s e) Void
-throwParseError e = get >>= throwError . flip makeParseErrorNoBacktrace e
+throwParseError e = get >>= throwError . flip makeParseError e
 
 {- | Parser that swallows any thrown error as a backtrace for a new error. -}
 onParseError
@@ -68,7 +67,7 @@ onParseError e p =
         p
         (\ b -> do
             s <- get
-            throwError $ makeParseError b s e)
+            throwError $ makeBacktrace b s e)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 
