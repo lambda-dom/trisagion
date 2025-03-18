@@ -11,7 +11,17 @@ module Trisagion.Typeclasses.Splittable (
 
 -- Imports.
 -- Base.
+import qualified Data.List as List (splitAt)
 import Data.Kind (Type)
+import Data.Word (Word8)
+
+-- Libraries.
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt)
+import qualified Data.Text as Text (Text, span, splitAt)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq (spanl, splitAt)
+import Data.Vector (Vector)
+import qualified Data.Vector as Vector (span, splitAt)
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
@@ -55,3 +65,50 @@ class Streamable s => Splittable s where
     
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
+
+
+-- Instances.
+instance Splittable Bytes.ByteString where
+    type PrefixOf Bytes.ByteString = Bytes.ByteString
+
+    splitAt :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitAt n = Bytes.splitAt $ fromIntegral n
+
+    splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitWith = Bytes.span
+
+instance Splittable Text.Text where
+    type PrefixOf Text.Text = Text.Text
+
+    splitAt :: Word -> Text.Text -> (Text.Text, Text.Text)
+    splitAt n = Text.splitAt $ fromIntegral n
+
+    splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
+    splitWith = Text.span
+
+instance Splittable [a] where
+    type PrefixOf [a] = [a]
+
+    splitAt :: Word -> [a] -> ([a], [a])
+    splitAt n = List.splitAt $ fromIntegral n
+
+    splitWith :: (a -> Bool) -> [a] -> ([a], [a])
+    splitWith = span
+
+instance Splittable (Seq a) where
+    type PrefixOf (Seq a) = Seq a
+
+    splitAt :: Word -> Seq a -> (Seq a, Seq a)
+    splitAt n = Seq.splitAt $ fromIntegral n
+
+    splitWith :: (a -> Bool) -> Seq a -> (Seq a, Seq a)
+    splitWith = Seq.spanl
+
+instance Splittable (Vector a) where
+    type PrefixOf (Vector a) = Vector a
+
+    splitAt :: Word -> Vector a -> (Vector a, Vector a)
+    splitAt n = Vector.splitAt (fromIntegral n)
+
+    splitWith :: (a -> Bool) -> Vector a -> (Vector a, Vector a)
+    splitWith = Vector.span
