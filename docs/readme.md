@@ -934,7 +934,7 @@ bimap monotoList monotoList . spliAt n = splitAt n . monotoList
 bimap monotoList monotoList . splitWith p = span p . monotoList
 ```
 
-The third and final law is a compatibility condition between 'splitOne' and 'spliAt':
+The third and final law is a compatibility condition between `splitOne` and `spliAt`:
 
 ```haskell
 maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList . spliAt 1
@@ -943,4 +943,3 @@ maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList .
 #### A. 4. 2. 3. Derived operations.
 
 #### A. 4. 2. 4. Isolating parsers.
-
