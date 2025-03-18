@@ -900,7 +900,7 @@ class Streamable s => Splittable s where
     spliAt :: Word -> s -> (PrefixOf s, s)
 
     {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
-    
+
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 ```
@@ -927,7 +927,7 @@ It follows that we have the equality,
 l = take (length xs - length suffix) (monotoList xs)
 ```
 
-so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` do _not_ apply, that is, we are implicitly assuming that prefixes are finite monofoldables. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `spliAt` is `splitAt` and `splitWith`, `span`:
+so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` on a `Streamable` do _not_ apply, that is, we are implicitly assuming that prefixes are _finite_ monofoldables -- as we will see below, some important parsers with a `Splittable s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `spliAt` is `splitAt` and `splitWith`, `span`:
 
 ```haskell
 bimap monotoList monotoList . spliAt n = splitAt n . monotoList

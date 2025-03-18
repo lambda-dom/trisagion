@@ -68,7 +68,7 @@ class Streamable s => Splittable s where
     splitAt :: Word -> s -> (PrefixOf s, s)
 
     {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
-    
+
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 
