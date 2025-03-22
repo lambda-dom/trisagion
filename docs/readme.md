@@ -937,7 +937,7 @@ bimap monotoList monotoList . splitWith p = span p . monotoList
 The third and final law is a compatibility condition between `splitOne` and `splitAt`:
 
 ```haskell
-maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList . spliAt 1
+maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList . splitAt 1
 ```
 
 #### A. 4. 2. 3. Derived operations.
