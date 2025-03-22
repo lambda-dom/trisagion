@@ -5,6 +5,9 @@ Parsers with @'Splittable' s@ constraints on the input stream @s@.
 -}
 
 module Trisagion.Parsers.Splittable (
+    -- * Isolating parsers.
+    isolateWith,
+
     -- * Parsers with a @'Splittable' s => 'Parser' s e a@ constraint.
     takePrefix,
     dropPrefix,
@@ -25,20 +28,40 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Control.Monad.State (MonadState(..), gets)
+import Control.Monad.State (MonadState (..), gets)
+import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (ElementOf)
 import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Typeclasses.Streamable (isNull)
 import Trisagion.Typeclasses.Splittable (Splittable(..))
-import Trisagion.Parser (Parser)
+import Trisagion.Parser (Parser, eval)
 import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Parsers.ParseError (ValidationError (..), validate, throwParseError, capture)
 import Trisagion.Parsers.Streamable (InputError (..))
+
+
+{- | Run a parser isolated to a prefix of the stream.
+
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
+parser to run with an appropriate check -- see 'Trisagion.Parsers.ParseError.guardWith'.
+-}
+isolateWith
+    :: (s -> Maybe (s, s))          -- ^ Stream splitter. The @'Nothing'@ case signals insufficient input.
+    -> Parser s e a                 -- ^ Parser to run.
+    -> Parser s (ParseError s (Either InputError e)) a
+isolateWith h p = do
+    xs <- get
+    case h xs of
+        Nothing               -> throwError $ makeParseError xs (Left InsufficientInputError)
+        Just (prefix, suffix) ->
+            case eval p prefix of
+                Left e -> throwError $ makeParseError prefix (Right e)
+                Right x -> put suffix $> x
 
 
 {- | Parse a fixed size prefix.
