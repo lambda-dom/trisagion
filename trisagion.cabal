@@ -84,3 +84,5 @@ test-suite trisagion-tests
     build-tool-depends:
         hspec-discover:hspec-discover
     other-modules:
+        Lib.Runners
+        Tests.ParserSpec
