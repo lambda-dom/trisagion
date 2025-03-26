@@ -66,6 +66,8 @@ decode :: Parser s e a -> s -> Maybe a
 decode p = either (const Nothing) Just . eval p
 ```
 
+Note that since `Either () a` is isomorphic to `Maybe a`, the `decode p` function is just `eval` with constraint `e ~ ()`. The error type `()` corresponds to erasing all error distinctions and just keeping track of whether parsing failed or not.
+
 Minus error handling, `decode` ought to be the inverse of `encode`.
 
 ### A. 1. 2. One implication and one design decision.
@@ -489,7 +491,7 @@ we have the equality
 
 The upshot of all this is that the `Alternative` typeclass is a red herring, choice is really a lax-monoidal structure. Let us go through the steps one by one to make this clearer.
 
-[^5]: The coherence laws hold up; exercise to the interested reader.
+[^5]: The coherence laws do hold up; exercise to the interested reader.
 
 ##### A. 3. 4. 3. 3. Monoidal categories and monoids.
 
@@ -613,7 +615,7 @@ p <*> q = do
 
 and doing a case by case analysis on the failures.
 
-As we will see in the next section, the monoid law that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type; since `Either () a` is isomorphic to `Maybe a`, we are back at the `decode p` case.
+As we will see in the next section, the monoid law that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
 
 [^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
@@ -954,3 +956,6 @@ maybe [] (bimap singleton monotoList) . splitOne = bimap monotoList monotoList .
 #### A. 4. 2. 3. Derived operations.
 
 #### A. 4. 2. 4. Isolating parsers.
+
+# B. Serializing.
+
