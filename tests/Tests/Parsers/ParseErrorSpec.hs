@@ -83,7 +83,7 @@ spec_until = describe "until tests" $ do
             "01"
             2
 
-    it "Case of failure of first parser" $ do
+    it "Case of closing parser succeeding on head of input" $ do
         testSuccess
             (Parsers.until (matchElem '}') (first (fmap Left) one))
             "}123"
