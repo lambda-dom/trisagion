@@ -13,7 +13,7 @@ serialize :: Serializer s a -> a -> s
 serialize (Serializer f) = f
 ```
 
-What constraints should be put on `s` to serve as an adequate output type? By Quine's dictum "No entity without identity", which even if not true of being in general, it certainly is of mathematicals, we (implicitly) require `Eq s`, but a discussion of what else is needed will be deferred to a later chapter. For now, we content ourselves with noting that the paradigmatical examples of `s` we have in mind are `ByteString`, `Text` and `[Char]`.
+What constraints should be put on `s` to serve as an adequate output type? By Quine's dictum "No entity without identity", which even if not true of being in general, it certainly is of mathematicals, we (implicitly) require `Eq s`, but a discussion of what else is needed will be deferred to a later chapter. For now, we content ourselves with noting that the paradigmatic examples of `s` we have in mind are `ByteString`, `Text` and `[Char]`.
 
 Dually to serializing, _parsing_ is a function `s -> a` that given some input `xs :: s` returns a decoded value `x :: a`. Wrapping in newtypes,
 
@@ -75,7 +75,7 @@ data ParserT m s e a = Parser (s -> m (Either e (a, s)))
 type Parser = ParserT Identity
 ```
 
-as is done in say, the [Megaparsec](https://hackage.haskell.org/package/megaparsec) library. In this library, we explicitely do _not_ make such a generalization; all code is pure (meaning: effect free). This design forces prospective library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `run`. The expectation is that, for the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
+as is done in say, the [Megaparsec](https://hackage.haskell.org/package/megaparsec) library. In this library, we explicitly do _not_ make such a generalization; all code is pure (meaning: effect free). This design forces prospective library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `run`. The expectation is that, for the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
 
 ### A. 1. 3. A small improvement: the type `Result s e a`.
 
@@ -91,7 +91,7 @@ data Result s e a
     | Success a !s 
 ```
 
-This introduces strictness where lazyness is almost surely not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case.
+This introduces strictness where laziness is almost surely not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case.
 
 note(s):
 
@@ -305,7 +305,7 @@ data T a_0 ... a_n
 
 The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` [^3] can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [Products](#a-3-1-products).
 
-Assuming the existence of parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`, a commonly occuring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the construtors top to bottom and return the corresponding ordinal:
+Assuming the existence of parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`, a commonly occurring idea for a serialization format is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the constructors top to bottom and return the corresponding ordinal:
 
 ```haskell
 tag :: T a_0 ... a_n -> Word
@@ -315,7 +315,7 @@ tag x = case x of
     T_n _ -> n
 ```
 
-This piece of bloatware can even be derived automatically using sometyhing like the [generics-sop library](https://hackage.haskell.org/package/generics-sop) or (God forbid) template Haskell, but we will not dwell on this detail here.
+This piece of bloatware can even be derived automatically using something like the [generics-sop library](https://hackage.haskell.org/package/generics-sop) or (God forbid) template Haskell, but we will not dwell on this detail here.
 
 note(s):
 
