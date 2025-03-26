@@ -10,7 +10,7 @@ import Test.Hspec (Spec, describe, it)
 import Lib.Runners
 
 -- Module to test.
-import Trisagion.Parsers.Combinators (observe, lookAhead, between, many, some, untilEnd, sepBy1)
+import Trisagion.Parsers.Combinators (observe, lookAhead, between, many, some, untilEnd, sepBy1, atMostN)
 import qualified Trisagion.Parsers.Combinators as Parsers (maybe, zip, zipWith, either, sequence, repeat)
 
 -- Base.
@@ -40,6 +40,7 @@ spec = describe "Trisagion.Parsers.Combinators tests" $ do
     spec_some
     spec_untilEnd
     spec_sepBy1
+    spec_atMostN
 
 
 -- Tests.
@@ -314,3 +315,26 @@ spec_sepBy1 = describe "sepBy1 tests" $ do
             ""
             (Left (InputError 1))
             0
+
+spec_atMostN :: Spec
+spec_atMostN = describe "atMostN tests" $ do
+    it "Success case" $ do
+        testSuccess
+            (atMostN 2 one)
+            "0123"
+            "01"
+            2
+
+    it "Success on insufficient input" $ do
+        testSuccess
+            (atMostN 10 one)
+            "0123"
+            "0123"
+            4
+
+    it "Case of parser failure" $ do
+        testSuccess
+            (atMostN 10 (matchElem '0'))
+            "0123"
+            "0"
+            1
