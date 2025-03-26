@@ -26,7 +26,7 @@ import Trisagion.Parsers.Streamable (InputError (..), one, matchElem, satisfy)
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Trisagion.Parser tests" $ do
+spec = describe "Trisagion.Parsers.Combinators tests" $ do
     spec_observe
     spec_lookAhead
     spec_maybe
@@ -238,7 +238,7 @@ spec_repeat = describe "repeat tests" $ do
             (InputError 1)
             4
 
-    it "Failure when middle parser fails" $ do
+    it "Failure when parser after first fails" $ do
         testError
             (Parsers.repeat 2 (matchElem '0'))
             "0123"
@@ -254,7 +254,7 @@ spec_many = describe "many tests" $ do
             "01"
             2
 
-    it "Case of first parser failure" $ do
+    it "Case of parser failure on head of input" $ do
         testSuccess
             (many $ satisfy ('0' /=))
             "0123"
@@ -277,7 +277,7 @@ spec_some = describe "some tests" $ do
             ('0' :| "1")
             2
 
-    it "Case when first parser fails" $ do
+    it "Case when parser fails on head of input" $ do
         testError
             (some $ satisfy ('0' /=))
             "0123"
