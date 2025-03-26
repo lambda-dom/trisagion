@@ -23,7 +23,7 @@ import Trisagion.Parsers.Streamable (InputError (..), one, matchElem)
 
 -- Main module test driver.
 spec :: Spec
-spec = describe "Trisagion.Getters.ParseError tests" $ do
+spec = describe "Trisagion.Parsers.ParseError tests" $ do
     spec_validate
     spec_failIff
     spec_until
