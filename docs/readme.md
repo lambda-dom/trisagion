@@ -1,27 +1,27 @@
 # Trisagion.
 
-A _serializer_ for a type `a` is a function `a -> ByteString` that given a value `x :: a` returns a `ByteString` encoding `x`. We can generalize over the return type and put, on a first approximation,
+A _serializer_ or _encoder_, for a type `a` is a function `a -> ByteString` that given a value `x :: a` returns a `ByteString` encoding `x`. As a first generalization, the return type of the encoder being `ByteString` is not strictly necessary, so we generalize,
 
 ```haskell
-newtype Serializer s a = Serializer (a -> s)
+newtype Encoder s a = Encoder (a -> s)
 ```
 
 with serialization done via
 
 ```haskell
-serialize :: Serializer s a -> a -> s
-serialize (Serializer f) = f
+encode :: Encoder s a -> a -> s
+encode (Encoder f) = f
 ```
 
-What constraints should be put on `s` to serve as an adequate output type? By Quine's dictum "No entity without identity", which even if not true of being in general, it certainly is of mathematicals, we (implicitly) require `Eq s`, but a discussion of what else is needed will be deferred to a later chapter. For now, we content ourselves with noting that the paradigmatic examples of `s` we have in mind are `ByteString`, `Text` and `[Char]`.
+What constraints should be put on `s` to serve as an adequate output type? By Quine's dictum "No entity without identity", which even if not true of being in general, it certainly is of mathematicals, we (implicitly) require `Eq s`, but a discussion of what else is needed will be deferred to [Typeclasses for the input](#a-4-typeclasses-for-the-input). For now, we content ourselves with saying that, up to some piece of state that it may carry around, `s` is isomorphic to `[a]` for some appropriate type `a`. The paradigmatical examples to have in mind are types like `ByteString`, `Text` and `[Char]`. Theoretically, we could even restrict ourselves to lists of bits, or `[Bool]`, but input types like `ByteString` and `Text` are important for pragmatic reasons.
 
-Dually to serializing, _parsing_ is a function `s -> a` that given some input `xs :: s` returns a decoded value `x :: a`. Wrapping in newtypes,
+Dually to serializing, _parsing_  or _decoding_ is a function `s -> a` that given some input `xs :: s` returns a decoded value `x :: a`. Wrapping in newtypes,
 
 ```haskell
 newtype Parser s a = Parser (s -> a)
 ```
 
-As with serializers we defer for later what is needed for `s` to be an adequate input type.
+At this point we should also note that there is a bifurcation in the type of parsers. `ByteString` and `[Word8]`, and even `[Bool]` parsers, are parsers for binary formats, which generally have a fixed layout optimized for size, speed and simplicity of parsing, while `Text` parsers are really language parsers. In this exploratory document we will concentrate mainly on binary parsers but much of the commentary applies to language parsers as well.
 
 # A. Parsing.
 
@@ -33,7 +33,7 @@ File(s):
 
   * [Parser.hs](../src/Trisagion/Parser.hs)
 
-In the introduction a parsing function was defined as a function `a -> s` but the problem with this definition is that it does not allow composition. To be able to compose parsing functions, we need the parsing function to also return the rest of the input so that the next parser in the pipeline can continue, so we redefine the `Parser` type as
+In the introduction a parsing function was defined as a function `a -> s` but the problem with this definition is that it does not allow for composition. To be able to compose parsing functions, we need the parsing function to also return the rest of the input so that the next parser in the pipeline can continue. So we redefine the `Parser` type as
 
 ```haskell
 newtype Parser s a = Parser (s -> (a, s))
@@ -59,11 +59,22 @@ eval :: Parser s e a -> s -> Either e a
 eval p = fmap fst . run p
 ```
 
-Minus the error handling, `eval` ought to be the inverse of `serialize`.
+If error distinctions are not needed, then:
+
+```haskell
+decode :: Parser s e a -> s -> Maybe a
+decode p = either (const Nothing) Just . eval p
+```
+
+Minus error handling, `decode` ought to be the inverse of `encode`.
 
 ### A. 1. 2. One implication and one design decision.
 
 An immediate implication of the type signature of a parsing function is that it is all-or-nothing: _either_ it throws an error _or_ (exclusive or) it succeeds, returning the pair of the parsed result and the rest of the input.
+
+note(s):
+
+  * We will often use exception-like terminology, like "throws an error"; the meaning should be evident.
 
 At this point, we note that `Parser` could be generalized to a transformer by,
 
@@ -95,17 +106,17 @@ This introduces strictness where laziness is almost surely not needed while keep
 
 note(s):
 
-  * In what follows, all the code examples we give we keep using `Either e (a, s)` as the return type of a parsing function.
+  * In what follows, in all the code examples we keep `Either e (a, s)` as the return type of a parsing function.
 
 ## A. 2. Some definitions.
 
 Given a parser `p :: Parser s e a` what is the relation of the input with the remainder, if any?
 
-__Definition__: A parser `p :: Parser s e a` is _normal_ is for every input `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
+__Definition__: A parser `p :: Parser s e a` is _normal_ if for every input `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
 
-There is one obvious problem with this definition, in that being a suffix is not a definable relation for an arbitrary type `s`. However, it is certainly well-defined for types like `ByteString` and `Text`, so, as the reader is probably already expecting given the times we have used the same sentence, we leave for later the working out of what is needed to define such a relation.
+There is one obvious problem with this definition, in that being a suffix is not a definable relation for an arbitrary type `s`. However, it is certainly well-defined for types like `ByteString` and `Text`, so we leave for later the working out of what is needed to define such a relation -- see [Definable `isSuffix`](#a-4-1-5-definable-issuffix) for the details.
 
-__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one input `xs :: s` for which parsing succeeds and the remainder is (equal to) `xs`. The parser `p` _never consumes input_ if for every input `xs`, on success the remainder is (equal to) `xs`.
+__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one input `xs :: s` for which parsing succeeds and the remainder is equal to `xs`. The parser `p` _never consumes input_ if for every input `xs`, on success the remainder is equal to `xs`.
 
 ## A. 3. Parser typeclasses.
 
@@ -145,14 +156,14 @@ instance Applicative (Parser s e) where
 
 #### A. 3. 1. 2. Errors and `Bifunctor`.
 
-The attentive reader will surely have noticed that while the parsers `p_i` have types `Parser s e_i a_i`, the argument parsers for `(<*>)` are required to all have the same error type. So at a minimum, and assuming we have conversion functions `f_i :: e_i -> e` for some type `e`, we need a `Bifunctor` instance for `Parser s e a` to write
+The attentive reader will surely have noticed that while the parsers `p_i` have types `Parser s e_i a_i`, the argument parsers for `(<*>)` are required to all have the same error type. So at a minimum, and assuming we have a cospan of conversion functions `f_i :: e_i -> e` for some type `e`, we need a `Bifunctor` instance for `Parser s e a` to write
 
 ```haskell
 p :: Parser s e (T a_0 ... a_n)
 p = T <$> (first f_0 p_0) <*> ... <*> (first f_n p_n)
 ```
 
-The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the section [On Errors](#a-4-on-errors) we will see another way to deal with this problem that does not rely on coming up with a cone `e_i -> e`.
+The choice of `e` is left to the user, but there is a canonical, minimal one: take the coproduct of all the `e_i`. In the section [On Errors](#a-4-on-errors) we will see another way to deal with this problem that does not rely on coming up with a cospan `e_i -> e`.
 
 Note also that as with the input stream type `s`, there are still no constraints on the error type `e`.
 
@@ -319,7 +330,7 @@ This piece of bloatware can even be derived automatically using something like t
 
 note(s):
 
-  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or addition of new constructors. A more robust version would use the constructor names. Other refactorings of the `T` type like the deletion of constructors would need more sophisticated schemes like versioning to ensure backwards compatibility.
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or addition of new constructors. A more robust version would use the constructor names, but this version is vulnerable to constructor renaming. Other refactorings of the `T` type like the deletion of constructors would need more sophisticated schemes like versioning to ensure backwards compatibility.
 
 To parse this format, we assume the existence of a parser for `Word` [^4]
 
@@ -365,7 +376,7 @@ catchErrorWith p h = embed $ \ s -> either (flip run s . h) Right $ run p s
 
 In the previous section [Coproducts](#a-3-3-coproducts) we derived a parser for coproduct types by assuming a format consisting of a prefix tag and then dispatch on the tag to call the appropriate parser. This format is natural for binary format parsers, but for text parsers (essentially, language parsers) often something else is needed and that something else is _choice_.
 
-Getting back to our coproduct type
+Getting back to the coproduct type
 
 ```haskell
 data T a_0 ... a_n
@@ -434,7 +445,7 @@ The `empty` parser is also easily implemented with a call to `throwError` with t
 
 ##### A. 3. 4. 3. 1. The `Monoid e` constraint.
 
-What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just do away with it into a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just throw it away to a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
 
 ##### A. 3. 4. 3. 2. The `either` parser and an alternative to `Alternative`.
 
@@ -602,7 +613,7 @@ p <*> q = do
 
 and doing a case by case analysis on the failures.
 
-As we will see in the next section, the monoid law that we will use in the library is idempotent.
+As we will see in the next section, the monoid law that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type; since `Either () a` is isomorphic to `Maybe a`, we are back at the `decode p` case.
 
 [^8]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
@@ -647,7 +658,7 @@ instance Monoid (ParseError e) where
     mempty = Fail
 ```
 
-A little bit of staring and the reader should be able to convince of himself that this type is monoid isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+A little bit of staring and the reader should be able to convince of himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
 
 ### A. 4. 2. What is in an error?
 
@@ -697,7 +708,7 @@ instance HasPosition s
     getPosition = id
 ```
 
-And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside of having the error carry a reference to the input stream is that it potentially keeps it alive in memory for much longer than needed. I have gone back and forth on this, and ended going for the most flexible solution: the error carries a reference to the input stream, but we also keep the typeclass `HasPosition`. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). The major downside of having the error carry a reference to the input stream is that it potentially keeps it alive in memory for much longer than needed. I have gone back and forth on this and ended going for the most flexible solution: the error carries a reference to the input stream, but we also keep the typeclass `HasPosition`. The `Bifunctor` instance then allows to insert `getPosition` calls if desired.
 
 ### A. 4. 3. Backtraces.
 
@@ -862,7 +873,7 @@ With the `Streamable` typeclass we can now extract one element from the input st
 
 ```haskell
 eoi :: Streamable s => Parser s Void Bool
-eoi = gets isNull
+eoi = gets (isNothing . splitOne)
 
 one :: Streamable s => Parser s (ParseError s InputError) (ElementOf s)
 one = do
@@ -874,7 +885,7 @@ one = do
 
 #### A. 4. 1. 5. Definable `isSuffix`.
 
-We can also close one of the loopholes in the introduction, the isSuffix relation. With streamable, this is simply defined as `isSuffix` at the level of lists.
+We can also close one of the loopholes in the introduction, the `isSuffix` relation. With `Streamable` this is simply defined as `isSuffix` at the level of lists:
 
 ```haskell
 isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
@@ -927,7 +938,7 @@ It follows that we have the equality,
 l = take (length xs - length suffix) (monotoList xs)
 ```
 
-so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` on a `Streamable` do _not_ apply, that is, we are implicitly assuming that prefixes are _finite_ monofoldables -- as we will see below, some important parsers with a `Splittable s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `splitAt` is `splitAt` and `splitWith`, `span`:
+so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` on a `Streamable` do _not_ apply, that is, we are implicitly assuming that prefixes are _finite_ monofoldables -- as we will see below, some important parsers with a `Splittable s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `splitAt` is `splitAt` and `splitWith` is `span`:
 
 ```haskell
 bimap monotoList monotoList . splitAt n = splitAt n . monotoList

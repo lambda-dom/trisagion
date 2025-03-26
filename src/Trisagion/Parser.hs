@@ -15,6 +15,7 @@ module Trisagion.Parser (
     run,
     eval,
     exec,
+    decode,
 
     -- * Error parsers.
     catchErrorWith,
@@ -173,6 +174,10 @@ eval p = withResult Left (\ x _ -> Right x) . run p
 {- | Run the parser on the input and return the remainder, discarding the parsed value. -}
 exec :: Parser s e a -> s -> Either e s
 exec p = withResult Left (\ _ s -> Right s) . run p
+
+{- | The decoding function associated to a parser. -}
+decode :: Parser s e a -> s -> Maybe a
+decode p = either (const Nothing) Just . eval p
 
 
 {- | Type-changing version of 'catchError'. -}
