@@ -71,6 +71,7 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
+        Trisagion.Parsers.Word8
 
 test-suite trisagion-tests
     import: common-fields
