@@ -94,39 +94,29 @@ digit
     => Parser s (ParseError s (Either InputError (ValidationError Char))) Char
 digit = satisfy isDigit
 
-{- | Parse a 'Word' in decimal format.
-
-note(s):
-
-    * no overflow checks are made.
--}
+{- | Parse a positive 'Integer' in decimal format. -}
 positive
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Word
+    => Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Integer
 positive = do
         digits <- atLeastOneWith isDigit
         let
-             n = monolength digits
+             n = fromIntegral $ monolength digits
              xs = zip [n - 1, n - 2 .. 0] (monotoList digits)
         pure $ foldl' (+) 0 [ value d i | (i, d) <- xs]
     where
-        value :: Char -> Word -> Word
+        value :: Char -> Integer -> Integer
         -- Returns implementation-dependent garbage for non-decimal digits.
         value c n = fromIntegral (ord c - ord '0') *  10 ^ n
 
-{- | Transform a @'Word'@ parser into an 'Int'-parser for signed numbers.
-
-note(s):
-
-    * no overflow checks are made.
--}
+{- | Transform an 'Integer' parser into an 'Integer' parser for signed numbers. -}
 signed
     :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Word
-    -> Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Int
+    => Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Integer
+    -> Parser s (ParseError s (Either InputError (ValidationError (PrefixOf s)))) Integer
 signed p = do
     sgn <- first absurd (fromMaybe Positive <$> Parsers.maybe sign)
-    number <- fromIntegral <$> p
+    number <- p
     case sgn of
         Positive -> pure number
         Negative -> pure (-number)
