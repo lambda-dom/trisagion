@@ -1,9 +1,10 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 {- |
 Module: Trisagion.Streams.Counter
 
 The @Counter@ type wrapping a 'Streamable' with an offset tracking current position.
 -}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Trisagion.Streams.Counter (
     -- * Types.
