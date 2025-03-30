@@ -19,8 +19,8 @@ To parse, or _decode_ some input, simply:
 
 ```haskell
 -- | Run the parser on the input and return the results.
-run :: Parser s e a -> s -> Either e (a, s)
-run (Parser p) = p
+parse :: Parser s e a -> s -> Either e (a, s)
+parse (Parser p) = p
 ```
 
 ### A. 1. 1. One implication and one design decision.
@@ -39,3 +39,16 @@ type Parser = ParserT Identity
 
 as is done in say, the [Megaparsec library](https://hackage.haskell.org/package/megaparsec). In this library, we explicitly do _not_ make such a generalization; all code is pure (meaning: effect free). This design forces prospective library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `parse`. The expectation is that, for the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
 
+### A. 1. 2. A small improvement: the type `Result s e a`.
+
+We make one small improvement by replacing the return type `Either e (a, s)` of a parsing function by the isomorph
+
+```haskell
+data Result s e a
+    = Error !e      -- ^ Error case.
+    | Success a !s  -- ^ Success case.
+```
+
+This introduces strictness where laziness is not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case. The disadvantage of this flattening of the return type is that there is no `Monad` or even `Applicative` structure for `Result s e a` so the actual code is a tad hairier.
+
+Since this is an implementation, detail, it is kept hidden from public eye; the user-facing API uses base types like `Either` and `(,)` exclusively. In all the code examples of this document we keep using `Either e (a, s)` as the return type of a parsing function.
