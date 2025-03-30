@@ -5,6 +5,10 @@ The @Parser@ monad.
 -}
 
 module Trisagion.Core.Parser (
+    -- * Type operators.
+    (:+:),
+    (:*:),
+
     -- * Types.
     Parser,
 
@@ -19,6 +23,15 @@ module Trisagion.Core.Parser (
 import Trisagion.Types.Result (Result, toEither, withResult)
 
 
+{- | Right-associative type operator version of the 'Either' type constructor. -}
+type (:+:) = Either
+infixr 6 :+:
+
+{- | Right-associative type operator version of the @(,)@ tuple type constructor. -}
+type a :*: b = (a, b)
+infixr 6 :*:
+
+
 {- | The parsing monad. -}
 newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
@@ -31,13 +44,13 @@ run :: Parser s e a -> s -> Result s e a
 run (Parser p) = p
 
 {- | Parse the input and return the results. -}
-parse :: Parser s e a -> s -> Either e (a, s)
+parse :: Parser s e a -> s -> e :+: (a :*: s)
 parse p = toEither . run p
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder of the input. -}
-eval :: Parser s e a -> s -> Either e a
+eval :: Parser s e a -> s -> e :+: a
 eval p = withResult Left (\ x _ -> Right x) . run p
 
 {- | Run the parser on the input and return the remainder, discarding the parsed value. -}
-remainder :: Parser s e a -> s -> Either e s
+remainder :: Parser s e a -> s -> e :+: s
 remainder p =  withResult Left (\ _ xs -> Right xs). run p
