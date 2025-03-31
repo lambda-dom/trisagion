@@ -183,3 +183,22 @@ instance Monad (Parser s e) where
         (x, t) <- parse p s
         parse (h x) t
 ```
+
+#### A. 2. 3. 1. Error laws.
+
+The `Bifunctor` instance provides, for a function `f :: d -> e`, a function `first f :: Parser s d a -> Parser s e a`. This function is not only type-changing, but monad-changing.
+
+__Theorem__: For evry `f :: d -> e`, the function `first f :: Parser s d a -> Parser s e a` is a natural transformation  that is _monoidal_
+
+```haskell
+prop> first f . pure = pure
+prop> (first f p) <*> (first f q) = first f (p <*> q)
+```
+
+and a _monad morphism_,
+
+```haskell
+prop> (first f p) >>= (first f .  q) = first f (p >>= q)
+```
+
+__Proof__: First note that if `p` succeeds, then `first f p` also succeeds and with the same reult, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
