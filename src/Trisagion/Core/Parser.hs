@@ -25,10 +25,15 @@ module Trisagion.Core.Parser (
 
     -- * Backtracking.
     backtrack,
+
+    -- Error parsers.
+    -- throw,
+    -- catch,
 ) where
 
 -- Imports.
 -- Base.
+import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Void (Void)
 
@@ -93,6 +98,40 @@ instance Monad (Parser s e) where
         case run p xs of
             Error e      -> Error e
             Success x ys -> run (h x) ys
+
+{- | The 'Alternative' instance.
+
+The @'empty'@ parser fails unconditionally with the monoid unit for @e@. The parser  @p \<|\> q@
+represents choice. First run @p@ and if successful return the result. If it throws an error,
+backtrack and run @q@ on the same input.
+
+The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
+
+prop> pure x <|> p = pure x
+prop> empty >>= f = empty
+
+but /not/ right catch and right zero,
+
+prop> f >>= const empty = empty
+
+because of short-circuiting.
+
+note(s):
+
+    * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+-}
+instance Monoid e => Alternative (Parser s e) where
+    empty :: Parser s e a
+    empty = Parser $ const (Error mempty)
+
+    (<|>) :: Parser s e a -> Parser s e a -> Parser s e a
+    (<|>) p q = Parser $ \ s ->
+        case run p s of
+            r@(Success _ _) -> r
+            Error e        ->
+                case run q s of
+                    r'@(Success _ _) -> r'
+                    Error e'        -> Error $ e <> e'
 
 
 {- | Run the parser on the input and return the results. -}
