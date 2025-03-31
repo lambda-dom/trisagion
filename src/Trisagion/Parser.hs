@@ -23,8 +23,9 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
 
-    -- * Backtracking.
+    -- * 'Alternative' parsers.
     backtrack,
+    either,
 
     -- * Error parsers.
     throw,
@@ -32,6 +33,9 @@ module Trisagion.Parser (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (either)
+
 -- Base.
 import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
@@ -205,6 +209,15 @@ backtrack p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
+
+{- | Run the first parser and if it fails run the second. Return the result as an @'Either'@.
+
+note(s):
+
+    * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
+-}
+either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
+either q p = (Left <$> q) <|> (Right <$> p)
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
