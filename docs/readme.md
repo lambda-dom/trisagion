@@ -467,3 +467,104 @@ catch p h = Parser $ \ s ->
 ```
 
 `catch` and `throwError` have the right shape for a monad structure for `ParseError s e a` in the error type `e` but it is not difficult to see that, essentially because of short-circuiting, while it satisfies the identity laws, associativity is violated.
+
+## A. 3. On errors.
+
+As discussed in [The `Alternative` instance](#a-2-5-the-alternative-instance), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either errors accumulate in a a list or the parsers short-circuit on the first error. Short-circuiting completely determines the monoid operation:
+
+```haskell
+(<>) :: Eq e => e -> e -> e
+(<>) x y
+    | x == mempty = y
+    | otherwise   = x
+```
+
+One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-2-5-5-more-laws).
+
+### A. 4. 1. First attempt.
+
+The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuiting strategy:
+
+```haskell
+data ParseError e
+    = Fail
+    | ParseError !e
+    deriving stock (Eq, Show, Functor)
+```
+
+For the `Monoid` instance, we have as discussed above:
+
+```haskell
+instance Semigroup (ParseError e) where
+    (<>) :: ParseError e -> ParseError e -> ParseError e
+    (<>) Fail x = x
+    (<>) x    _ = x
+
+instance Monoid (ParseError e) where
+    mempty :: ParseError e
+    mempty = Fail
+```
+
+A little bit of staring and the reader should be able to convince of himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+
+From this isomorphism, it follows that:
+
+__Theorem__: for every `f :: d -> e`, `fmap f :: ParseError d -> ParseError e` is a monoid morphism.
+
+The theorem is an implication, not an iff. The constant map `const Fail :: ParseError d -> ParseError e` is a monoid morphism. For a minimal example of a non-monoid morphism, let `y, y' :: d` be two distinct non-identity elements and `z :: e` a non-identity element, then:
+
+```haskell
+f :: Eq d => ParseError d -> ParseError
+f x
+    | x == y    = z
+    | otherwise = mempty 
+```
+
+Now, `f (y' <> y)` and `f y' <> f y` are not equal.
+
+### A. 4. 2. What is in an error?
+
+`ParseError e` is just a thin wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
+
+```haskell
+data ParseError s e
+    = Fail
+    | ParseError !s !e
+    deriving stock (Eq, Show, Functor)
+```
+
+But now we face a problem: for binary parsers with input type `ByteString`, a `Word` offset is a reasonable notion of position, while for text parsers with input type `Text`, something like
+
+```haskell
+data Position = Position {
+    line   :: !Word,
+    column :: !Word,
+}
+```
+
+is more useful. So we do what every self-respecting Haskeller does and introduce a typeclass to abstract over the notions of position.
+
+```haskell
+{- | The typeclass for input streams with a notion of current position. -}
+class HasPosition s where
+    {-# MINIMAL getPosition #-}
+
+    {- | The type of the stream's position. -}
+    type PositionOf s :: Type
+
+    {- | Return the current position of the stream. -}
+    position :: s -> PositionOf s
+```
+
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. It follows that every type `s` has an `HasPosition` instance by simply returning itself as the current position!
+
+```haskell
+instance HasPosition s
+    type PositionOf s = s
+
+    getPosition :: s -> s
+    getPosition = id
+```
+
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
+
