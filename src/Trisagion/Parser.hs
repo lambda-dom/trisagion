@@ -1,10 +1,10 @@
 {- |
-Module: Trisagion.Core.Parser
+Module: Trisagion.Parser
 
 The @Parser@ monad.
 -}
 
-module Trisagion.Core.Parser (
+module Trisagion.Parser (
     -- * Type operators.
     (:+:),
     (:*:),
@@ -23,8 +23,9 @@ module Trisagion.Core.Parser (
     -- * State parsers.
     get,
 
-    -- * Backtracking.
+    -- * 'Alternative' parsers.
     backtrack,
+    either,
 
     -- * Error parsers.
     throw,
@@ -32,6 +33,9 @@ module Trisagion.Core.Parser (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (either)
+
 -- Base.
 import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
@@ -193,6 +197,10 @@ value x = Parser $ \ s -> Success x s
         -- Do something with @s@.
 @
 
+The 'get' parser satisfies the get-get law of lenses in the form:
+
+prop> get *> get == get
+
 The parser does not throw an error or consume input.
 -}
 get :: Parser s Void s
@@ -205,6 +213,15 @@ backtrack p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
+
+{- | Run the first parser and if it fails run the second. Return the results as an @'Either'@.
+
+note(s):
+
+    * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
+-}
+either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
+either q p = (Left <$> q) <|> (Right <$> p)
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
