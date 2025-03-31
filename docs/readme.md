@@ -706,7 +706,7 @@ monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (Element
 monomap f = fmap (bimap f (monomap f))
 ```
 
-### A. 5. 4. The `MonoFoldable` constraint.
+### A. 5. 4. The (absence of the) `MonoFoldable` constraint.
 
 Given the `uncons` operation, we can define a conversion to lists,
 

@@ -9,7 +9,13 @@ module Trisagion.Parser (
     (:+:),
     (:*:),
 
-    -- * Types.
+    -- * Error types.
+    InputError (..),
+
+    -- * Type aliases.
+    ParserPE,
+
+    -- * The parsing monad.
     Parser,
 
     -- ** Basic functions.
@@ -30,11 +36,15 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
+
+    -- * Parsers @'Streamable' s => 'Parser' s e a@.
+    eoi,
+    head,
 ) where
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (either)
+import Prelude hiding (either, head, null)
 
 -- Base.
 import Control.Applicative (Alternative (..))
@@ -44,8 +54,14 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 
+-- non-Hackage libraries.
+import Data.MonoFunctor (MonoFunctor (..))
+
 -- Package.
 import Trisagion.Types.Result (Result (..), toEither, withResult)
+import Trisagion.Types.ParseError (ParseError, makeParseError)
+import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.HasPosition (HasPosition(..))
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -57,10 +73,26 @@ type a :*: b = (a, b)
 infixr 6 :*:
 
 
+{- | The @InputError@ error type.
+
+Error thrown when a parser requests more input than is available.
+-}
+data InputError
+    -- | Generic failure case.
+    = InsufficientInputError
+
+    -- | Failure case when it is possible to determine the amount requested.
+    | InputError Word
+    deriving stock (Eq, Show)
+
+
+{- | Type alias to shorten parser type signatures involving 'ParseError'. -}
+type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a
+
+
 {- | The parsing monad. -}
 newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
-
 
 {- | The 'Bifunctor' instance, providing functoriality in the error type. -}
 instance Bifunctor (Parser s) where
@@ -237,3 +269,14 @@ catch p h = Parser $ \ xs ->
     case run p xs of
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
+
+{- | Return @'True'@ if all input is consumed. -}
+eoi :: Streamable s => Parser s Void Bool
+eoi = null <$> get
+
+{- | Parse the first @'ElementOf' s@ from the streamable. -}
+head :: (Streamable s, HasPosition s) => ParserPE s InputError (ElementOf s)
+head = Parser $ \ s ->
+    case uncons s of
+        Nothing      -> Error $ makeParseError s (InputError 1)
+        Just (x, xs) -> Success x xs
