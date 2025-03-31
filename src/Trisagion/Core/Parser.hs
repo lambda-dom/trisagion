@@ -26,16 +26,19 @@ module Trisagion.Core.Parser (
     -- * Backtracking.
     backtrack,
 
-    -- Error parsers.
-    -- throw,
-    -- catch,
+    -- * Error parsers.
+    throw,
+    catch,
 ) where
 
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (Void)
+import Data.Void (Void, absurd)
+
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), toEither, withResult)
@@ -107,14 +110,10 @@ backtrack and run @q@ on the same input.
 
 The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
 
-prop> pure x <|> p = pure x
-prop> empty >>= f = empty
+prop> pure x <|> p == pure x
+prop> empty >>= f == empty
 
-but /not/ right catch and right zero,
-
-prop> f >>= const empty = empty
-
-because of short-circuiting.
+but /not/ right catch and right zero @f >>= const empty == empty@, because of short-circuiting.
 
 note(s):
 
@@ -132,6 +131,33 @@ instance Monoid e => Alternative (Parser s e) where
                 case run q s of
                     r'@(Success _ _) -> r'
                     Error e'        -> Error $ e <> e'
+
+{- | The 'MonadError' instance.
+
+The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
+unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
+the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
+returned by @p@.
+
+The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
+difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
+continuation to depend on the specific error that was thrown.
+
+note(s):
+
+    * The monad analogy is not precise, because even if we make the obvious generalization of
+    @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
+-}
+instance MonadError e (Parser s e) where
+    throwError :: e -> Parser s e a
+    throwError = fmap absurd . throw
+
+    catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
+    catchError p h = Parser $ \ s ->
+        -- Case statement instead of 'catch' to make use of sharing in the Success branch.
+        case run p s of
+            r@(Success _ _) -> r
+            Error e         -> run (h e) s
 
 
 {- | Run the parser on the input and return the results. -}
@@ -179,3 +205,18 @@ backtrack p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
+
+
+{- | The parser @'throw' e@ unconditionally errors with @e@. -}
+throw :: e -> Parser s e Void
+throw e = Parser $ \ _ -> Error e
+
+{- | Type-changing version of 'catchError'. -}
+catch
+    :: Parser s d a                     -- ^ Parser to try.
+    -> (d -> Parser s e a)              -- ^ Error handler.
+    -> Parser s e a
+catch p h = Parser $ \ xs ->
+    case run p xs of
+        Error e      -> run (h e) xs
+        Success x ys -> Success x ys

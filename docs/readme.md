@@ -232,7 +232,7 @@ instance MonadState s (Parser s e) where
     put s = embed $ const (Right ((), s))
 ```
 
-The first thing to notice is that both `get` and `put` do not throw an error and `get` does not consume any input; the `put` parser however, allows arbitrary state transformations. Because of all this, we have retained the `get` parser but with `Void` in the type error but have _not_ implemented the full `MonadState` typeclass. This means that `backtrack` cannot make use of `put` and must be implemented as a primitive. See also section.
+The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input; the `put` parser however, allows arbitrary state transformations. Because of all this, we have retained the `get` parser but with `Void` in the type error but have _not_ implemented the full `MonadState` typeclass. This means that `backtrack` cannot make use of `put` and must be implemented as a primitive.
 
 #### A. 2. 4. 2. The `backtrack` parser.
 
@@ -246,7 +246,7 @@ backtrack p = Parser $ \ xs ->
         Right (x, ys) -> Right (Right x, ys)
 ```
 
-#### A. 2. 4. 3. The `Alternative` instance.
+### A. 2. 5. The `Alternative` instance.
 
 We now have all the ingredients to implement choice via `(<|>)` of the `Alternative` typeclass: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however, namely, what to do if _both_ parsers error out? One obvious answer is "combine the errors" and "combine the errors" is a code word for a `Monoid` constraint on the error type `e`. With this setup:
 
@@ -265,7 +265,35 @@ We now have all the ingredients to implement choice via `(<|>)` of the `Alternat
 
 The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that with this structure `Parser s e a` is indeed a monoid, but as we will see next, it implies much more.
 
-What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just throw it away to a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only. We revisit the problem below.
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data, mainly useful for developers, with no meaningful monoid operation. One of the most common things to do with an error is to just throw it away to a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only.
 
-### A. 2. 5. Handling errors.
+### A. 2. 6. Handling errors.
 
+A parsing function has type `s -> Either e (a, s)` with the error type introduced to signal, well, errors. Error throwing and catching is captured in the `MonadError` typeclass from the [mtl package](https://hackage.haskell.org/package/mtl) and the instance for `Parser s e a` is readily given:
+
+```haskell
+instance MonadError e (Parser s e) where
+    throwError :: e -> Parser s e a
+    throwError e = embed $ const (Left e)
+
+    catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
+    catchError p h = Parser $ \ s ->
+        case run p s of
+            Left e      -> run (h e) s
+            r@Right _ _ -> r
+```
+
+The `catchError` method of the `MonadError` typeclass does not change the error type (and therefore, the monad), but it is easy (and more importantly, useful), to implement a type-changing version:
+
+```haskell
+catch
+    :: Parser s d a             -- ^ Parser to try.
+    -> (e -> Parser s e a)      -- ^ Error handler.
+    -> Parser s e a
+catch p h = Parser $ \ s ->
+    case run p s of
+        Left e  -> run (h e) s
+        Right p -> Right p
+```
+
+`catch` and `throwError` have the right shape for a monad structure for `ParseError s e a` in the error type `e` but it is not difficult to see that, essentially because of short-circuiting, while it satisfies the identity laws, associativity is violated.
