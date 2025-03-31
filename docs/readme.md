@@ -467,3 +467,196 @@ catch p h = Parser $ \ s ->
 ```
 
 `catch` and `throwError` have the right shape for a monad structure for `ParseError s e a` in the error type `e` but it is not difficult to see that, essentially because of short-circuiting, while it satisfies the identity laws, associativity is violated.
+
+## A. 3. On errors.
+
+As discussed in [The `Alternative` instance](#a-2-5-the-alternative-instance), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either errors accumulate in a a list or the parsers short-circuit on the first error. Short-circuiting completely determines the monoid operation:
+
+```haskell
+(<>) :: Eq e => e -> e -> e
+(<>) x y
+    | x == mempty = y
+    | otherwise   = x
+```
+
+One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-2-5-5-more-laws).
+
+### A. 4. 1. First attempt.
+
+The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuiting strategy:
+
+```haskell
+data ParseError e
+    = Fail
+    | ParseError !e
+    deriving stock (Eq, Show, Functor)
+```
+
+For the `Monoid` instance, we have as discussed above:
+
+```haskell
+instance Semigroup (ParseError e) where
+    (<>) :: ParseError e -> ParseError e -> ParseError e
+    (<>) Fail x = x
+    (<>) x    _ = x
+
+instance Monoid (ParseError e) where
+    mempty :: ParseError e
+    mempty = Fail
+```
+
+A little bit of staring and the reader should be able to convince of himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+
+From this isomorphism, it follows that:
+
+__Theorem__: for every `f :: d -> e`, `fmap f :: ParseError d -> ParseError e` is a monoid morphism.
+
+The theorem is an implication, not an iff. The constant map `const Fail :: ParseError d -> ParseError e` is a monoid morphism. For a minimal example of a non-monoid morphism, let `y, y' :: d` be two distinct non-identity elements and `z :: e` a non-identity element, then:
+
+```haskell
+f :: Eq d => ParseError d -> ParseError
+f x
+    | x == y    = z
+    | otherwise = mempty 
+```
+
+Now, `f (y' <> y)` and `f y' <> f y` are not equal.
+
+### A. 4. 2. What is in an error?
+
+`ParseError e` is just a thin wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
+
+```haskell
+data ParseError s e
+    = Fail
+    | ParseError !s !e
+    deriving stock (Eq, Show, Functor)
+```
+
+But now we face a problem: for binary parsers with input type `ByteString`, a `Word` offset is a reasonable notion of position, while for text parsers with input type `Text`, something like
+
+```haskell
+data Position = Position {
+    line   :: !Word,
+    column :: !Word,
+}
+```
+
+is more useful. So we do what every self-respecting Haskeller does and introduce a typeclass to abstract over the notions of position.
+
+```haskell
+{- | The typeclass for input streams with a notion of current position. -}
+class HasPosition s where
+    {-# MINIMAL getPosition #-}
+
+    {- | The type of the stream's position. -}
+    type PositionOf s :: Type
+
+    {- | Return the current position of the stream. -}
+    position :: s -> PositionOf s
+```
+
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. It follows that every type `s` has an `HasPosition` instance by simply returning itself as the current position!
+
+```haskell
+instance HasPosition s
+    type PositionOf s = s
+
+    getPosition :: s -> s
+    getPosition = id
+```
+
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
+
+### A. 4. 3. Backtraces.
+
+Consider the following block
+
+```haskell
+parser = do
+    ...
+    x <- p  -- ^ Can throw here.
+    ...
+    y <- q  -- ^ Can throw here.
+    ...
+```
+
+`p` and `q` must have the same error type. If `p` and `q` have different error types `e1` and `e2`, we must find a type `e` and a cospan of functions `e1 -> e <- e2` and write
+
+```haskell
+parser = do
+    ...
+    x <- first f1 p  -- ^ Can throw here.
+    ...
+    y <- first f2 q  -- ^ Can throw here.
+    ...
+```
+
+Another option is to throw a different error `e'`, with the error thrown from `p` attached like an _exception backtrace_. The obvious problem is that the errors of `p` and `q` can be different so we must still find appropriate cospans; Haskell's GADT's and existentials to the rescue.
+
+```haskell
+data ParseError s e where
+    Fail :: ParseError s e              -- ^ Monoid unit for `ParseError s e`.
+    ParseError
+        :: (Typeable d, Eq d, Show d)
+        => (Maybe (ParseError s d))     -- ^ Backtrace.
+        -> !s                           -- ^ (Position of the) input stream.
+        -> !e                           -- ^ Error tag.
+        -> ParseError s e
+```
+
+The reader can read up on existentials, but the one-line summary is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`. We are trading flexibility in error handling for less operations to handle backtraces, since we cannot pin down their type. Is the trade-off worth it? I guess we will find out.
+
+note(s):
+
+  * The actual shape of `ParseError` in [ParseError.hs](../src/Trisagion/Parsers/ParseError.hs) is slightly different.
+
+With these changes to `ParseError`, we can now have a parser combinator that turns a thrown error into the backtrace of a new, contextually more useful, error:
+
+```haskell
+onParseError
+    :: (HasPosition s, Typeable d, Eq d, Show d)
+    => e                                        -- ^ Error tag of new error.
+    -> Parser s (ParseError (PositionOf s) d) a -- ^ Parser to run.
+    -> Parser s (ParseError (PositionOf s) e) a
+onParseError e p =
+    catch
+        p
+        (\ b -> do
+            s <- get
+            throw $ makeParseError b s e)
+```
+
+The above block can now be written as,
+
+```haskell
+parser = do
+    ...
+    x <- onParseError e1 p  -- ^ Can throw here.
+    ...
+    y <- onParseError e2 q  -- ^ Can throw here.
+    ...
+```
+
+for appropriate `e1, e2 :: e`, without having to unify the error types of `p` and `q`.
+
+#### A. 4. 3. 1. The backtrace getter.
+
+With backtraces, a `ParseError` looks like,
+
+>  error -> Just error_0 -> ... -> Just error_n -> Nothing
+
+with `error_i` _not_ equal to a `Fail` by normalization. So the full backtrace is just a list of `(Typeable d, Eq d, Show d) => ParseError s d`. This leads to implement a getter for the backtrace as an elimination function:
+
+```haskell
+backtrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
+backtrace f = go
+    where
+        go :: ParseError s c -> [a]
+        go Fail               = []
+        go (ParseError b s e) = f s e : maybe [] go b
+```
+
+#### A. 4. 3. 2. Anything else you want to add?
+
+No, not really.
