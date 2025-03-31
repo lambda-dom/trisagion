@@ -37,7 +37,7 @@ module Trisagion.Parser (
     throw,
     catch,
 
-    -- * Parsers @'Streamable' s => 'Parser' s e a@.
+    -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     eoi,
     head,
 ) where
@@ -82,7 +82,7 @@ data InputError
     = InsufficientInputError
 
     -- | Failure case when it is possible to determine the amount requested.
-    | InputError Word
+    | InputError {-# UNPACK #-} !Word
     deriving stock (Eq, Show)
 
 
