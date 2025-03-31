@@ -743,4 +743,4 @@ Since the `put` parser is not available, it has to be implemented directly in th
 
 note(s):
 
-  * The type signature of `head` is already very long. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
+  * The type signature of parsers like `head` involving `ParseError` are getting gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
