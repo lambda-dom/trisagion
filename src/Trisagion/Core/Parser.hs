@@ -19,6 +19,12 @@ module Trisagion.Core.Parser (
 
     -- * 'Applicative' parsers.
     value,
+
+    -- * State parsers.
+    get,
+
+    -- * Backtracking.
+    backtrack,
 ) where
 
 -- Imports.
@@ -97,7 +103,7 @@ run (Parser p) = p
 parse :: Parser s e a -> s -> e :+: (a :*: s)
 parse p = toEither . run p
 
-{- | Evaluate the parser on the input and return the result, discarding the remainder of the input. -}
+{- | Evaluate the parser on the input and return the result, discarding the remainder. -}
 eval :: Parser s e a -> s -> e :+: a
 eval p = withResult Left (\ x _ -> Right x) . run p
 
@@ -112,3 +118,25 @@ The difference with 'pure' from 'Applicative' is the more precise signature.
 -}
 value :: a -> Parser s Void a
 value x = Parser $ \ s -> Success x s
+
+
+{- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The parser does not throw an error or consume input.
+-}
+get :: Parser s Void s
+get = Parser $ \ s -> Success s s
+
+
+{- | Run the parser and return the result as a 'Right'; on error, backtrack and return it as a 'Left'. -}
+backtrack :: Parser s e a -> Parser s Void (e :+: a)
+backtrack p = Parser $ \ xs ->
+    case run p xs of
+        Error e      -> Success (Left e) xs
+        Success x ys -> Success (Right x) ys

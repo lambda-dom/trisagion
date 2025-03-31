@@ -64,7 +64,7 @@ Functoriality in the error type is given by the `Bifunctor` instance.
 ```haskell
 instance Bifunctor (Parser s) where
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
-    bimap f g p = embed $ \ s -> bimap f (first g) $ parse p s
+    bimap f g p = Parser $ \ s -> bimap f (first g) $ parse p s
 ```
 
 Bifunctoriality provides the basic way to unify error types. If we have parsers `p_i :: Parser s e_i a` and a cospan `f_i :: e_i -> e`, then we have a cospan `first f_i :: Parser s e_i a -> Parser s e a`. The choice of `e` is left to the user, but there is a canonical, minimal choice by taking the coproduct of all `e_i`. Unfortunately, dealing with arbitrary coproducts in Haskell is very clunky, even if we reached for any of the innumerable packages on hackage offering extensible sum types -- for just one example, see [sop-core](https://hackage.haskell.org/package/sop-core). Most likely, any truly satisfying solution will need some form of dependent types. Latter on, we will get another way to deal with this recurring problem.
@@ -76,10 +76,10 @@ We can endow `Parser s e a` with further structure, starting with the `Applicati
 ```haskell
 instance Applicative (Parser s e) where
     pure :: a -> Parser s e a
-    pure x = embed $ \ s -> pure (x, s)
+    pure x = Parser $ \ s -> pure (x, s)
 
     (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
-    (<*>) p q = embed $ \ s -> do
+    (<*>) p q = Parser $ \ s -> do
         (f, t) <- parse p s
         (x, u) <- parse q t
         pure (f x, u)
@@ -100,7 +100,7 @@ value :: a -> Parser s Void a
 value = pure
 ```
 
-One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly, to the users. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of littering the code with `first absurd` calls to satisfy the type checker.
+One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly, to the users. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.
 
 #### A. 2. 2. 2. Unzipping and cozipping.
 
@@ -114,7 +114,7 @@ cozip :: Functor f => f a :+: f b -> f (a :+: b)
 cozip = either (fmap Left) (fmap Right)
 ```
 
-where `:+:` and `:*:` are type operator aliases for `Either` and `(,)` respectively, introduced to make type signatures look better. The operator `(&&&)` is the representability isomorphism implied by the universal property of products:
+where `:+:` and `:*:` are type operator aliases for `Either` and `(,)` respectively, introduced to make type signatures look nicer. The operator `(&&&)` is the representability isomorphism implied by the universal property of products:
 
 ```haskell
 (&&&) :: (c -> a) -> (c -> b) -> c -> a :*: b
@@ -179,7 +179,7 @@ The `Monad` instance is also readily given.
 ```haskell
 instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
-    (>>=) p h = embed $ \ s -> do
+    (>>=) p h = Parser $ \ s -> do
         (x, t) <- parse p s
         parse (h x) t
 ```
@@ -188,7 +188,7 @@ instance Monad (Parser s e) where
 
 The `Bifunctor` instance provides, for a function `f :: d -> e`, a function `first f :: Parser s d a -> Parser s e a`. This function is not only type-changing, but monad-changing.
 
-__Theorem__: For evry `f :: d -> e`, the function `first f :: Parser s d a -> Parser s e a` is a natural transformation  that is _monoidal_
+__Theorem__: For every `f :: d -> e`, the function `first f :: Parser s d a -> Parser s e a` is a natural transformation that is _monoidal_,
 
 ```haskell
 prop> first f . pure = pure
@@ -198,7 +198,50 @@ prop> (first f p) <*> (first f q) = first f (p <*> q)
 and a _monad morphism_,
 
 ```haskell
-prop> (first f p) >>= (first f .  q) = first f (p >>= q)
+prop> (first f p) >>= (first f .  h) = first f (p >>= h)
 ```
 
-__Proof__: First note that if `p` succeeds, then `first f p` also succeeds and with the same reult, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
+__Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with the same result, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
+
+### A. 2. 4. The `Alternative` instance.
+
+The `Alternative` instance for `Parser s e a` implements _choice_. Specifically, the operator
+
+```haskell
+(<|>) :: ParseError s e a -> ParseError s e a -> ParseError s e a
+```
+
+tries the first parser and if it errors, _backtracks_ and tries the second on the same input. In order to implement choice, we rely on the parser combinator
+
+```haskell
+backtrack :: Parser s e a -> Parser s Void (e :+: a)
+```
+
+implementing backtracking. Specifically, the `backtrack` parser runs the argument parser and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
+
+#### A. 2. 4. 1. The (absence of the) `MonadState` class.
+
+Probing the state of the parser monad is abstracted out in the `MonadState` typeclass, available from the [mtl package](https://hackage.haskell.org/package/mtl). The instance implementation is as easy as:
+
+```haskell
+instance MonadState s (Parser s e) where
+    get :: Parser s e s
+    get = embed $ \ s -> Right (s, s)
+
+    put :: s -> Parser s e ()
+    put s = embed $ const (Right ((), s))
+```
+
+The first thing to notice is that both `get` and `put` do not throw an error and `get` does not consume any input; the `put` parser however, allows arbitrary state transformations. Because of all this, we have retained the `get` parser but with `Void` in the type error but have _not_ implemented the full `MonadState` typeclass. This means that `backtrack` cannot make use of `put` and must be implemented as a primitive.
+
+#### A. 2. 4. 2. The `backtrack` parser.
+
+The implementation of `backtrack` is a standard try-catch implemented directly:
+
+```haskell
+backtrack :: Parser s e a -> Parser s Void (e :+: a)
+backtrack p = Parser $ \ xs ->
+    case parse p xs of
+        Left e        -> Right (Left e, xs)
+        Right (x, ys) -> Right (Right x, ys)
+```
