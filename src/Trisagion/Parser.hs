@@ -1,10 +1,10 @@
 {- |
-Module: Trisagion.Core.Parser
+Module: Trisagion.Parser
 
 The @Parser@ monad.
 -}
 
-module Trisagion.Core.Parser (
+module Trisagion.Parser (
     -- * Type operators.
     (:+:),
     (:*:),

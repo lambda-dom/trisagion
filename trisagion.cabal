@@ -60,4 +60,4 @@ library
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
-        Trisagion.Core.Parser
+        Trisagion.Parser
