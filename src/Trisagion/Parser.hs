@@ -197,6 +197,10 @@ value x = Parser $ \ s -> Success x s
         -- Do something with @s@.
 @
 
+The 'get' parser satisfies the get-get law of lenses in the form:
+
+prop> get *> get == get
+
 The parser does not throw an error or consume input.
 -}
 get :: Parser s Void s
@@ -210,7 +214,7 @@ backtrack p = Parser $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
-{- | Run the first parser and if it fails run the second. Return the result as an @'Either'@.
+{- | Run the first parser and if it fails run the second. Return the results as an @'Either'@.
 
 note(s):
 
