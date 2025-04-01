@@ -721,7 +721,7 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
   2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
 
-Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`. This means that `toList` is _not_ a typeclass method; if you want an overridable list conversion, you need a `MonoFoldable` constraint.
 
 ### A. 5. 5. Two fundamental parsers.
 
