@@ -18,8 +18,6 @@ module Trisagion.Typeclasses.Streamable (
 import qualified Data.Foldable as Foldable (null)
 import Data.List (unfoldr)
 import qualified Data.List as List (uncons, isSuffixOf)
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NonEmpty (uncons)
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
 
@@ -136,16 +134,6 @@ instance Streamable [a] where
     uncons = List.uncons
 
     null :: [a] -> Bool
-    null = Foldable.null
-
-instance Streamable (NonEmpty a) where
-    uncons :: NonEmpty a -> Maybe (a, NonEmpty a)
-    uncons xs =
-        case NonEmpty.uncons xs of
-            (_, Nothing) -> Nothing
-            (y, Just ys) -> Just (y, ys)
-
-    null :: NonEmpty a -> Bool
     null = Foldable.null
 
 instance Streamable (Seq a) where
