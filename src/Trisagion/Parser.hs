@@ -23,28 +23,21 @@ module Trisagion.Parser (
     eval,
     remainder,
 
-    -- * 'Applicative' parsers.
-    value,
-
     -- * State parsers.
     get,
-
-    -- * 'Alternative' parsers.
     backtrack,
-    either,
 
     -- * Error parsers.
     throw,
     catch,
 
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
-    eoi,
     one,
 ) where
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (either, null)
+import Prelude hiding (null)
 
 -- Base.
 import Control.Applicative (Alternative (..))
@@ -107,7 +100,7 @@ the result of @q@.
 
 note(s):
 
-    * The parser @p \<*\> q@ short-circuits on @p@ erroring out, that is, @q@ never runs.
+  * The parser @p \<*\> q@ short-circuits on @p@ erroring out, that is, @q@ never runs.
 -}
 instance Applicative (Parser s e) where
     pure :: a -> Parser s e a
@@ -129,7 +122,7 @@ function @f@ to the result.
 
 note(s):
 
-    * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
+  * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
 -}
 instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
@@ -153,7 +146,7 @@ but /not/ right catch and right zero @f >>= const empty == empty@, because of sh
 
 note(s):
 
-    * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+  * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
 -}
 instance Monoid e => Alternative (Parser s e) where
     empty :: Parser s e a
@@ -181,8 +174,8 @@ continuation to depend on the specific error that was thrown.
 
 note(s):
 
-    * The monad analogy is not precise, because even if we make the obvious generalization of
-    @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
+  * The monad analogy is not precise, because even if we make the obvious generalization of
+  @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
 -}
 instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
@@ -213,14 +206,6 @@ remainder :: Parser s e a -> s -> e :+: s
 remainder p =  withResult Left (\ _ xs -> Right xs). run p
 
 
-{- | Embed a value in the 'Parser' monad.
-
-The difference with 'pure' from 'Applicative' is the more precise signature.
--}
-value :: a -> Parser s Void a
-value x = Parser $ \ s -> Success x s
-
-
 {- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 @
@@ -246,15 +231,6 @@ backtrack p = Parser $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
-{- | Run the first parser and if it fails run the second. Return the results as an @'Either'@.
-
-note(s):
-
-    * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
--}
-either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
-either q p = (Left <$> q) <|> (Right <$> p)
-
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
 throw :: e -> Parser s e Void
@@ -270,9 +246,6 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
-{- | Return @'True'@ if all input is consumed. -}
-eoi :: Streamable s => Parser s Void Bool
-eoi = null <$> get
 
 {- | Parse one @'ElementOf' s@ from the streamable. -}
 one :: (Streamable s, HasPosition s) => ParserPE s InputError (ElementOf s)

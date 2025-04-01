@@ -64,3 +64,5 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Types.ParseError
         Trisagion.Parser
+        Trisagion.Parsers.Combinators
+        Trisagion.Parsers.Streamable
