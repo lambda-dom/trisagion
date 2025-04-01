@@ -10,14 +10,14 @@ module Trisagion.Typeclasses.Streamable (
 
     -- * Basic functions.
     toList,
-    isSuffix,
+    isSuffixOf,
 ) where
 
 -- Imports.
 -- Base.
 import qualified Data.Foldable as Foldable (null)
-import Data.List (unfoldr, isSuffixOf)
-import qualified Data.List as List (uncons)
+import Data.List (unfoldr)
+import qualified Data.List as List (uncons, isSuffixOf)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty (uncons)
 import Data.Maybe (isNothing)
@@ -190,5 +190,5 @@ toList :: Streamable s => s -> [ElementOf s]
 toList = unfoldr uncons
 
 {- | Return 'True' if @xs@ is a suffix of @ys@. -}
-isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
-isSuffix xs ys = toList xs `isSuffixOf` toList ys
+isSuffixOf :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffixOf xs ys = toList xs `List.isSuffixOf` toList ys
