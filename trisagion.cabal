@@ -60,9 +60,10 @@ library
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
+        Trisagion.Types.ParseError
         Trisagion.Typeclasses.HasPosition
         Trisagion.Typeclasses.Streamable
-        Trisagion.Types.ParseError
+        Trisagion.Streams.Counter
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
