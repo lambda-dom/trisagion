@@ -676,11 +676,39 @@ class Streamable s where
 
     {- | Uncons the first element from the input stream. -}
     uncons :: s -> Maybe (ElementOf s, s)
+
+head :: Streamable s => s -> Maybe (ElementOf s)
+head = fmap fst . uncons
+
+tail :: Streamable s => s -> Maybe s
+tail = fmap snd . uncons
 ```
 
 ### A. 5. 2. The `MonoFunctor` constraint.
 
-All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this; it is not a terribly useful typeclass but it ends up being very important as a base and to state some of the typeclass laws. With this superclass:
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this;
+
+```haskell
+class MonoFunctor s where
+    -- | The type of the elements of the monofunctor.
+    type ElementOf s :: Type
+
+    -- | Map over an element of the monofunctor.
+    monomap :: (ElementOf s -> ElementOf s) -> s -> s
+
+-- Instances.
+instance MonoFunctor [a] where
+    type ElementOf [a] = a
+
+    monomap :: (a -> a) -> [a] -> [a]
+    monomap = fmap
+```
+
+There are corresponding instances for types like `ByteString` and `Text`, but in this document, if we need some concrete stream type we will just defer to something like `[a]`.
+
+The `MonoFunctor` typeclass, as well as monomorphic versions of `Foldable` and `Traversable` can be found in the [mono-traversable package](https://hackage.haskell.org/package/mono-traversable). We have our own version of it, available from the [mono github repository](https://github.com/lambda-dom/mono).
+
+`MonoFunctor` is not a terribly useful typeclass but it ends up being important as a base and to state some of the typeclass laws. With this superclass:
 
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic, streamable functors. -}
@@ -691,7 +719,7 @@ class MonoFunctor s => Streamable s where
 
 ### A. 5. 3. No free laws.
 
-Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available, and equational laws like naturality must be explicitly required.
+Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available and equational laws like naturality must be explicitly required.
 
 __Definition__: Let `s` and `t` be two monofunctors with `a ~ ElementOf s ~ ElementOf t`. A function `h :: s -> t` is _mononatural_ if for every `f :: a -> a` we have the equality `monomap f . h = h . monomap f`.
 
@@ -721,26 +749,57 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
   2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
 
-Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`. This means that `toList` is _not_ a typeclass method; if you want an overridable list conversion, you need a `MonoFoldable` constraint.
 
 ### A. 5. 5. Two fundamental parsers.
 
 With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
 
 ```haskell
+-- | Error thrown when input stream is exhausted.
+data InputError = InputError
+    deriving stock (Eq, Show)
+
+
 eoi :: Streamable s => Parser s Void Bool
 eoi = null <$> get
 
-head :: Streamable s => Parser s (ParseError (PositionOf s) InputError) (ElementOf s)
-head = do
+one :: Streamable s => Parser s InputError (ElementOf s)
+one = do
     xs <- get
     case uncons xs of
         Just (y, ys) -> put ys $> y
-        Nothing      -> absurd <$> throwParseError (InputError 1)
+        Nothing      -> absurd <$> throw InputError
 ```
 
-Since the `put` parser is not available, it has to be implemented directly in the core.
+Since the `put` parser is not available, `one` has to be implemented directly in the core.
 
-note(s):
+The actual `one` parser uses a type error `ParseError (PositionOf s) InputError`. The type signature of parsers involving `ParseError` can get gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
 
-  * The type signature of parsers like `head` involving `ParseError` are getting gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
+### A. 5. 6. Some definitions.
+
+The remainder of a parser's input can be obtained via
+
+```haskell
+remainder :: Parser s e a -> s -> Maybe s
+remainder p = either (const Nothing) id . fmap snd . parse p
+```
+
+What is the relation of the remainder with the original input, if any?
+
+__Definition__: A parser `p :: Parser s e a` is _normal_ if for every `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
+
+With the `Streamable` typeclass, the is-suffix relation is simply `isSuffixOf` at the level of lists.
+
+```haskell
+isSuffixOf :: Streamable s => s -> s -> Bool
+isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
+```
+
+In this library, it is not possible to construct non-normal parsers. All primitives return normal parsers, all combinators do as much and the `Parser` constructor is not exported and there is no way to change a parser's state. The trade-off is that the user cannot add new primitives.
+
+__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one `xs :: s` for which parsing succeeds and the remainder is equal to `xs`. The parser `p` _never consumes input_ if for every `xs` for which parsing succeeds the remainder is equal to `xs`.
+
+## A. 6. Optimization: prefixes and the `Splittable` typeclass.
+
+The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut out prefixes from streams.

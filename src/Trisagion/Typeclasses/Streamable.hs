@@ -9,31 +9,35 @@ module Trisagion.Typeclasses.Streamable (
     Streamable (..),
 
     -- * Basic functions.
-    isSuffix,
+    head,
+    tail,
+    toList,
+    isSuffixOf,
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (head, tail)
+
 -- Base.
-import qualified Data.Foldable as Foldable (null, toList)
-import Data.List (unfoldr, isSuffixOf, singleton)
-import qualified Data.List as List (uncons)
-import Data.List.NonEmpty (NonEmpty)
-import qualified Data.List.NonEmpty as NonEmpty (uncons)
+import qualified Data.Foldable as Foldable (null)
+import Data.List (unfoldr)
+import qualified Data.List as List (uncons, isSuffixOf)
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, uncons, null, unpack)
-import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons, null, unpack)
-import qualified Data.ByteString.Short as ShortBytes (ShortByteString, uncons, null, unpack)
-import qualified Data.Text as Text (Text, uncons, null, unpack)
-import qualified Data.Text.Lazy as LazyText (Text, uncons, null, unpack)
+import qualified Data.ByteString as Bytes (ByteString, uncons, null)
+import qualified Data.ByteString.Lazy as LazyBytes (ByteString, uncons, null)
+import qualified Data.ByteString.Short as ShortBytes (ShortByteString, uncons, null)
+import qualified Data.Text as Text (Text, uncons, null)
+import qualified Data.Text.Lazy as LazyText (Text, uncons, null)
 import Data.Sequence (Seq (..))
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (uncons)
 import qualified Data.Vector.Strict as StrictVector (Vector, uncons)
-import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, uncons, null, toList)
-import qualified Data.Vector.Storable as StorableVector (Vector, Storable, uncons, null, toList)
+import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, uncons, null)
+import qualified Data.Vector.Storable as StorableVector (Vector, Storable, uncons, null)
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
@@ -85,9 +89,6 @@ class MonoFunctor s => Streamable s where
     null :: s -> Bool
     null = isNothing . uncons
 
-    {- | Convert a 'Streamable' to a list. -}
-    toList :: s -> [ElementOf s]
-    toList = unfoldr uncons
 
 -- Instances.
 instance Streamable Bytes.ByteString where
@@ -97,18 +98,12 @@ instance Streamable Bytes.ByteString where
     null :: Bytes.ByteString -> Bool
     null = Bytes.null
 
-    toList :: Bytes.ByteString -> [Word8]
-    toList = Bytes.unpack
-
 instance Streamable LazyBytes.ByteString where
     uncons :: LazyBytes.ByteString -> Maybe (Word8, LazyBytes.ByteString)
     uncons = LazyBytes.uncons
 
     null :: LazyBytes.ByteString -> Bool
     null = LazyBytes.null
-
-    toList :: LazyBytes.ByteString -> [Word8]
-    toList = LazyBytes.unpack
 
 instance Streamable ShortBytes.ShortByteString where
     uncons :: ShortBytes.ShortByteString -> Maybe (Word8, ShortBytes.ShortByteString)
@@ -117,9 +112,6 @@ instance Streamable ShortBytes.ShortByteString where
     null :: ShortBytes.ShortByteString -> Bool
     null = ShortBytes.null
 
-    toList :: ShortBytes.ShortByteString -> [Word8]
-    toList = ShortBytes.unpack
-
 instance Streamable Text.Text where
     uncons :: Text.Text -> Maybe (Char, Text.Text)
     uncons = Text.uncons
@@ -127,18 +119,12 @@ instance Streamable Text.Text where
     null :: Text.Text -> Bool
     null = Text.null
 
-    toList :: Text.Text -> [Char]
-    toList = Text.unpack
-
 instance Streamable LazyText.Text where
     uncons :: LazyText.Text -> Maybe (Char, LazyText.Text)
     uncons = LazyText.uncons
 
     null :: LazyText.Text -> Bool
     null = LazyText.null
-
-    toList :: LazyText.Text -> [Char]
-    toList = LazyText.unpack
 
 instance Streamable (Maybe a) where
     uncons :: Maybe a -> Maybe (a, Maybe a)
@@ -148,31 +134,12 @@ instance Streamable (Maybe a) where
     null :: Maybe a -> Bool
     null = isNothing
 
-    toList :: Maybe a -> [a]
-    toList = maybe [] singleton
-
 instance Streamable [a] where
     uncons :: [a] -> Maybe (a, [a])
     uncons = List.uncons
 
     null :: [a] -> Bool
     null = Foldable.null
-
-    toList :: [a] -> [a]
-    toList = id
-
-instance Streamable (NonEmpty a) where
-    uncons :: NonEmpty a -> Maybe (a, NonEmpty a)
-    uncons xs =
-        case NonEmpty.uncons xs of
-            (_, Nothing) -> Nothing
-            (y, Just ys) -> Just (y, ys)
-
-    null :: NonEmpty a -> Bool
-    null = Foldable.null
-
-    toList :: NonEmpty a -> [a]
-    toList = Foldable.toList
 
 instance Streamable (Seq a) where
     uncons :: Seq a -> Maybe (a, Seq a)
@@ -182,18 +149,12 @@ instance Streamable (Seq a) where
     null :: Seq a -> Bool
     null = Foldable.null
 
-    toList :: Seq a -> [a]
-    toList = Foldable.toList
-
 instance Streamable (Vector a) where
     uncons :: Vector a -> Maybe (a, Vector a)
     uncons = Vector.uncons
 
     null :: Vector a -> Bool
     null = Foldable.null
-
-    toList :: Vector a -> [a]
-    toList = Foldable.toList
 
 instance Streamable (StrictVector.Vector a) where
     uncons :: StrictVector.Vector a -> Maybe (a, StrictVector.Vector a)
@@ -202,18 +163,12 @@ instance Streamable (StrictVector.Vector a) where
     null :: StrictVector.Vector a -> Bool
     null = Foldable.null
 
-    toList :: StrictVector.Vector a -> [a]
-    toList = Foldable.toList
-
 instance UnboxedVector.Unbox a => Streamable (UnboxedVector.Vector a) where
     uncons :: UnboxedVector.Vector a -> Maybe (a, UnboxedVector.Vector a)
     uncons = UnboxedVector.uncons
 
     null :: UnboxedVector.Vector a -> Bool
     null = UnboxedVector.null
-
-    toList :: UnboxedVector.Vector a -> [a]
-    toList = UnboxedVector.toList
 
 instance StorableVector.Storable a => Streamable (StorableVector.Vector a) where
     uncons :: StorableVector.Vector a -> Maybe (a, StorableVector.Vector a)
@@ -222,10 +177,19 @@ instance StorableVector.Storable a => Streamable (StorableVector.Vector a) where
     null :: StorableVector.Vector a -> Bool
     null = StorableVector.null
 
-    toList :: StorableVector.Vector a -> [a]
-    toList = StorableVector.toList
 
+{- | The head of the stream. -}
+head :: Streamable s => s -> Maybe (ElementOf s)
+head = fmap fst . uncons
+
+{- | The tail of the stream. -}
+tail :: Streamable s => s -> Maybe s
+tail = fmap snd . uncons
+
+{- | Convert a 'Streamable' to a list. -}
+toList :: Streamable s => s -> [ElementOf s]
+toList = unfoldr uncons
 
 {- | Return 'True' if @xs@ is a suffix of @ys@. -}
-isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
-isSuffix xs ys = toList xs `isSuffixOf` toList ys
+isSuffixOf :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffixOf xs ys = toList xs `List.isSuffixOf` toList ys
