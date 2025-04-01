@@ -51,7 +51,7 @@ data Result s e a
 
 This introduces strictness where laziness is not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case. The disadvantage of this flattening of the return type is that there is no `Monad` or even `Applicative` structure for `Result s e a` so the actual code is a tad hairier.
 
-Since this is an implementation, detail, it is kept hidden from public eye; the user-facing API uses base types like `Either` and `(,)` exclusively. In all the code examples of this document we keep using `Either e (a, s)` as the return type of a parsing function.
+Since this is an implementation detail, it is kept private like a closet skeleton or an ugly vice, and the user-facing API uses types like `Either` and `(,)` from base exclusively. To simplify things, in the rest of this document we keep using `Either e (a, s)` as the return type of a parsing function.
 
 ## A. 2. Basic instances.
 
@@ -67,7 +67,9 @@ instance Bifunctor (Parser s) where
     bimap f g p = Parser $ \ s -> bimap f (first g) $ parse p s
 ```
 
-Bifunctoriality provides the basic way to unify error types. If we have parsers `p_i :: Parser s e_i a` and a cospan `f_i :: e_i -> e`, then we have a cospan `first f_i :: Parser s e_i a -> Parser s e a`. The choice of `e` is left to the user, but there is a canonical, minimal choice by taking the coproduct of all `e_i`. Unfortunately, dealing with arbitrary coproducts in Haskell is very clunky, even if we reached for any of the innumerable packages on hackage offering extensible sum types -- for just one example, see [sop-core](https://hackage.haskell.org/package/sop-core). Most likely, any truly satisfying solution will need some form of dependent types. Latter on, we will get another way to deal with this recurring problem.
+Bifunctoriality provides the basic way to unify error types. If we have parsers `p_i :: Parser s e_i a` and a cospan `f_i :: e_i -> e`, then we have a cospan `first f_i :: Parser s e_i a -> Parser s e a`. The choice of `e` is left to the user, but there is a canonical, minimal choice by taking the coproduct of all `e_i`. Unfortunately, dealing with arbitrary coproducts in Haskell is very clunky, even if we reached for any of the innumerable packages on hackage offering extensible sum types [^1]. Most likely, any truly satisfying solution will need some form of dependent types. Latter on, we will get another way to deal with this recurring problem.
+
+[^1]: For just one example among many, see [sop-core](https://hackage.haskell.org/package/sop-core).
 
 ### A. 2. 2. The `Applicative` instance.
 
@@ -87,7 +89,11 @@ instance Applicative (Parser s e) where
 
 #### A. 2. 2. 1. The parser `pure x`.
 
-For a value `x`, the parser `pure x` does not error and never consumes input. The two are linked because if a parser does not error then it must do something when there is no input to be had, which of course, requires that it does not consume input. However, even if the two are linked only the former can be reflected in the type signature, e. g. by:
+For a value `x`, the parser `pure x` does not error and _never consumes input_. The two are linked because if a parser does not error then it must do something when there is no input to be had, which of course, requires that it _does not consume input_.
+
+__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one `xs :: s` for which parsing succeeds and the remainder is equal to `xs`. The parser `p` _never consumes input_ if for every `xs` for which parsing succeeds the remainder is equal to `xs`.
+
+However, even if the two are linked only the former can be reflected in the type signature, e. g. by:
 
 ```haskell
 pure :: a -> Parser s Void a
@@ -121,13 +127,13 @@ where `:+:` and `:*:` are type operator aliases for `Either` and `(,)` respectiv
 (&&&) f g x = (f x, g x)
 ```
 
-In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^1].
+In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
 
-[^1]: The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
+[^2]: See for example [Lax monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor). The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
 
 #### A. 2. 2. 3. Equivalent description of `Applicative`.
 
-As is well known, the `Applicative` typeclass is equivalent to `f` being lax-monoidal for products [^2]:
+As is well known, the `Applicative` typeclass is equivalent to `f` being lax-monoidal for products [^3]:
 
 ```haskell
 zip :: Applicative f => f a -> f b -> f (a :*: b)
@@ -170,7 +176,7 @@ point = const
 
 The laws for the typeclasses guarantee that we get the same results either way. The reason for this piece of category-theoretic trivia is that once we get to serializers, we will see that it is the lax-monoidal version of `Applicative` that dualizes well.
 
-[^2]: See for example [Lax monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor).
+[^3]: See for example [Notions of computation as monoids](https://arxiv.org/abs/1406.4823) and references therein.
 
 ### A. 2. 3. The `Monad` typeclass.
 
@@ -217,7 +223,7 @@ tries the first parser and if it errors, _backtracks_ and tries the second on th
 backtrack :: Parser s e a -> Parser s Void (e :+: a)
 ```
 
-implementing backtracking. Specifically, the `backtrack` parser runs the argument parser and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
+implementing backtracking. Specifically, the `backtrack p` parser runs `p` and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
 
 #### A. 2. 4. 1. The (absence of the) `MonadState` class.
 
@@ -283,7 +289,7 @@ unit :: Monoid e => () -> Parser s e Void
 unit = const $ throwError mempty
 ```
 
-this gives a (symmetric) lax-monoidal structure to `Parser s e` between products and coproducts [^3]. Considering the _codiagonal_,
+this gives a (symmetric) lax-monoidal structure to `Parser s e` between products and coproducts [^4]. Considering the _codiagonal_,
 
 ```haskell
 codiagonal :: Either a a -> a
@@ -298,7 +304,7 @@ we have the equality
 
 The upshot of all this is that the `Alternative` typeclass is a red herring, choice is really a lax-monoidal structure. Let us go through the steps one by one to make this clearer.
 
-[^3]: The coherence laws do hold up; exercise to the interested reader.
+[^4]: The coherence laws do hold up; exercise to the interested reader.
 
 #### A. 2. 5. 2. Monoidal categories and monoids.
 
@@ -310,11 +316,11 @@ unitorLeft  :: k :*: a -> a
 unitorRight :: a :*: k -> a
 ```
 
-satisfying a bunch of equations, the so called _coherence laws_ [^4].
+satisfying a bunch of equations, the so called _coherence laws_ [^5].
 
 The value of any abstraction is in the list of examples it covers and the things you can do with it, both the new concepts that can be expressed and the theorems that can be derived. Starting with the examples, the two most important for us, are the monoidal structures given by products and coproducts respectively. As for concepts that can be expressed, one can now generalize the notion of monoid to a monoid in a monoidal category. The classical notion is recovered by using the product monoidal structure.
 
-[^4]: See [Monoidal categories](https://ncatlab.org/nlab/show/monoidal+category) for the full story.
+[^5]: See [Monoidal categories](https://ncatlab.org/nlab/show/monoidal+category) for the full story.
 
 #### A. 2. 5. 2. Why you never heard of monoids for coproducts.
 
@@ -339,7 +345,7 @@ u :: f a :*: f b -> f (a :+: b)
 e :: j -> f k
 ```
 
-where the objects `j` and `k` are the unit objects for `(:*:)` and `(:+:)` respectively, satisfying some equations [^5] . If we drop the requirements that the natural transformations are isomorphisms we obtain the notion of _lax monoidal functor_.
+where the objects `j` and `k` are the unit objects for `(:*:)` and `(:+:)` respectively, satisfying some equations [^6] . If we drop the requirements that the natural transformations are isomorphisms we obtain the notion of _lax monoidal functor_.
 
 __Theorem__: Let `f` be a lax monoidal functor between monoidal structures `(:*:)` and `(:+:)` and
 
@@ -362,7 +368,7 @@ is a `(:*:)`-monoid structure on `f a`.
 
 __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor), proposition 3. 1. and references therein.
 
-[^5]: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor) for them.
+[^6]: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor) for them.
 
 #### A. 2. 5. 4. The punchline.
 
@@ -397,7 +403,7 @@ fmap f (p <|> q) = (fmap f p) <|> (fmap f q)
 fmap f empty = empty
 ```
 
-But this is also a consequence of naturality of `(<|>)` and thus a consequence of the free theorem [^6]. Slightly more substantive are the next two results (because they do not follow from any free theorem).
+But this is also a consequence of naturality of `(<|>)` and thus a consequence of the free theorem [^7]. Slightly more substantive (because they do not follow from any free theorem) are the next two results.
 
 __Theorem__: If `f :: d -> e` is a monoid morphism, then `first f :: Parser s d a -> Parser s e a` is a monoid morphism:
 
@@ -406,7 +412,7 @@ first f empty == empty
 (first f p) <|> (first f q) == first f (p <|> q)
 ```
 
-__Proof__: proof by case-analysis on the failures.
+__Proof__: proof by case analysis on the failures.
 
 The second result are the compatibility laws between `<*>` and `<|>`.
 
@@ -435,7 +441,7 @@ and doing a case by case analysis on the failures.
 
 As we will see in the next section, the monoid that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
 
-[^6]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
+[^7]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
 ### A. 2. 6. Handling errors.
 
@@ -547,7 +553,7 @@ is more useful. So we do what every self-respecting Haskeller does and introduce
 ```haskell
 {- | The typeclass for input streams with a notion of current position. -}
 class HasPosition s where
-    {-# MINIMAL getPosition #-}
+    {-# MINIMAL position #-}
 
     {- | The type of the stream's position. -}
     type PositionOf s :: Type
@@ -562,11 +568,11 @@ As one can see, the entirety of `HasPosition` is nothing more than a getter for 
 instance HasPosition s
     type PositionOf s = s
 
-    getPosition :: s -> s
-    getPosition = id
+    position :: s -> s
+    position = id
 ```
 
-And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want to `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
 
 ### A. 4. 3. Backtraces.
 
@@ -605,7 +611,7 @@ data ParseError s e where
         -> ParseError s e
 ```
 
-The reader can read up on existentials, but the one-line summary is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`. We are trading flexibility in error handling for less operations to handle backtraces, since we cannot pin down their type. Is the trade-off worth it? I guess we will find out.
+The reader can read up on existentials, but the one-line summary is that we can use _any_ `(Typeable d, Eq d, Show d) => ParseError s d` as a backtrace of an error but getting it back the only thing we know about it is that it is a `Maybe (ParseError s d)` with `d` satisfying the constraints `(Typeable d, Eq d, Show d)`. We are trading more flexibility in error handling for less flexibility in handling backtraces, since we cannot pin down their type. Is the trade-off worth it? I guess we will find out.
 
 note(s):
 
@@ -623,8 +629,8 @@ onParseError e p =
     catch
         p
         (\ b -> do
-            s <- get
-            throw $ makeParseError b s e)
+            s <- first absurd get
+            absurd <$> throw (makeBacktrace b s e))
 ```
 
 The above block can now be written as,
@@ -749,7 +755,7 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
   2. For input streams like `ByteString.Lazy` computing its length would force the entire bytestring into memory which is a big no-no.
 
-Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`. This means that `toList` is _not_ a typeclass method; if you want an overridable list conversion, you need a `MonoFoldable` constraint.
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`. This means that `toList` is _not_ a typeclass method; if you want an overridable list conversion, you need a `MonoFoldable` instance.
 
 ### A. 5. 5. Two fundamental parsers.
 
@@ -764,7 +770,7 @@ data InputError = InputError
 eoi :: Streamable s => Parser s Void Bool
 eoi = null <$> get
 
-one :: Streamable s => Parser s InputError (ElementOf s)
+one :: Streamable s => Parser s (ParseError (PositionOf s) InputError) (ElementOf s)
 one = do
     xs <- get
     case uncons xs of
@@ -772,13 +778,11 @@ one = do
         Nothing      -> absurd <$> throw InputError
 ```
 
-Since the `put` parser is not available, `one` has to be implemented directly in the core.
-
-The actual `one` parser uses a type error `ParseError (PositionOf s) InputError`. The type signature of parsers involving `ParseError` can get gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
+Since the `put` parser is not available, `one` has to be implemented directly in the core. Also, and as can be seen in the example of `one`, the type signature of parsers involving `ParseError` can get gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
 
 ### A. 5. 6. Some definitions.
 
-The remainder of a parser's input can be obtained via
+Recall that the remainder of a parser's input can be obtained via
 
 ```haskell
 remainder :: Parser s e a -> s -> Maybe s
@@ -796,9 +800,7 @@ isSuffixOf :: Streamable s => s -> s -> Bool
 isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
 ```
 
-In this library, it is not possible to construct non-normal parsers. All primitives return normal parsers, all combinators do as much and the `Parser` constructor is not exported and there is no way to change a parser's state. The trade-off is that the user cannot add new primitives.
-
-__Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one `xs :: s` for which parsing succeeds and the remainder is equal to `xs`. The parser `p` _never consumes input_ if for every `xs` for which parsing succeeds the remainder is equal to `xs`.
+In this library, it is not possible to construct non-normal parsers. All primitives return normal parsers, all combinators do as much and the `Parser` constructor is not exported and there is no way to change a parser's state. The trade-off for this guarantee is that the user cannot add new primitives.
 
 ## A. 6. Optimization: prefixes and the `Splittable` typeclass.
 
