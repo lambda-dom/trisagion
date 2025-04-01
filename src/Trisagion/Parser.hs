@@ -23,28 +23,23 @@ module Trisagion.Parser (
     eval,
     remainder,
 
-    -- * 'Applicative' parsers.
-    value,
-
     -- * State parsers.
     get,
 
     -- * 'Alternative' parsers.
     backtrack,
-    either,
 
     -- * Error parsers.
     throw,
     catch,
 
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
-    eoi,
     one,
 ) where
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (either, null)
+import Prelude hiding (null)
 
 -- Base.
 import Control.Applicative (Alternative (..))
@@ -213,14 +208,6 @@ remainder :: Parser s e a -> s -> e :+: s
 remainder p =  withResult Left (\ _ xs -> Right xs). run p
 
 
-{- | Embed a value in the 'Parser' monad.
-
-The difference with 'pure' from 'Applicative' is the more precise signature.
--}
-value :: a -> Parser s Void a
-value x = Parser $ \ s -> Success x s
-
-
 {- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 @
@@ -246,15 +233,6 @@ backtrack p = Parser $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
-{- | Run the first parser and if it fails run the second. Return the results as an @'Either'@.
-
-note(s):
-
-    * The parser is @'Left'@-biased; if the first parser is successful the second never runs.
--}
-either :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
-either q p = (Left <$> q) <|> (Right <$> p)
-
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
 throw :: e -> Parser s e Void
@@ -270,9 +248,6 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
-{- | Return @'True'@ if all input is consumed. -}
-eoi :: Streamable s => Parser s Void Bool
-eoi = null <$> get
 
 {- | Parse one @'ElementOf' s@ from the streamable. -}
 one :: (Streamable s, HasPosition s) => ParserPE s InputError (ElementOf s)
