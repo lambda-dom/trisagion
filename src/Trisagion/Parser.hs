@@ -100,7 +100,7 @@ the result of @q@.
 
 note(s):
 
-    * The parser @p \<*\> q@ short-circuits on @p@ erroring out, that is, @q@ never runs.
+  * The parser @p \<*\> q@ short-circuits on @p@ erroring out, that is, @q@ never runs.
 -}
 instance Applicative (Parser s e) where
     pure :: a -> Parser s e a
@@ -122,7 +122,7 @@ function @f@ to the result.
 
 note(s):
 
-    * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
+  * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
 -}
 instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
@@ -146,7 +146,7 @@ but /not/ right catch and right zero @f >>= const empty == empty@, because of sh
 
 note(s):
 
-    * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+  * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
 -}
 instance Monoid e => Alternative (Parser s e) where
     empty :: Parser s e a
@@ -174,8 +174,8 @@ continuation to depend on the specific error that was thrown.
 
 note(s):
 
-    * The monad analogy is not precise, because even if we make the obvious generalization of
-    @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
+  * The monad analogy is not precise, because even if we make the obvious generalization of
+  @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
 -}
 instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
