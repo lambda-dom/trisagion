@@ -39,12 +39,12 @@ module Trisagion.Parser (
 
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     eoi,
-    head,
+    one,
 ) where
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (either, head, null)
+import Prelude hiding (either, null)
 
 -- Base.
 import Control.Applicative (Alternative (..))
@@ -274,9 +274,9 @@ catch p h = Parser $ \ xs ->
 eoi :: Streamable s => Parser s Void Bool
 eoi = null <$> get
 
-{- | Parse the first @'ElementOf' s@ from the streamable. -}
-head :: (Streamable s, HasPosition s) => ParserPE s InputError (ElementOf s)
-head = Parser $ \ s ->
+{- | Parse one @'ElementOf' s@ from the streamable. -}
+one :: (Streamable s, HasPosition s) => ParserPE s InputError (ElementOf s)
+one = Parser $ \ s ->
     case uncons s of
         Nothing      -> Error $ makeParseError s (InputError 1)
         Just (x, xs) -> Success x xs
