@@ -25,8 +25,6 @@ module Trisagion.Parser (
 
     -- * State parsers.
     get,
-
-    -- * 'Alternative' parsers.
     backtrack,
 
     -- * Error parsers.
