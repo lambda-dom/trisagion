@@ -800,3 +800,6 @@ In this library, it is not possible to construct non-normal parsers. All primiti
 
 __Definition__: A parser `p :: Parser s e a` _does not consume input_ if there is one `xs :: s` for which parsing succeeds and the remainder is equal to `xs`. The parser `p` _never consumes input_ if for every `xs` for which parsing succeeds the remainder is equal to `xs`.
 
+## A. 6. Optimization: prefixes and the `Splittable` typeclass.
+
+The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut out prefixes from streams.
