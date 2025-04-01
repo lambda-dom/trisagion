@@ -9,11 +9,16 @@ module Trisagion.Typeclasses.Streamable (
     Streamable (..),
 
     -- * Basic functions.
+    head,
+    tail,
     toList,
     isSuffixOf,
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (head, tail)
+
 -- Base.
 import qualified Data.Foldable as Foldable (null)
 import Data.List (unfoldr)
@@ -172,6 +177,14 @@ instance StorableVector.Storable a => Streamable (StorableVector.Vector a) where
     null :: StorableVector.Vector a -> Bool
     null = StorableVector.null
 
+
+{- | The head of the stream. -}
+head :: Streamable s => s -> Maybe (ElementOf s)
+head = fmap fst . uncons
+
+{- | The tail of the stream. -}
+tail :: Streamable s => s -> Maybe s
+tail = fmap snd . uncons
 
 {- | Convert a 'Streamable' to a list. -}
 toList :: Streamable s => s -> [ElementOf s]
