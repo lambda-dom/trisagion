@@ -28,6 +28,12 @@ module Trisagion.Parsers.Combinators (
     many,
     some,
     untilEnd,
+
+    -- * List parsers.
+    sepBy,
+    sepBy1,
+    unfold,
+    atMostN,
 ) where
 
 -- Imports.
@@ -171,3 +177,36 @@ untilEnd end p = go
             case r of
                 Left e -> pure $ e :| []
                 Right x -> (x <|) <$> go
+
+
+{- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
+sepBy :: Parser s e a -> Parser s e b -> Parser s Void [b]
+sepBy sep = many . before sep
+
+{- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
+sepBy1 sep p = zipWith (:|) p (first absurd $ sepBy sep p)
+
+{- | Lift 'List.unfoldr' over the 'Parser' monad. -}
+unfold :: (r -> Parser s e (a, r)) -> r -> Parser s Void [a]
+unfold h = go
+    where
+        go s = do
+            r <- maybe (h s)
+            case r of
+                Nothing     -> pure []
+                Just (x, t) -> (x : ) <$> go t
+
+{- | Run the parser @n@ times or until it errors and return the list of results.
+
+The parser does not error and it is guaranteed that the list of results has @n@ or less elements.
+-}
+atMostN :: Word -> Parser s e a -> Parser s Void [a]
+atMostN n p = go n
+    where
+        go 0 = pure []
+        go i = do
+            r <- maybe p
+            case r of
+                Nothing -> pure []
+                Just x  -> (x :) <$> go (pred i)
