@@ -34,6 +34,11 @@ module Trisagion.Parser (
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     one,
 
+    -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
+    isolateWith,
+    takePrefix,
+    takeWith,
+
     -- * Streams.
     Chunk,
 
@@ -43,7 +48,7 @@ module Trisagion.Parser (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (null)
+import Prelude hiding (null, splitAt)
 
 -- Base.
 import Control.Applicative (Alternative (..))
@@ -59,8 +64,9 @@ import Data.MonoFunctor (MonoFunctor (..))
 -- Package.
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
-import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasPosition (HasPosition(..))
+import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -261,10 +267,47 @@ one = Parser $ \ s ->
         Just (x, xs) -> Success x xs
 
 
+{- | Run a parser isolated to a prefix of the stream.
+
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
+parser to run with an appropriate check -- see 'Trisagion.Parsers.ParseError.guardWith'.
+-}
+isolateWith
+    :: (HasPosition s)
+    => (s -> Maybe (s, s))              -- ^ Stream splitter. @'Nothing'@ means insufficient input.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> ParserPE s (InputError :+: e) a
+isolateWith h p = Parser $ \xs ->
+    case h xs of
+        Nothing               -> Error $ makeParseError xs (Left InsufficientInputError)
+        Just (prefix, suffix) ->
+            case eval p prefix of
+                Left e -> Error $ makeParseError prefix (Right e)
+                Right x -> Success x suffix
+
+{- | Parse a fixed size prefix.
+
+The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
+-}
+takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
+takePrefix n = Parser $ \ xs ->
+    let
+        (prefix, suffix) = splitAt n xs
+    in
+        Success prefix suffix
+
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
+takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
+takeWith p = Parser $ \ xs ->
+    let
+        (prefix, suffix) = splitWith p xs
+    in
+        Success prefix suffix
+
+
 {- | Chunk a streamable with a parser. -}
 data Chunk s e a where
     Chunk :: !Word -> !s -> !(Parser s e a) -> Chunk s e a
-
 
 -- Instances.
 instance MonoFunctor (Chunk s e a) where
