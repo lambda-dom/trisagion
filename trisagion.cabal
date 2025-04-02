@@ -71,3 +71,24 @@ library
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Word8
+
+test-suite trisagion-tests
+    import: common-fields
+    type: exitcode-stdio-1.0
+    hs-source-dirs:
+        tests
+    main-is: Spec.hs
+    build-depends:
+        hspec ^>=2.11 && <2.12,
+        trisagion,
+    build-tool-depends:
+        hspec-discover:hspec-discover
+    other-modules:
+        Lib.Runners
+        Tests.ParserSpec
+        -- Tests.Parsers.StreamableSpec
+        -- Tests.Parsers.CombinatorsSpec
+        -- Tests.Parsers.ParseErrorSpec
+        -- Tests.Parsers.SplittableSpec
+        -- Tests.Parsers.Word8Spec
+        -- Tests.Parsers.CharSpec
