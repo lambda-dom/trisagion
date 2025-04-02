@@ -35,9 +35,9 @@ module Trisagion.Parser (
     one,
 
     -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
-    isolateWith,
+    isolate,
     takePrefix,
-    takeWith,
+    takePrefixWith,
 
     -- * Streams.
     Chunk,
@@ -272,12 +272,12 @@ one = Parser $ \ s ->
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
 parser to run with an appropriate check -- see 'Trisagion.Parsers.ParseError.guardWith'.
 -}
-isolateWith
+isolate
     :: (HasPosition s)
     => (s -> Maybe (s, s))              -- ^ Stream splitter. @'Nothing'@ means insufficient input.
     -> Parser s e a                     -- ^ Parser to run.
     -> ParserPE s (InputError :+: e) a
-isolateWith h p = Parser $ \xs ->
+isolate h p = Parser $ \xs ->
     case h xs of
         Nothing               -> Error $ makeParseError xs (Left InsufficientInputError)
         Just (prefix, suffix) ->
@@ -297,8 +297,8 @@ takePrefix n = Parser $ \ xs ->
         Success prefix suffix
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
-takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
-takeWith p = Parser $ \ xs ->
+takePrefixWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
+takePrefixWith p = Parser $ \ xs ->
     let
         (prefix, suffix) = splitWith p xs
     in
