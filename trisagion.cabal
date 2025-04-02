@@ -87,7 +87,7 @@ test-suite trisagion-tests
         Lib.Runners
         Tests.ParserSpec
         Tests.Parsers.CombinatorsSpec
-        -- Tests.Parsers.ParseErrorSpec
+        Tests.Parsers.ParseErrorSpec
         -- Tests.Parsers.StreamableSpec
         -- Tests.Parsers.SplittableSpec
         -- Tests.Parsers.Word8Spec
