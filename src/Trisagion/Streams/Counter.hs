@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 {- |
 Module: Trisagion.Streams.Counter
 
@@ -13,12 +15,17 @@ module Trisagion.Streams.Counter (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (splitAt)
+
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
+import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position.
@@ -49,6 +56,29 @@ instance Streamable s => Streamable (Counter s) where
         case uncons xs of
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Counter (succ n) ys)
+
+{- | 'Splittable' instance.
+
+The instance requires computing the length of the prefix, which is @O(n)@ for some types like
+@Text@. This in its turn, requires a @'MonoFoldable' ('PrefixOf' s)@ constraint and the
+@UndecidableInstances@ extension to shut up GHC.
+-}
+instance (Splittable s, MonoFoldable (PrefixOf s)) => Splittable (Counter s) where
+    type PrefixOf (Counter s) = PrefixOf s
+ 
+    splitAt :: Word -> Counter s -> (PrefixOf (Counter s), Counter s)
+    splitAt n (Counter offset xs) =
+        let
+            (prefix, suffix) = splitAt n xs
+        in
+            (prefix, Counter (offset + monolength prefix) suffix)
+
+    splitWith :: (ElementOf (Counter s) -> Bool) -> Counter s -> (PrefixOf (Counter s), Counter s)
+    splitWith p (Counter offset xs) =
+        let
+            (prefix, suffix) = splitWith p xs
+        in
+            (prefix, Counter (offset + monolength prefix) suffix)
 
 
 {- | Construct a t'Counter' from a 'Streamable'. -}
