@@ -11,6 +11,7 @@ module Trisagion.Typeclasses.Splittable (
 
 -- Imports.
 -- Base.
+import qualified Data.List as List (splitAt)
 import Data.Kind (Type)
 import Data.Word (Word8)
 
@@ -20,6 +21,11 @@ import qualified Data.ByteString.Lazy as LazyBytes (ByteString, span, splitAt)
 import qualified Data.ByteString.Short as ShortBytes (ShortByteString, span, splitAt)
 import qualified Data.Text as Text (Text, span, splitAt)
 import qualified Data.Text.Lazy as LazyText (Text, span, splitAt)
+import qualified Data.Sequence as Seq (Seq, spanl, splitAt)
+import qualified Data.Vector as Vector (Vector, span, splitAt)
+import qualified Data.Vector.Strict as StrictVector (Vector, span, splitAt)
+import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, span, splitAt)
+import qualified Data.Vector.Storable as StorableVector (Vector, Storable, span, splitAt)
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
@@ -109,3 +115,57 @@ instance Splittable LazyText.Text where
 
     splitWith :: (Char -> Bool) -> LazyText.Text -> (LazyText.Text, LazyText.Text)
     splitWith = LazyText.span
+
+instance Splittable [a] where
+    type PrefixOf [a] = [a]
+
+    splitAt :: Word -> [a] -> ([a], [a])
+    splitAt n = List.splitAt $ fromIntegral n
+
+    splitWith :: (a -> Bool) -> [a] -> ([a], [a])
+    splitWith = span
+
+instance Splittable (Seq.Seq a) where
+    type PrefixOf (Seq.Seq a) = Seq.Seq a
+
+    splitAt :: Word -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
+    splitAt n = Seq.splitAt $ fromIntegral n
+
+    splitWith :: (a -> Bool) -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
+    splitWith = Seq.spanl
+
+instance Splittable (Vector.Vector a) where
+    type PrefixOf (Vector.Vector a) = Vector.Vector a
+
+    splitAt :: Word -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    splitAt n = Vector.splitAt (fromIntegral n)
+
+    splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    splitWith = Vector.span
+
+instance Splittable (StrictVector.Vector a) where
+    type PrefixOf (StrictVector.Vector a) = StrictVector.Vector a
+
+    splitAt :: Word -> StrictVector.Vector a -> (StrictVector.Vector a, StrictVector.Vector a)
+    splitAt n = StrictVector.splitAt (fromIntegral n)
+
+    splitWith :: (a -> Bool) -> StrictVector.Vector a -> (StrictVector.Vector a, StrictVector.Vector a)
+    splitWith = StrictVector.span
+
+instance UnboxedVector.Unbox a => Splittable (UnboxedVector.Vector a) where
+    type PrefixOf (UnboxedVector.Vector a) = UnboxedVector.Vector a
+
+    splitAt :: Word -> UnboxedVector.Vector a -> (UnboxedVector.Vector a, UnboxedVector.Vector a)
+    splitAt n = UnboxedVector.splitAt (fromIntegral n)
+
+    splitWith :: (a -> Bool) -> UnboxedVector.Vector a -> (UnboxedVector.Vector a, UnboxedVector.Vector a)
+    splitWith = UnboxedVector.span
+
+instance StorableVector.Storable a => Splittable (StorableVector.Vector a) where
+    type PrefixOf (StorableVector.Vector a) = StorableVector.Vector a
+
+    splitAt :: Word -> StorableVector.Vector a -> (StorableVector.Vector a, StorableVector.Vector a)
+    splitAt n = StorableVector.splitAt (fromIntegral n)
+
+    splitWith :: (a -> Bool) -> StorableVector.Vector a -> (StorableVector.Vector a, StorableVector.Vector a)
+    splitWith = StorableVector.span
