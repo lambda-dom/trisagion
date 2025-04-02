@@ -88,7 +88,7 @@ test-suite trisagion-tests
         Tests.ParserSpec
         Tests.Parsers.CombinatorsSpec
         Tests.Parsers.ParseErrorSpec
-        -- Tests.Parsers.StreamableSpec
+        Tests.Parsers.StreamableSpec
         -- Tests.Parsers.SplittableSpec
         -- Tests.Parsers.Word8Spec
         -- Tests.Parsers.CharSpec
