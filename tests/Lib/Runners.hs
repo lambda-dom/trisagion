@@ -13,7 +13,7 @@ import Test.Hspec (Expectation, shouldBe)
 import Trisagion.Types.ParseError (ParseError, withParseError)
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
 import Trisagion.Streams.Counter (Counter, initialize)
-import Trisagion.Parser (ParserPE, (:+:), parse)
+import Trisagion.Parser (Parser, ParserPE, (:+:), parse)
 
 
 {- | Get success info on a parsed result. -}
@@ -42,7 +42,7 @@ getError =
 {- | Test parser success by testing equality of output and (position of) updated state. -}
 testSuccess
     :: (Show a, Eq a)
-    => ParserPE (Counter s) e a         -- ^ Parser to test.
+    => Parser (Counter s) e a           -- ^ Parser to test.
     -> s                                -- ^ Initial input, usually @'String'@.
     -> a                                -- ^ Parsed result.
     -> Word                             -- ^ Position of updated stream.
