@@ -33,6 +33,7 @@ module Trisagion.Parsers.Combinators (
     sepBy,
     sepBy1,
     unfold,
+    atMostN,
 ) where
 
 -- Imports.
@@ -195,3 +196,17 @@ unfold h = go
             case r of
                 Nothing     -> pure []
                 Just (x, t) -> (x : ) <$> go t
+
+{- | Run @p@ at most @n@ times and return the list of results.
+
+A lazy version of @'take' n <$> 'many' p@.
+-}
+atMostN :: Word -> Parser s e a -> Parser s Void [a]
+atMostN n p = go n
+    where
+        go 0 = pure []
+        go m = do
+            r <- maybe p
+            case r of
+                Nothing -> pure []
+                Just x  -> (x :) <$> go (pred m)
