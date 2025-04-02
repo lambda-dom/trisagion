@@ -802,6 +802,62 @@ isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
 
 In this library, it is not possible to construct non-normal parsers. All primitives return normal parsers, all combinators do as much and the `Parser` constructor is not exported and there is no way to change a parser's state. The trade-off for this guarantee is that the user cannot add new primitives.
 
-## A. 6. Optimization: prefixes and the `Splittable` typeclass.
+## A. 6. Prefixes and the `Splittable` typeclass.
 
 The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut out prefixes from streams.
+
+### A. 6. 1. The `Splittable` class.
+
+Hence the `Splittable` typeclass.
+
+```haskell
+class Streamable s => Splittable s where
+    {-# MINIMAL splitAt, splitWith #-}
+
+    {- | The type of prefixes of the streamable. -}
+    type PrefixOf s :: Type
+
+    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
+    splitAt :: Word -> s -> (PrefixOf s, s)
+
+    {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
+
+    @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
+    splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
+```
+
+### A. 6. 2. The laws.
+
+To state the laws, we must assume something of `PrefixOf s` that is not expressed directly in the typeclass. The first constraint is that `PrefixOf s` is a monofunctor with the same type of elements as `s`, that is, `ElementOf (PrefixOf s) ~ ElementOf s`. With this assumption: for every `n` and every `p`, both `splitAt n` and `splitWith p` are mononatural.
+
+For the second law, put
+
+```haskell
+let (prefix, suffix) = spliAt n xs
+```
+
+for arbitrary `n` and `xs`. Given the `toList` function on `Streamable`, both `suffix` and `xs` can be converted to lists, and since as per the name `prefix` is supposed to be a prefix of `xs`, then there should be a unique list `l` such that
+
+```haskell
+toList xs = l ++ toList suffix
+```
+
+It follows that we have the equality,
+
+```haskell
+l = take (length $ toList xs - length $ toList suffix) (toList xs)
+```
+
+so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring `MonoFoldable s` on a `Streamable` do _not_ apply, that is, we are implicitly assuming that prefixes are indeed _finite_ monofoldables, in part because some important parsers with a `Splittable s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable (PrefixOf s)`, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `splitAt` is `splitAt` and `splitWith` is `span`:
+
+```haskell
+bimap monotoList toList . splitAt n = splitAt n . toList
+bimap monotoList toList . splitWith p = span p . toList
+```
+
+The third and final law is a compatibility condition between `uncons` and `splitAt`:
+
+```haskell
+maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
+```
+
