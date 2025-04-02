@@ -86,9 +86,9 @@ test-suite trisagion-tests
     other-modules:
         Lib.Runners
         Tests.ParserSpec
-        -- Tests.Parsers.StreamableSpec
-        -- Tests.Parsers.CombinatorsSpec
+        Tests.Parsers.CombinatorsSpec
         -- Tests.Parsers.ParseErrorSpec
+        -- Tests.Parsers.StreamableSpec
         -- Tests.Parsers.SplittableSpec
         -- Tests.Parsers.Word8Spec
         -- Tests.Parsers.CharSpec
