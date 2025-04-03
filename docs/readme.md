@@ -868,40 +868,47 @@ maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
 A first solution is to carry the codomain `s` of a serializer in a `Writer` monad as is done in say, the [cereal package](https://hackage.haskell.org/package/cereal).
 
 ```haskell
-data Writer m a = Writer !m a
+data Writer w a = Writer w a
     deriving stock Functor
 
 -- Instances.
-instance Monoid m => Applicative (Writer m) where
-    pure :: a -> Writer m a
+instance Monoid w => Applicative (Writer w) where
+    pure :: a -> Writer w a
     pure = Writer mempty
 
-    (<*>) :: Writer m (a -> b) -> Writer m a -> Writer m b
+    (<*>) :: Writer w (a -> b) -> Writer w a -> Writer w b
     (<*>) (Writer m f) (Writer n x) = Writer (m <> n) (f x)
 
 instance Monoid m => Monad (Writer m) where
-    (>>=) :: Writer m a -> (a -> Writer m b) -> Writer m b
+    (>>=) :: Writer w a -> (a -> Writer w b) -> Writer w b
     (>>=) (Writer m x) h = let (Writer n y) = h x in Writer (m <> n) y 
 
 
 -- Basic functions.
-run :: Writer m a -> (m, a)
+run :: Writer w a -> (w, a)
 run (Writer m x) = (m, x)
 
-tell :: m -> Writer m ()
+tell :: w -> Writer w ()
 tell m = Writer m ()
 ```
 
-As is obvious from the code block, `Writer m a` is isomorphic to `m :*: a`. `m` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`. This detail is not really relevant for this section, so we can just take `m` to be `[Word8]` for the sake of concreteness.
+As is obvious from the code block, `Writer w a` is isomorphic to `w :*: a`. `w` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`. This detail is not really relevant for this section, so we can just take `w` to be `[Word8]` for the sake of concreteness.
 
 We get, from the `Writer` instances alone, a lot of power. For example, the zip combinator allows a to combine writers for `a` and `b` to a writer for `(a, b)`. Expanding the definition:
 
 ```haskell
-pair :: Writer m a -> Writer m b -> Writer m (a, b)
+pair :: Writer w a -> Writer w b -> Writer w (a, b)
 pair p q = do
     x <- p
     y <- q
     pure (x, y)
 ```
 
-The `m` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it at the end of a computation, by `fst . run`.
+The `w` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it at the end of a computation, by `fst . run`.
+
+## B. 2. Two arguments.
+
+There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly, this implementation does not align with basic intuitions about serialization: the result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this is ass-backwards.
+
+## B. 3. Serializer is a contravariant representable.
+
