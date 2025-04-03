@@ -197,10 +197,7 @@ unfold h = go
                 Nothing     -> pure []
                 Just (x, t) -> (x : ) <$> go t
 
-{- | Run @p@ at most @n@ times and return the list of results.
-
-A lazy version of @'take' n <$> 'many' p@.
--}
+{- | Run @p@ at most @n@ times and return the list of results. -}
 atMostN :: Word -> Parser s e a -> Parser s Void [a]
 atMostN n p = go n
     where

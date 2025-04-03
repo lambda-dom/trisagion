@@ -17,7 +17,6 @@ import qualified Trisagion.Parsers.Combinators as Parsers (maybe, zip, zipWith, 
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.List.NonEmpty (NonEmpty (..))
--- import qualified Control.Applicative as Base (many)
 
 -- Package.
 import Trisagion.Types.ParseError (makeParseError)
@@ -269,11 +268,11 @@ spec_many = describe "many tests" $ do
             ""
             0
 
-    it "'take n <$> many' consumes *all* input" $ do
+    it "'take n <$> many p' consumes as much input as possible" $ do
         testSuccess
-            (take 2 <$> many one)
-            "0123"
-            "01"
+            (take 2 <$> many (satisfy ('0' ==)))
+            "0000456"
+            "00"
             4
 
 spec_some :: Spec
