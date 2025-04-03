@@ -487,7 +487,7 @@ As discussed in [The `Alternative` instance](#a-2-5-the-alternative-instance), t
 
 One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-2-5-5-more-laws).
 
-### A. 4. 1. First attempt.
+### A. 3. 1. First attempt.
 
 The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuiting strategy:
 
@@ -528,7 +528,7 @@ f x
 
 Now, `f (y' <> y)` and `f y' <> f y` are not equal.
 
-### A. 4. 2. What is in an error?
+### A. 3. 2. What is in an error?
 
 `ParseError e` is just a thin wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
 
@@ -574,7 +574,7 @@ instance HasPosition s
 
 And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want to `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
 
-### A. 4. 3. Backtraces.
+### A. 3. 3. Backtraces.
 
 Consider the following block
 
@@ -646,7 +646,7 @@ parser = do
 
 for appropriate `e1, e2 :: e`, without having to unify the error types of `p` and `q`.
 
-#### A. 4. 3. 1. The backtrace getter.
+#### A. 3. 3. 1. The backtrace getter.
 
 With backtraces, a `ParseError` looks like,
 
@@ -663,15 +663,15 @@ backtrace f = go
         go (ParseError b s e) = f s e : maybe [] go b
 ```
 
-### A. 4. 4. Anything else you want to add?
+### A. 3. 4. Anything else you want to add?
 
 No, not really.
 
-## A. 5. Typeclasses for the input.
+## A. 4. Typeclasses for the input.
 
 We are at the point where we can finally tackle the constraints needed for the input type `s`; after all, at this point we cannot even get out one element from the input stream.
 
-### A. 5. 1. One out of `s`: the `Streamable` typeclass.
+### A. 4. 1. One out of `s`: the `Streamable` typeclass.
 
 What we need from `s`: an `uncons` operation with the return type depending on `s`.
 
@@ -690,7 +690,7 @@ tail :: Streamable s => s -> Maybe s
 tail = fmap snd . uncons
 ```
 
-### A. 5. 2. The `MonoFunctor` constraint.
+### A. 4. 2. The `MonoFunctor` constraint.
 
 All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this;
 
@@ -723,7 +723,7 @@ class MonoFunctor s => Streamable s where
     uncons :: s -> Maybe (ElementOf s, s)
 ```
 
-### A. 5. 3. No free laws.
+### A. 4. 3. No free laws.
 
 Since monofunctors `f` are not fully polymorphic in `ElementOf f`, there are no free theorems available and equational laws like naturality must be explicitly required.
 
@@ -740,7 +740,7 @@ monomap :: MonoFunctor s => (s -> s) -> Maybe (ElementOf s, s) -> Maybe (Element
 monomap f = fmap (bimap f (monomap f))
 ```
 
-### A. 5. 4. The (absence of the) `MonoFoldable` constraint.
+### A. 4. 4. The (absence of the) `MonoFoldable` constraint.
 
 Given the `uncons` operation, we can define a conversion to lists,
 
@@ -757,7 +757,7 @@ so that `Streamable` could / should have `MonoFoldable` as a superclass. There a
 
 Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`. This means that `toList` is _not_ a typeclass method; if you want an overridable list conversion, you need a `MonoFoldable` instance.
 
-### A. 5. 5. Two fundamental parsers.
+### A. 4. 5. Two fundamental parsers.
 
 With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
 
@@ -780,7 +780,7 @@ one = do
 
 Since the `put` parser is not available, `one` has to be implemented directly in the core. Also, and as can be seen in the example of `one`, the type signature of parsers involving `ParseError` can get gnarly. We introduce the type alias `type ParserPE s e a = Parser s (ParseError (PositionOf s) e) a` to shorten them.
 
-### A. 5. 6. Some definitions.
+### A. 4. 6. Some definitions.
 
 Recall that the remainder of a parser's input can be obtained via
 
@@ -802,11 +802,11 @@ isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
 
 In this library, it is not possible to construct non-normal parsers. All primitives return normal parsers, all combinators do as much and the `Parser` constructor is not exported and there is no way to change a parser's state. The trade-off for this guarantee is that the user cannot add new primitives.
 
-## A. 6. Prefixes and the `Splittable` typeclass.
+## A. 5. Prefixes and the `Splittable` typeclass.
 
 The `Streamable` typeclass allows to write down all commonly used parsers, but alas, getting one element from the input stream at a time can be very inefficient. What we need is a notion of chunk, or stream prefix, and methods to cut out prefixes from streams.
 
-### A. 6. 1. The `Splittable` class.
+### A. 5. 1. The `Splittable` class.
 
 Hence the `Splittable` typeclass.
 
@@ -826,7 +826,7 @@ class Streamable s => Splittable s where
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 ```
 
-### A. 6. 2. The laws.
+### A. 5. 2. The laws.
 
 To state the laws, we must assume something of `PrefixOf s` that is not expressed directly in the typeclass. The first constraint is that `PrefixOf s` is a monofunctor with the same type of elements as `s`, that is, `ElementOf (PrefixOf s) ~ ElementOf s`. With this assumption: for every `n` and every `p`, both `splitAt n` and `splitWith p` are mononatural.
 
@@ -860,4 +860,55 @@ The third and final law is a compatibility condition between `uncons` and `split
 ```haskell
 maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
 ```
+
+# B. Serializers.
+
+## B. 1. First attempt.
+
+A first solution is to carry the codomain `s` of a serializer in a `Writer` monad as is done in say, the [cereal package](https://hackage.haskell.org/package/cereal).
+
+```haskell
+data Writer w a = Writer w a
+    deriving stock Functor
+
+-- Instances.
+instance Monoid w => Applicative (Writer w) where
+    pure :: a -> Writer w a
+    pure = Writer mempty
+
+    (<*>) :: Writer w (a -> b) -> Writer w a -> Writer w b
+    (<*>) (Writer m f) (Writer n x) = Writer (m <> n) (f x)
+
+instance Monoid m => Monad (Writer m) where
+    (>>=) :: Writer w a -> (a -> Writer w b) -> Writer w b
+    (>>=) (Writer m x) h = let (Writer n y) = h x in Writer (m <> n) y 
+
+
+-- Basic functions.
+run :: Writer w a -> (w, a)
+run (Writer m x) = (m, x)
+
+tell :: w -> Writer w ()
+tell m = Writer m ()
+```
+
+As is obvious from the code block, `Writer w a` is isomorphic to `w :*: a`. `w` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`. This detail is not really relevant for this section, so we can just take `w` to be `[Word8]` for the sake of concreteness.
+
+We get, from the `Writer` instances alone, a lot of power. For example, the zip combinator allows a to combine writers for `a` and `b` to a writer for `(a, b)`. Expanding the definition:
+
+```haskell
+pair :: Writer w a -> Writer w b -> Writer w (a, b)
+pair p q = do
+    x <- p
+    y <- q
+    pure (x, y)
+```
+
+The `w` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it at the end of a computation, by `fst . run`.
+
+## B. 2. Two arguments.
+
+There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly, this implementation does not align with basic intuitions about serialization: the result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this is ass-backwards.
+
+## B. 3. Serializer is a contravariant representable.
 
