@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-
 {- |
 Module: Trisagion.Serializer
 
@@ -8,10 +6,13 @@ The @Serializer@ contravariant functor.
 
 module Trisagion.Serializer (
     -- * The serializer type.
-    Serializer (..),
+    Serializer,
 
     -- ** Basic functions.
     run,
+
+    -- * Operators.
+    (|*>),
 ) where
 
 -- Imports.
@@ -63,7 +64,6 @@ instance Monoid m => Decidable (Serializer m) where
                     Left x  -> p x
                     Right y -> q y
 
-
 instance Semigroup m => Semigroup (Serializer m a) where
     (<>) :: Serializer m a -> Serializer m a -> Serializer m a
     (<>) (Serializer m) (Serializer n) = Serializer (\ x -> m x <> n x)
@@ -76,3 +76,9 @@ instance Monoid m => Monoid (Serializer m a) where
 {- | Run a serializer on the input and return the result. -}
 run :: Serializer m a -> a -> m
 run (Serializer m) = m
+
+
+{- | Monoid action for serializers. -}
+(|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
+(|*>) m (Serializer n) = Serializer (\ x -> m <> n x)
+infixl 6 |*>

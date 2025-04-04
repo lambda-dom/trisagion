@@ -29,6 +29,7 @@ common common-fields
         DerivingStrategies
         DerivingVia
         TypeFamilies
+        LambdaCase
     build-depends:
         -- GHC 9.6
         base >=4.18 && <4.19,
