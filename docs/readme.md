@@ -908,7 +908,26 @@ The `w` accumulator is threaded around by `Writer` in such a way that it disappe
 
 ## B. 2. Two arguments.
 
-There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly, this implementation does not align with basic intuitions about serialization: the result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this is ass-backwards.
+There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
 
-## B. 3. Serializer is a contravariant representable.
+## B. 3. Serializer in the contravariant representable version.
 
+We arrive at the representation of a serializer as,
+
+```haskell
+newtype Serializer m a = Serializer (a -> m)
+```
+
+where the codomain `m` is a monoid -- see below for more on this.
+
+The first difference with parsers is that a serializer is contravariant in `a`. `Contravariant` functor is the typeclass from base formalizing this.
+
+```haskell
+instance Contravariant (Serializer m) where
+    contramap :: (a -> b) -> Serializer m b -> Serializer m a
+    contramap f (Serializer m) = Serializer (m . f)
+```
+
+### B. 4. 1. Relation with parsers.
+
+### B. 4. 2. The prism version.

@@ -29,6 +29,7 @@ common common-fields
         DerivingStrategies
         DerivingVia
         TypeFamilies
+        LambdaCase
     build-depends:
         -- GHC 9.6
         base >=4.18 && <4.19,
@@ -55,6 +56,7 @@ library
         text >=2.0 && <2.2,
         containers >=0.6 && <0.8,
         vector >=0.13 && <0.14,
+        contravariant >=1.5 && <1.6,
         -- Non-hackage libraries.
         mono >=0.1 && <0.2,
     other-modules:
@@ -72,6 +74,7 @@ library
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Word8
         Trisagion.Parsers.Char
+        Trisagion.Serializer
 
 test-suite trisagion-tests
     import: common-fields
