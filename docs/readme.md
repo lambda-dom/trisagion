@@ -932,10 +932,42 @@ instance Contravariant (Serializer m) where
     contramap f s = Serializer (run s . f)
 ```
 
-### B. 3. 1. Relation with parsers.
+### B. 3. 1. Parsers and adjoint serializers.
+
+Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. To make the relation symmetric, let us also say that `p` is the _adjoint_ parser of `s`.
+
+```haskell
+decoder :: Parser m e a -> (m -> e :+: (a, m))
+decoder = run
+
+encoder :: Serializer m a -> (a -> m)
+encoder = run
+```
+
+Note that both `encoder` and `decoder` are isomorphisms. The first law says that serializing then parsing is the identity, minus some fudging to get the types right.
+
+__First law__: We have for a parser `p` and its adjoint serializer `s`:
+
+```haskell
+prop> decoder p . encoder s == pure . (, mempty)
+```
+
+The second law says that, up to the parser erroring out, parsing then serializing is the identity.
+
+__Second law__: We have for a parser `p` and its adjoint serializer `s`:
+
+```haskell
+prop> fmap (uncurry (<>) . first (encoder s)) . decoder p = pure
+```
+
+__Theorem__: If a parser has an adjoint serializer, then it is unique.
+
+__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `decoder p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `decoder p` is also a monomorphism. Therefore given `p`, `encoder s` is unique. Since `encoder` is an isomorphism, `s` is unique.
+
+This reduces the problem to, given a parser, construct its adjoint serializer, and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the following sections.
 
 ### B. 3. 2. The prism version.
-
+  
 ## B. 4. Instances.
 
 ### B. 4. 1. The lax monoidal structure for products.
