@@ -980,7 +980,9 @@ encoder = run
 
 Therefore, an adjoint pair `(p :: Parser m e a, s :: Parser m a)` gives us a pair of functions `decoder p :: m -> e :+: a` and `encoder s :: a -> m`.
 
-__Theorem__: if `p` and `s` is an adjoint pair of parser-serializer, the functions `decoder p` and `encoder s` yield a prism `Prism m a` (or `Prism m m a a`).
+__Theorem__: if `p` and `s` is an adjoint pair of parser-serializer, the functions `decoder p` and `encoder s` yield a prism `Prism m a` (or `Prism m m a a`, the non-type changing prism).
+
+Prisms can be composed, so this gives us another way to obtain adjoint pairs.
 
 ## B. 4. Instances.
 
