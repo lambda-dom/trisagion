@@ -1111,7 +1111,8 @@ Assuming the existence of a primitive serializer `word :: Serializer m Word`, we
 
 ```haskell
 s :: Serializer m (T a_0 ... a_n)
-s x = word (tag x)
+s = Serializer $ x ->
+    word (tag x)
     |*> case x of
         T_0 x_0 -> s_0 x0
         ...
@@ -1139,3 +1140,34 @@ parser = do
 ```
 
 Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, and we have to add a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
+
+### B. 4. 7. The prism for sequences.
+
+We give one more example of constructing a prism for the whole from a prism for the parts. Let `t` be a `Functor` and a `Foldable`. Then a format for serializing `t` is to first serialzing the length, then repeatedly applying the serializer `s :: Serializer m a` to the elements of `t a`.
+
+```haskell
+serializer :: Foldable t => Serializer m (t a)
+serializer = Serializer $ xs ->
+    word (length xs) |*> foldmap (run s) xs
+```
+
+To parse this format, we need to first be able to construct a `t` from a list, the dual analog of the `Foldable` structure.
+
+__Definition__: A foldable `f` is a _sequence_ if `toList :: f a -> [a]` is an isomorphism.
+
+If a name for the inverse of `toList` is needed, we will use `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order. A second related reason is that `Set a` does not have a `Functor` instance.
+
+With the `fromList` inverse, and assuming the existence of a parser `p :; Parser s e a`, we have,
+
+```haskell
+parser :: Parser s e (t a)
+parser = word >>= fmap fromList . flip repeat p
+```
+
+where `repeat` is the parser combinator:
+
+```haskell
+repeat :: Word -> Parser s e a -> Parser s e [a]
+repeat 0 _ = pure []
+repeat n p = (:) <$> p <*> repeat (pred n) p
+```
