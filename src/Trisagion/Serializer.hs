@@ -10,6 +10,7 @@ module Trisagion.Serializer (
 
     -- ** Basic functions.
     run,
+    embed,
 
     -- * Operators.
     (|*>),
@@ -77,7 +78,10 @@ instance Monoid m => Monoid (Serializer m a) where
 run :: Serializer m a -> a -> m
 run (Serializer m) = m
 
-{- | Embed a serializing function in a 'Serializer'. -}
+{- | Embed a serializing function in a 'Serializer'.
+
+The inverse to 'run'.
+-}
 embed :: (a -> m) -> Serializer m a
 embed = Serializer
 

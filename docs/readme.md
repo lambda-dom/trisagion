@@ -964,11 +964,61 @@ instance Monoid m => Divisible (Serializer m) where
             g = uncurry (<>) . bimap (run s) (run t)
 ```
 
-### B. 4. 2. The prism for products.
+### B. 4. 2. The monoid instance.
 
-### B. 4. 3. The lax monoidal structure for coproducts.
+There is also a `Monoid` instance for `Serializer m a` that allows to combine two serializers.
 
-As seen in the section [The `Alternative` Instance](#a-2-5-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
+```haskell
+instance Semigroup m => Semigroup (Serializer m a) where
+    (<>) :: Serializer m a -> Serializer m a -> Serializer m a
+    (<>) s t = Parser $ \ x -> run s x <> run t x
+
+instance Monoid m => Monoid (Serializer m a) where
+    mempty :: Serializer m a
+    mempty = Parser $ const mempty
+```
+
+If we look at the code for `Divisible`, one can see that this monoid structure allows us to replace uses of it in a way analogous that `<*>` allows us to seemlessly extend a binary parser combinator to an n-ary parser combinator.
+
+Closely related, is the left action of `m` on `Serializer m a`:
+
+```haskell
+(|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
+(|*>) m s = Serializer $ \ x -> m <> run s x
+infixl 6 |*>
+```
+
+### B. 4. 3. The prism for products.
+
+Consider the case of a product type, a type of the form
+
+```haskell
+data T a_0 ... a_n = T a_0 ... a_n
+```
+
+Assume there are serializers `Serializer m a_i` with `i` ranging from `0` to `n`. A natural idea for a format for `T` is to lay out the `a_i` consecutively one after another. So a serializer for `T` is, denoting by `f_i :: T a_0 ... a_n -> a_i` the field projections,
+
+```haskell
+s :: Serializer m (T a_0 ... a_n)
+    =  s_0 (f_0 x)
+    <> ...
+    <> s_n (f_n x)
+```
+
+Dually, assume there are parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`. A parser for `T` we have to apply the parsers `p_i` consecutively and then apply the `T` constructor to the results. Fixing a cospan `f_i :: e_i -> e`:
+
+```haskell
+p :: Parser s e (T a_0 ... a_n)
+p = T <$> first f_0 p_0 <*> ... <*> first f_n p_n
+```
+
+Instead of a cospan `f_i`, we can fix instead an error tag type `e` and use `onParseError e_i` for approppriate `e_i :: e`, instead of `first f_i`.
+
+Note the duality in constructing serializers and parsers: for the parsers we use the constructor to synthesize the whole from the parts, while for serializers we use the field projections, or the eliminators, to synthesize the whole from the parts.
+
+### B. 4. 4. The lax monoidal structure for coproducts.
+
+As seen in the section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
 
 ```haskell
 either :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a :+: b)
@@ -981,7 +1031,7 @@ empty :: Serializer m Void
 empty = Serializer absurd
 ```
 
-The `Decidable` typeclass, also from the [contravariant package](https://hackage.haskell.org/package/contravariant), encodes this structure:
+Using the `Decidable` typeclass, also from the [contravariant package](https://hackage.haskell.org/package/contravariant):
 
 ```haskell
 instance Monoid m => Decidable (Serializer m) where
@@ -999,6 +1049,59 @@ instance Monoid m => Decidable (Serializer m) where
                     Right y -> q y
 ```
 
-### B. 4. 4. The prism for coproducts.
+### B. 4. 5. The prism for coproducts.
 
-### B. 4. 5. The analog of `Monad`.
+Now consider the case of a coproduct, a type of the form
+
+```haskell
+data T a_0 ... a_n
+    = T_0 a_0
+    ...
+    | T_n a_n
+```
+
+The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [The prism for products](#b-4-3-the-prism-for-products).
+
+Assuming the existence of serializers `s_i :: Serializer m a_i` with `i` ranging from `0` to `n`, a natural format for `T a_0 ... a_n` is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the constructors top to bottom and return the corresponding ordinal:
+
+```haskell
+tag :: T a_0 ... a_n -> Word
+tag x = case x of
+    T_0 _ -> 0
+    ...
+    T_n _ -> n
+```
+
+This piece of bloatware can even be derived automatically using something like the [generics-sop library](https://hackage.haskell.org/package/generics-sop) or (God forbid) template Haskell, but we will not dwell on this detail here.
+
+note(s):
+
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or adding new constructors. How this can be solved is a whole different problem.
+
+Assuming the existence of a primitive serializer `word :: Serializer m Word`, we now have:
+
+```haskell
+s :: Serializer m (T a_0 ... a_n)
+s x = word (tag x)
+    |*> case x of
+        T_0 x_0 -> s_0 x0
+        ...
+        T_n x_n -> s_n x_n 
+```
+
+The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i`.
+
+Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s e' Word` and an error conversion function `f :: e' -> e`. Then the parser for this format is just:
+
+```haskell
+parser :: Parser s e (T a_0 ... a_n)
+parser = do
+    i <- first f word
+    case i of
+        i | 0 == i -> bimap f_0 T_0 p_0
+        ...
+        i | n == i -> bimap f_n T_n p_n
+        _          -> throwError e
+```
+
+Once again we see the duality: in the serializer case we have the left action `|*>` while on the parser side we have the `Monad` bind combinator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
