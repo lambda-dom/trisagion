@@ -937,19 +937,19 @@ instance Contravariant (Serializer m) where
 Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. To make the relation symmetric, let us also say that `p` is the _adjoint_ parser of `s`.
 
 ```haskell
-decoder :: Parser m e a -> (m -> e :+: (a, m))
-decoder = run
+parser :: Parser m e a -> (m -> e :+: (a, m))
+parser = run
 
 encoder :: Serializer m a -> (a -> m)
 encoder = run
 ```
 
-Note that both `encoder` and `decoder` are isomorphisms. The first law says that serializing then parsing is the identity, minus some fudging to get the types right.
+Note that both `encoder` and `parser` are isomorphisms. The first law says that serializing then parsing is the identity, minus some fudging to get the types right.
 
 __First law__: We have for a parser `p` and its adjoint serializer `s`:
 
 ```haskell
-prop> decoder p . encoder s == pure . (, mempty)
+prop> parser p . encoder s == pure . (, mempty)
 ```
 
 The second law says that, up to the parser erroring out, parsing then serializing is the identity.
@@ -957,17 +957,31 @@ The second law says that, up to the parser erroring out, parsing then serializin
 __Second law__: We have for a parser `p` and its adjoint serializer `s`:
 
 ```haskell
-prop> fmap (uncurry (<>) . first (encoder s)) . decoder p = pure
+prop> fmap (uncurry (<>) . first (encoder s)) . parser p = pure
 ```
 
 __Theorem__: If a parser has an adjoint serializer, then it is unique.
 
-__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `decoder p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `decoder p` is also a monomorphism. Therefore given `p`, `encoder s` is unique. Since `encoder` is an isomorphism, `s` is unique.
+__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `parser p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `parser p` is also a monomorphism. Therefore given `p`, `encoder s` is unique. Since `encoder` is an isomorphism, `s` is unique.
 
-This reduces the problem to, given a parser, construct its adjoint serializer, and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the following sections.
+This reduces the problem to, given a parser, construct its adjoint serializer, and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the sections following it.
 
 ### B. 3. 2. The prism version.
-  
+
+There are functions
+
+```haskell
+decoder :: Parser m e a -> (m -> Maybe a)
+decoder p = fmap fst . either (const Nothing) Just . run p
+
+encoder :: Serializer m a -> (a -> m)
+encoder = run
+```
+
+Therefore, an adjoint pair `(p :: Parser m e a, s :: Parser m a)` gives us a pair of functions `decoder p :: m -> e :+: a` and `encoder s :: a -> m`.
+
+__Theorem__: if `p` and `s` is an adjoint pair of parser-serializer, the functions `decoder p` and `encoder s` yield a prism `Prism m a` (or `Prism m m a a`).
+
 ## B. 4. Instances.
 
 ### B. 4. 1. The lax monoidal structure for products.
@@ -1021,9 +1035,7 @@ prop> contramap f mempty == mempty
 prop> contramp f (s <> t) == contramap f s <> contramap f t 
 ```
 
-Because of this property, it could be argued that the monoid instance is the analog of the `Alternative` instance for parsers. But as seen in section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is best seen as a lax-monoidal structure from products to coproducts, and in this form, the serializer analog is given below in section [The lax-monoidal structure for coproducts](#b-4-5-the-lax-monoidal-structure-for-coproducts).
-
-But the fundamental break down in the analogy is that there is no error handling needed for serializers; and since there is no error handling, no backtracking is needed; and since there is no analog of backtracking, there is no analog of choice.
+Because of this property, it could be argued that the monoid instance is the analog of the `Alternative` instance for parsers. But as seen in section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is best viewed as a lax-monoidal structure from products to coproducts, and in this form, the serializer analog is given below in section [The lax-monoidal structure for coproducts](#b-4-5-the-lax-monoidal-structure-for-coproducts). But the fundamental break down in the analogy is that there is no error handling needed for serializers; and since there is no error handling, no backtracking is needed; and since there is no analog of backtracking, there is no analog of choice.
 
 ### B. 4. 3. The left action.
 
@@ -1154,11 +1166,11 @@ s = Serializer $ x ->
 The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i` and the alternative instance for `Maybe`, e. g. denoting the prism getters `T a_0 ... a_n -> Maybe a_i` by `p_i` then:
 
 ```haskell
-either :: (a_0 -> b) -> ... -> (a_n -> b) -> T a_0 ... a_n -> b
-either f_0 ... f_n r = asum [f_0 $ p_0 r, ..., f_n $ p_n r]
+eliminator :: (a_0 -> b) -> ... -> (a_n -> b) -> T a_0 ... a_n -> b
+eliminator f_0 ... f_n r = asum [f_0 $ p_0 r, ..., f_n $ p_n r]
 ```
 
-Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s e' Word` and an error conversion function `f :: e' -> e`. Then the parser for this format is just:
+Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s d Word` and an error conversion function `f :: d -> e`. Then the parser for this format is just:
 
 ```haskell
 parser :: Parser s e (T a_0 ... a_n)
