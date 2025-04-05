@@ -38,47 +38,51 @@ newtype Serializer m a = Serializer (a -> m)
 -- Instances.
 instance Contravariant (Serializer m) where
     contramap :: (a -> b) -> Serializer m b -> Serializer m a
-    contramap f (Serializer m) = Serializer (m . f)
+    contramap f s = embed $ run s . f
 
 instance Monoid m => Divisible (Serializer m) where
     conquer :: Serializer m a
     conquer = mempty
 
     divide :: forall a b c . (c -> a :*: b) -> Serializer m a -> Serializer m b -> Serializer m c
-    divide f (Serializer m) (Serializer n) = Serializer (g . f)
+    divide f s t = embed $ g . f
         where
             g :: a :*: b -> m
-            g = uncurry (<>) . bimap m n
+            g = uncurry (<>) . bimap (run s) (run t)
 
 instance Monoid m => Decidable (Serializer m) where
     lose :: (a -> Void) -> Serializer m a
-    lose f = Serializer $ absurd . f
+    lose f = embed $ absurd . f
 
     choose :: (a -> b :+: c) -> Serializer m b -> Serializer m c -> Serializer m a
-    choose f (Serializer m) (Serializer n) = Serializer $ eitherD m n . f
+    choose f s t = embed $ choice (run s) (run t) . f
         where
             -- | Representability isomorphism.
-            eitherD :: (a -> m) -> (b -> m) -> (a :+: b) -> m
-            eitherD p q
+            choice :: (a -> m) -> (b -> m) -> (a :+: b) -> m
+            choice p q
                 = \case 
                     Left x  -> p x
                     Right y -> q y
 
 instance Semigroup m => Semigroup (Serializer m a) where
     (<>) :: Serializer m a -> Serializer m a -> Serializer m a
-    (<>) (Serializer m) (Serializer n) = Serializer (\ x -> m x <> n x)
+    (<>) s t = embed $ \ x -> run s x <> run t x
 
 instance Monoid m => Monoid (Serializer m a) where
     mempty :: Serializer m a
-    mempty = Serializer $ const mempty
+    mempty = embed $ const mempty
 
 
 {- | Run a serializer on the input and return the result. -}
 run :: Serializer m a -> a -> m
 run (Serializer m) = m
 
+{- | Embed a serializing function in a 'Serializer'. -}
+embed :: (a -> m) -> Serializer m a
+embed = Serializer
+
 
 {- | Monoid action for serializers. -}
 (|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
-(|*>) m (Serializer n) = Serializer (\ x -> m <> n x)
+(|*>) m s = embed $ \ x -> m <> run s x
 infixl 6 |*>

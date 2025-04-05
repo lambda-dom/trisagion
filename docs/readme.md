@@ -916,6 +916,10 @@ We arrive at the representation of a serializer as,
 
 ```haskell
 newtype Serializer m a = Serializer (a -> m)
+
+-- | Run the serializer on the input and return the results.
+run :: Serializer m a -> a -> m
+run (Serializer m) = m
 ```
 
 where the codomain `m` is a monoid -- see below for more on this.
@@ -925,9 +929,76 @@ The first difference with parsers is that a serializer is contravariant in `a`. 
 ```haskell
 instance Contravariant (Serializer m) where
     contramap :: (a -> b) -> Serializer m b -> Serializer m a
-    contramap f (Serializer m) = Serializer (m . f)
+    contramap f s = Serializer (run s . f)
 ```
 
-### B. 4. 1. Relation with parsers.
+### B. 3. 1. Relation with parsers.
 
-### B. 4. 2. The prism version.
+### B. 3. 2. The prism version.
+
+## B. 4. Instances.
+
+### B. 4. 1. The lax monoidal structure for products.
+
+As mentioned in [Equivalent description of `Applicative`](#a-2-2-3-equivalent-description-of-applicative), the applicative structure is equivalent to a lax-monoidal structure for the product monoidal structure. The corresponding structure for serializers is the same lax-monoidal structure:
+
+```haskell
+zip :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a, b)
+zip s t = Serializer $ uncurry (<>) . bimap (run s) (run t)
+
+unit :: Monoid m => Serializer m ()
+unit = Serializer $ const mempty
+```
+
+This is encoded in the `Divisible` typeclass from the [contravariant package](https://hackage.haskell.org/package/contravariant).
+
+```haskell
+instance Monoid m => Divisible (Serializer m) where
+    conquer :: Serializer m a
+    conquer = Serializer $ const mempty
+
+    divide :: forall a b c . (c -> a :*: b) -> Serializer m a -> Serializer m b -> Serializer m c
+    divide f s t = Serializer $ g . f
+        where
+            g :: a :*: b -> m
+            g = uncurry (<>) . bimap (run s) (run t)
+```
+
+### B. 4. 2. The prism for products.
+
+### B. 4. 3. The lax monoidal structure for coproducts.
+
+As seen in the section [The `Alternative` Instance](#a-2-5-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
+
+```haskell
+either :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a :+: b)
+either s t = Serializer $
+    \case
+        Left x  -> (run s) x
+        Right y -> (run t) y
+
+empty :: Serializer m Void
+empty = Serializer absurd
+```
+
+The `Decidable` typeclass, also from the [contravariant package](https://hackage.haskell.org/package/contravariant), encodes this structure:
+
+```haskell
+instance Monoid m => Decidable (Serializer m) where
+    lose :: (a -> Void) -> Serializer m a
+    lose f = Serializer $ absurd . f
+
+    choose :: (a -> b :+: c) -> Serializer m b -> Serializer m c -> Serializer m a
+    choose f s t = Serializer $ choice (run s) (run t) . f
+        where
+            -- | The Representability isomorphism.
+            choice :: (a -> m) -> (b -> m) -> (a :+: b) -> m
+            choice p q
+                = \case 
+                    Left x  -> p x
+                    Right y -> q y
+```
+
+### B. 4. 4. The prism for coproducts.
+
+### B. 4. 5. The analog of `Monad`.
