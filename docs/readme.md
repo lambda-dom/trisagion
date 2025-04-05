@@ -980,15 +980,44 @@ instance Monoid m => Monoid (Serializer m a) where
 
 If we look at the code for `Divisible`, one can see that this monoid structure allows us to replace uses of it in a way analogous that `<*>` allows us to seemlessly extend a binary parser combinator to an n-ary parser combinator.
 
-Closely related, is the left action of `m` on `Serializer m a`:
+One important property this monoid structure is that it is natural in `a`, and thus a monoid morphism:
+
+__Theorem__: For every `f :: a -> b`, we have the equalities:
+
+```haskell
+prop> contramap f mempty == mempty
+prop> contramp f (s <> t) == contramap f s <> contramap f t 
+```
+
+Because of this property, it could be argued that the monoid instance is the analog of the `Alternative` instance for parsers. But as seen in section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is best seen as a lax-monoidal structure from products to coproducts, and in this form, the serializer analog is given below in section [The lax-monoidal structure for coproducts](#b-4-5-the-lax-monoidal-structure-for-coproducts).
+
+But the fundamental break down in the analogy is that there is no error handling needed for serializers; and since there is no error handling, no backtracking is needed; and since there is no analog of backtracking, there is no analog of choice.
+
+### B. 4. 3. The left action.
+
+Closely related to the monoid instance, is the left action of `m` on `Serializer m a`:
 
 ```haskell
 (|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
 (|*>) m s = Serializer $ \ x -> m <> run s x
-infixl 6 |*>
+infixr 5 |*>
 ```
 
-### B. 4. 3. The prism for products.
+__Theorem__: `(|*>)` is a left `m`-action on `Serializer m a`, that is, it satisfies the equalities:
+
+```haskell
+prop> m <> n |*> s == m |*> n |*> s
+prop> mempty |*> s == s
+```
+
+This also gives us the occasional useful function `collapse`, that allows us to embed `m` in `Serializer m a`:
+
+```haskell
+collapse :: m -> Serializer m a
+collapse m = m |*> mempty
+```
+
+### B. 4. 4. The prism for products.
 
 Consider the case of a product type, a type of the form
 
@@ -1016,7 +1045,7 @@ Instead of a cospan `f_i`, we can fix instead an error tag type `e` and use `onP
 
 Note the duality in constructing serializers and parsers: for the parsers we use the constructor to synthesize the whole from the parts, while for serializers we use the field projections, or the eliminators, to synthesize the whole from the parts.
 
-### B. 4. 4. The lax monoidal structure for coproducts.
+### B. 4. 5. The lax-monoidal structure for coproducts.
 
 As seen in the section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
 
@@ -1049,7 +1078,7 @@ instance Monoid m => Decidable (Serializer m) where
                     Right y -> q y
 ```
 
-### B. 4. 5. The prism for coproducts.
+### B. 4. 6. The prism for coproducts.
 
 Now consider the case of a coproduct, a type of the form
 
@@ -1089,7 +1118,12 @@ s x = word (tag x)
         T_n x_n -> s_n x_n 
 ```
 
-The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i`.
+The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i` and the alternative instance for `Maybe`, e. g. denoting the prism getters `T a_0 ... a_n -> Maybe a_i` by `p_i` then:
+
+```haskell
+either :: (a_0 -> b) -> ... -> (a_n -> b) -> T a_0 ... a_n -> b
+either f_0 ... f_n r = asum [f_0 $ p_0 r, ..., f_n $ p_n r]
+```
 
 Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s e' Word` and an error conversion function `f :: e' -> e`. Then the parser for this format is just:
 
@@ -1104,4 +1138,4 @@ parser = do
         _          -> throwError e
 ```
 
-Once again we see the duality: in the serializer case we have the left action `|*>` while on the parser side we have the `Monad` bind combinator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
+Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, and we have to add a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.

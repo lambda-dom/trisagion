@@ -89,4 +89,4 @@ embed = Serializer
 {- | Monoid action for serializers. -}
 (|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
 (|*>) m s = embed $ \ x -> m <> run s x
-infixl 6 |*>
+infixr 5 |*>
