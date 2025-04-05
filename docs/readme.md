@@ -910,7 +910,7 @@ The `w` accumulator is threaded around by `Writer` in such a way that it disappe
 
 There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
 
-## B. 3. Serializer in the contravariant representable version.
+## B. 3. Serializers in the corepresentable representation.
 
 We arrive at the representation of a serializer as,
 
@@ -995,7 +995,7 @@ But the fundamental break down in the analogy is that there is no error handling
 
 ### B. 4. 3. The left action.
 
-Closely related to the monoid instance, is the left action of `m` on `Serializer m a`:
+Closely related to the monoid instance is the left action of `m` on `Serializer m a`:
 
 ```haskell
 (|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
@@ -1143,7 +1143,7 @@ Once again we see the duality: on the parser side we have the `Monad` bind combi
 
 ### B. 4. 7. The prism for sequences.
 
-We give one more example of constructing a prism for the whole from a prism for the parts. Let `t` be a `Functor` and a `Foldable`. Then a format for serializing `t` is to first serialzing the length, then repeatedly applying the serializer `s :: Serializer m a` to the elements of `t a`.
+We give one more example of constructing a prism for the whole from a prism for the parts. Let `t` be a `Functor` and a `Foldable`. Then a format for serializing `t` is to first serialize the length, then repeatedly apply the serializer `s :: Serializer m a` to the elements of `t a`.
 
 ```haskell
 serializer :: Foldable t => Serializer m (t a)
@@ -1151,11 +1151,11 @@ serializer = Serializer $ xs ->
     word (length xs) |*> foldmap (run s) xs
 ```
 
-To parse this format, we need to first be able to construct a `t` from a list, the dual analog of the `Foldable` structure.
+To parse this format, we need to first be able to construct a `t` from a list.
 
 __Definition__: A foldable `f` is a _sequence_ if `toList :: f a -> [a]` is an isomorphism.
 
-If a name for the inverse of `toList` is needed, we will use `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order. A second related reason is that `Set a` does not have a `Functor` instance.
+We denote the inverse of `toList` by `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order. A second related reason is that `Set a` does not have a `Functor` instance.
 
 With the `fromList` inverse, and assuming the existence of a parser `p :; Parser s e a`, we have,
 
