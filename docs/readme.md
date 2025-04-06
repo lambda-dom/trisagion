@@ -910,12 +910,16 @@ The `w` accumulator is threaded around by `Writer` in such a way that it disappe
 
 There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
 
-## B. 3. Serializer in the contravariant representable version.
+## B. 3. Serializers in the corepresentable representation.
 
 We arrive at the representation of a serializer as,
 
 ```haskell
 newtype Serializer m a = Serializer (a -> m)
+
+-- | Run the serializer on the input and return the results.
+run :: Serializer m a -> a -> m
+run (Serializer m) = m
 ```
 
 where the codomain `m` is a monoid -- see below for more on this.
@@ -925,9 +929,285 @@ The first difference with parsers is that a serializer is contravariant in `a`. 
 ```haskell
 instance Contravariant (Serializer m) where
     contramap :: (a -> b) -> Serializer m b -> Serializer m a
-    contramap f (Serializer m) = Serializer (m . f)
+    contramap f s = Serializer (run s . f)
 ```
 
-### B. 4. 1. Relation with parsers.
+### B. 3. 1. Parsers and adjoint serializers.
 
-### B. 4. 2. The prism version.
+Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. We would like to say that this relation is symmetric and that `p` is the _adjoint_ parser of `s`, but here we have to be a bit careful as the parser type has an extra parameter `e` for the error type, so two parsers that differ only in how they handle errors should count as the same. So the solution is to keep track only whether the parser errors or not, and this is equivalent to instead of `p :: Parser s e a` take `first terminal p :: Parser s () a` with terminal the unique map `e -> ()` given by `const ()`. Since terminal is a monoid morphism, by the results of sections [Error laws](#a-2-3-1-error-laws) and [More laws](#a-2-5-5-more-laws) it preserves all the structures in sight. On the other hand, since `Either () a` is isomorphic to `Maybe a` the collapsing of the error type is equivalent to taking the returning type of parsing functions to be `Maybe (a, s)`.
+
+Given all this, consider the functions,
+
+```haskell
+decoder :: Parser m () a -> m -> Maybe (a, m)
+decoder p =  rightToMaybe . run p
+
+encoder :: Serializer m a -> a -> m
+encoder = run
+```
+
+where `rightToMaybe` is the isomorphism `Either () a -> Maybe a`. Note that both `encoder` and `decoder` are isomorphisms.
+
+We can state the definition of an adjoint pair of parser-serializer by stating the two round-tripping laws that it must satisfy.
+
+__Definition__: A pair `(p, s)` of a parser `p :: Parser m () a` and `s :: Serializer m a` is an __adjoint pair__ iff they satisfy the following two equational laws:
+
+```haskell
+prop> decoder p . encoder s == pure . (, mempty)
+```
+
+```haskell
+prop> fmap (uncurry (<>) . first (encoder s)) . decoder p = pure
+```
+
+We also say that `p` is adjoint to `s` and, vice-versa, that `s` is adjoint to `p`.
+
+__Theorem__: If a parser has an adjoint serializer, then it is unique.
+
+__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `decoder p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `decoder p` is also a monomorphism. Therefore given `p`, `encoder s` is unique by the first law. Since `encoder` is an isomorphism, `s` is unique.
+
+That a serializer uniquely determines its adjoint parser follows the same strategy of proof, but is a little bit more work because we have to use the second law and prove that `fmap (uncurry (<>) . first (encoder s))` is a monomorphism, but `fmap (uncurry (<>))` is not a monomorphism in general. But first things first.
+
+__Lemma__: If `f :: a -> b` is a monomorphism, then `fmap (first f) :: Maybe (a, c) -> Maybe (b, c)` is a monomorphism.
+
+To get rid of the term `fmap (uncurry)` note that if the parser consumes all the input on success, then `fmap (uncurry (<>))` is just the the function that to `(s, mempty)` associates `s`, which is indeed a monomorphism. So in the case the adjoint parser consumes all input, then it must be a monomorphism and therefore `decoder p` is unique, and since `decoder` is an isomorphism, `p` is unique. To finish the proof, note now that the only way a serializer could have two distinct adjoint parsers `p` and `p'` is if `p` and `p'` have distinct remainders for some input `xs :: s`, but this is not possible for as they define the same adjoint serializer.
+
+__Theorem__: If a serializer has an adjoint parser, then it is unique.
+
+The problem now becomes how to construct adjoint pairs and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the sections following it -- and how to combine them, which is what we now turn to.
+
+### B. 3. 2. Adjoint pairs and prisms.
+
+## B. 4. Instances.
+
+### B. 4. 1. The lax monoidal structure for products.
+
+As mentioned in [Equivalent description of `Applicative`](#a-2-2-3-equivalent-description-of-applicative), the applicative structure is equivalent to a lax-monoidal structure for the product monoidal structure. The corresponding structure for serializers is the same lax-monoidal structure:
+
+```haskell
+zip :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a, b)
+zip s t = Serializer $ uncurry (<>) . bimap (run s) (run t)
+
+unit :: Monoid m => Serializer m ()
+unit = Serializer $ const mempty
+```
+
+This is encoded in the `Divisible` typeclass from the [contravariant package](https://hackage.haskell.org/package/contravariant).
+
+```haskell
+instance Monoid m => Divisible (Serializer m) where
+    conquer :: Serializer m a
+    conquer = Serializer $ const mempty
+
+    divide :: forall a b c . (c -> a :*: b) -> Serializer m a -> Serializer m b -> Serializer m c
+    divide f s t = Serializer $ g . f
+        where
+            g :: a :*: b -> m
+            g = uncurry (<>) . bimap (run s) (run t)
+```
+
+### B. 4. 2. The monoid instance.
+
+There is also a `Monoid` instance for `Serializer m a` that allows to combine two serializers.
+
+```haskell
+instance Semigroup m => Semigroup (Serializer m a) where
+    (<>) :: Serializer m a -> Serializer m a -> Serializer m a
+    (<>) s t = Parser $ \ x -> run s x <> run t x
+
+instance Monoid m => Monoid (Serializer m a) where
+    mempty :: Serializer m a
+    mempty = Parser $ const mempty
+```
+
+If we look at the code for `Divisible`, one can see that this monoid structure allows us to replace uses of it in a way analogous that `<*>` allows us to seemlessly extend a binary parser combinator to an n-ary parser combinator.
+
+One important property this monoid structure is that it is natural in `a`, and thus a monoid morphism:
+
+__Theorem__: For every `f :: a -> b`, we have the equalities:
+
+```haskell
+prop> contramap f mempty == mempty
+prop> contramp f (s <> t) == contramap f s <> contramap f t 
+```
+
+Because of this property, it could be argued that the monoid instance is the analog of the `Alternative` instance for parsers. But as seen in section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is best viewed as a lax-monoidal structure from products to coproducts, and in this form, the serializer analog is given below in section [The lax-monoidal structure for coproducts](#b-4-5-the-lax-monoidal-structure-for-coproducts). But the fundamental break down in the analogy is that there is no error handling needed for serializers; and since there is no error handling, no backtracking is needed; and since there is no analog of backtracking, there is no analog of choice.
+
+### B. 4. 3. The left action.
+
+Closely related to the monoid instance is the left action of `m` on `Serializer m a`:
+
+```haskell
+(|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
+(|*>) m s = Serializer $ \ x -> m <> run s x
+infixr 5 |*>
+```
+
+__Theorem__: `(|*>)` is a left `m`-action on `Serializer m a`, that is, it satisfies the equalities:
+
+```haskell
+prop> m <> n |*> s == m |*> n |*> s
+prop> mempty |*> s == s
+```
+
+This also gives us the occasional useful function `collapse`, that allows us to embed `m` in `Serializer m a`:
+
+```haskell
+collapse :: m -> Serializer m a
+collapse m = m |*> mempty
+```
+
+### B. 4. 4. The prism for products.
+
+Consider the case of a product type, a type of the form
+
+```haskell
+data T a_0 ... a_n = T a_0 ... a_n
+```
+
+Assume there are serializers `Serializer m a_i` with `i` ranging from `0` to `n`. A natural idea for a format for `T` is to lay out the `a_i` consecutively one after another. So a serializer for `T` is, denoting by `f_i :: T a_0 ... a_n -> a_i` the field projections,
+
+```haskell
+s :: Serializer m (T a_0 ... a_n)
+    =  s_0 (f_0 x)
+    <> ...
+    <> s_n (f_n x)
+```
+
+Dually, assume there are parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`. A parser for `T` we have to apply the parsers `p_i` consecutively and then apply the `T` constructor to the results. Fixing a cospan `f_i :: e_i -> e`:
+
+```haskell
+p :: Parser s e (T a_0 ... a_n)
+p = T <$> first f_0 p_0 <*> ... <*> first f_n p_n
+```
+
+Instead of a cospan `f_i`, we can fix instead an error tag type `e` and use `onParseError e_i` for approppriate `e_i :: e`, instead of `first f_i`.
+
+Note the duality in constructing serializers and parsers: for the parsers we use the constructor to synthesize the whole from the parts, while for serializers we use the field projections, or the eliminators, to synthesize the whole from the parts.
+
+### B. 4. 5. The lax-monoidal structure for coproducts.
+
+As seen in the section [`Alternative`](#a-2-5-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
+
+```haskell
+either :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a :+: b)
+either s t = Serializer $
+    \case
+        Left x  -> (run s) x
+        Right y -> (run t) y
+
+empty :: Serializer m Void
+empty = Serializer absurd
+```
+
+Using the `Decidable` typeclass, also from the [contravariant package](https://hackage.haskell.org/package/contravariant):
+
+```haskell
+instance Monoid m => Decidable (Serializer m) where
+    lose :: (a -> Void) -> Serializer m a
+    lose f = Serializer $ absurd . f
+
+    choose :: (a -> b :+: c) -> Serializer m b -> Serializer m c -> Serializer m a
+    choose f s t = Serializer $ choice (run s) (run t) . f
+        where
+            -- | The Representability isomorphism.
+            choice :: (a -> m) -> (b -> m) -> (a :+: b) -> m
+            choice p q
+                = \case 
+                    Left x  -> p x
+                    Right y -> q y
+```
+
+### B. 4. 6. The prism for coproducts.
+
+Now consider the case of a coproduct, a type of the form
+
+```haskell
+data T a_0 ... a_n
+    = T_0 a_0
+    ...
+    | T_n a_n
+```
+
+The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [The prism for products](#b-4-3-the-prism-for-products).
+
+Assuming the existence of serializers `s_i :: Serializer m a_i` with `i` ranging from `0` to `n`, a natural format for `T a_0 ... a_n` is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the constructors top to bottom and return the corresponding ordinal:
+
+```haskell
+tag :: T a_0 ... a_n -> Word
+tag x = case x of
+    T_0 _ -> 0
+    ...
+    T_n _ -> n
+```
+
+This piece of bloatware can even be derived automatically using something like the [generics-sop library](https://hackage.haskell.org/package/generics-sop) or (God forbid) template Haskell, but we will not dwell on this detail here.
+
+note(s):
+
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or adding new constructors. How this can be solved is a whole different problem.
+
+Assuming the existence of a primitive serializer `word :: Serializer m Word`, we now have:
+
+```haskell
+s :: Serializer m (T a_0 ... a_n)
+s = Serializer $ x ->
+    word (tag x)
+    |*> case x of
+        T_0 x_0 -> s_0 x0
+        ...
+        T_n x_n -> s_n x_n 
+```
+
+The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i` and the alternative instance for `Maybe`, e. g. denoting the prism getters `T a_0 ... a_n -> Maybe a_i` by `p_i` then:
+
+```haskell
+eliminator :: (a_0 -> b) -> ... -> (a_n -> b) -> T a_0 ... a_n -> b
+eliminator f_0 ... f_n r = asum [f_0 $ p_0 r, ..., f_n $ p_n r]
+```
+
+Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s d Word` and an error conversion function `f :: d -> e`. Then the parser for this format is just:
+
+```haskell
+parser :: Parser s e (T a_0 ... a_n)
+parser = do
+    i <- first f word
+    case i of
+        i | 0 == i -> bimap f_0 T_0 p_0
+        ...
+        i | n == i -> bimap f_n T_n p_n
+        _          -> throwError e
+```
+
+Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, and we have to add a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
+
+### B. 4. 7. The prism for sequences.
+
+We give one more example of constructing a prism for the whole from a prism for the parts. Let `t` be a `Functor` and a `Foldable`. Then a format for serializing `t` is to first serialize the length, then repeatedly apply the serializer `s :: Serializer m a` to the elements of `t a`.
+
+```haskell
+serializer :: Foldable t => Serializer m (t a)
+serializer = Serializer $ xs ->
+    word (length xs) |*> foldmap (run s) xs
+```
+
+To parse this format, we need to first be able to construct a `t` from a list.
+
+__Definition__: A foldable `f` is a _sequence_ if `toList :: f a -> [a]` is an isomorphism.
+
+We denote the inverse of `toList` by `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order. A second related reason is that `Set a` does not have a `Functor` instance.
+
+With the `fromList` inverse, and assuming the existence of a parser `p :; Parser s e a`, we have,
+
+```haskell
+parser :: Parser s e (t a)
+parser = word >>= fmap fromList . flip repeat p
+```
+
+where `repeat` is the parser combinator:
+
+```haskell
+repeat :: Word -> Parser s e a -> Parser s e [a]
+repeat 0 _ = pure []
+repeat n p = (:) <$> p <*> repeat (pred n) p
+```
