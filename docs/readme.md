@@ -934,55 +934,49 @@ instance Contravariant (Serializer m) where
 
 ### B. 3. 1. Parsers and adjoint serializers.
 
-Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. To make the relation symmetric, let us also say that `p` is the _adjoint_ parser of `s`.
+Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. We would like to say that this relation is symmetric and that `p` is the _adjoint_ parser of `s`, but here we have to be a bit careful as the parser type has an extra parameter `e` for the error type, so two parsers that differ only in how they handle errors should count as the same. So the solution is to keep track only whether the parser errors or not, and this is equivalent to instead of `p :: Parser s e a` take `first terminal p :: Parser s () a` with terminal the unique map `e -> ()` given by `const ()`. Since terminal is a monoid morphism, by the results of sections [Error laws](#a-2-3-1-error-laws) and [More laws](#a-2-5-5-more-laws) it preserves all the structures in sight. On the other hand, since `Either () a` is isomorphic to `Maybe a` the collapsing of the error type is equivalent to taking the returning type of parsing functions to be `Maybe (a, s)`.
+
+Given all this, consider the functions,
 
 ```haskell
-parser :: Parser m e a -> (m -> e :+: (a, m))
-parser = run
+decoder :: Parser m () a -> m -> Maybe (a, m)
+decoder p =  rightToMaybe . run p
 
-encoder :: Serializer m a -> (a -> m)
+encoder :: Serializer m a -> a -> m
 encoder = run
 ```
 
-Note that both `encoder` and `parser` are isomorphisms. The first law says that serializing then parsing is the identity, minus some fudging to get the types right.
+where `rightToMaybe` is the isomorphism `Either () a -> Maybe a`. Note that both `encoder` and `decoder` are isomorphisms.
 
-__First law__: We have for a parser `p` and its adjoint serializer `s`:
+We can state the definition of an adjoint pair of parser-serializer by stating the two round-tripping laws that it must satisfy.
 
-```haskell
-prop> parser p . encoder s == pure . (, mempty)
-```
-
-The second law says that, up to the parser erroring out, parsing then serializing is the identity.
-
-__Second law__: We have for a parser `p` and its adjoint serializer `s`:
+__Definition__: A pair `(p, s)` of a parser `p :: Parser m () a` and `s :: Serializer m a` is an __adjoint pair__ iff they satisfy the following two equational laws:
 
 ```haskell
-prop> fmap (uncurry (<>) . first (encoder s)) . parser p = pure
+prop> decoder p . encoder s == pure . (, mempty)
 ```
+
+```haskell
+prop> fmap (uncurry (<>) . first (encoder s)) . decoder p = pure
+```
+
+We also say that `p` is adjoint to `s` and, vice-versa, that `s` is adjoint to `p`.
 
 __Theorem__: If a parser has an adjoint serializer, then it is unique.
 
-__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `parser p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `parser p` is also a monomorphism. Therefore given `p`, `encoder s` is unique. Since `encoder` is an isomorphism, `s` is unique.
+__Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `decoder p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `decoder p` is also a monomorphism. Therefore given `p`, `encoder s` is unique by the first law. Since `encoder` is an isomorphism, `s` is unique.
 
-This reduces the problem to, given a parser, construct its adjoint serializer, and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the sections following it.
+That a serializer uniquely determines its adjoint parser follows the same strategy of proof, but is a little bit more work because we have to use the second law and prove that `fmap (uncurry (<>) . first (encoder s))` is a monomorphism, but `fmap (uncurry (<>))` is not a monomorphism in general. But first things first.
 
-### B. 3. 2. The prism version.
+__Lemma__: If `f :: a -> b` is a monomorphism, then `fmap (first f) :: Maybe (a, c) -> Maybe (b, c)` is a monomorphism.
 
-There are functions
+To get rid of the term `fmap (uncurry)` note that if the parser consumes all the input on success, then `fmap (uncurry (<>))` is just the the function that to `(s, mempty)` associates `s`, which is indeed a monomorphism. So in the case the adjoint parser consumes all input, then it must be a monomorphism and therefore `decoder p` is unique, and since `decoder` is an isomorphism, `p` is unique. To finish the proof, note now that the only way a serializer could have two distinct adjoint parsers `p` and `p'` is if `p` and `p'` have distinct remainders for some input `xs :: s`, but this is not possible for as they define the same adjoint serializer.
 
-```haskell
-decoder :: Parser m e a -> (m -> Maybe a)
-decoder p = fmap fst . either (const Nothing) Just . run p
+__Theorem__: If a serializer has an adjoint parser, then it is unique.
 
-encoder :: Serializer m a -> (a -> m)
-encoder = run
-```
+The problem now becomes how to construct adjoint pairs and this is done by _fixing a format_ -- see [The prism for products](#b-4-4-the-prism-for-products) and the sections following it -- and how to combine them, which is what we now turn to.
 
-Therefore, an adjoint pair `(p :: Parser m e a, s :: Parser m a)` gives us a pair of functions `decoder p :: m -> e :+: a` and `encoder s :: a -> m`.
-
-__Theorem__: if `p` and `s` is an adjoint pair of parser-serializer, the functions `decoder p` and `encoder s` yield a prism `Prism m a` (or `Prism m m a a`, the non-type changing prism).
-
-Prisms can be composed, so this gives us another way to obtain adjoint pairs.
+### B. 3. 2. Adjoint pairs and prisms.
 
 ## B. 4. Instances.
 
