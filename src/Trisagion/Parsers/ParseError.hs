@@ -99,11 +99,11 @@ note(s):
   * This parser can be used to implement the longest match rule -- see 'until'.
 -}
 failIff :: ParserPE s e a -> ParserPE s Void ()
-failIff p =
-    first absurd (lookAhead p) >>=
-        either
-            (const $ pure ())
-            (const $ absurd <$> throw mempty)
+failIff p = do
+    r <- first absurd $ lookAhead p
+    case r of
+        Left  _ -> pure ()
+        Right _ -> absurd <$> throw mempty
 
 {- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds. -}
 until
@@ -121,10 +121,9 @@ validate
     -> ParserPE s (e :+: d) b
 validate v p = capture $ do
     r <- first (fmap Left) p
-    either
-        (fmap absurd . throwParseError . Right)
-        pure
-        (v r)
+    case v r of
+        Left  e -> absurd <$> throwParseError (Right e)
+        Right x -> pure x
 
 {- | Guard a parser with a monadic post-condition.
 
