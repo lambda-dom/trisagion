@@ -49,9 +49,9 @@ data Result s e a
     | Success a !s  -- ^ Success case.
 ```
 
-This introduces strictness where laziness is not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case. The disadvantage of this flattening of the return type is that there is no `Monad` or even `Applicative` structure for `Result s e a` so the actual code is a tad hairier.
+This introduces strictness where laziness is not needed while keeping it in where it is useful. It also removes one layer of indirection in the `Success` case. The disadvantage of this flattening of the return type is that there is no `Monad`, or even an `Applicative`, instance for `Result s e a` so the actual code is a tad hairier.
 
-Since this is an implementation detail, it is kept private like a closet skeleton or an ugly vice, and the user-facing API uses types like `Either` and `(,)` from base exclusively. To simplify things, in the rest of this document we keep using `Either e (a, s)` as the return type of a parsing function.
+Since this is an implementation detail, it is kept private like a closet skeleton or an ugly vice, and the user-facing API uses base types like `Either` and `(,)` exclusively. To simplify the exposition, in the rest of this document we keep using `Either e (a, s)` as the return type of a parsing function.
 
 ## A. 2. Basic instances.
 
@@ -192,7 +192,7 @@ instance Monad (Parser s e) where
 
 #### A. 2. 3. 1. Error laws.
 
-The `Bifunctor` instance provides, for a function `f :: d -> e`, a function `first f :: Parser s d a -> Parser s e a`. This function is not only type-changing, but monad-changing.
+The `Bifunctor` instance yields, for a function `f :: d -> e`, a function `first f :: Parser s d a -> Parser s e a`. This function is not only type-changing, but monad-changing.
 
 __Theorem__: For every `f :: d -> e`, the function `first f :: Parser s d a -> Parser s e a` is a natural transformation that is _monoidal_,
 
@@ -450,7 +450,7 @@ A parsing function has type `s -> Either e (a, s)` with the error type introduce
 ```haskell
 instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
-    throwError e = embed $ const (Left e)
+    throwError e = Parser $ const (Left e)
 
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
     catchError p h = Parser $ \ s ->
@@ -511,7 +511,7 @@ instance Monoid (ParseError e) where
     mempty = Fail
 ```
 
-A little bit of staring and the reader should be able to convince of himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
+A little bit of staring and the reader should be able to convince himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit.
 
 From this isomorphism, it follows that:
 
@@ -530,7 +530,7 @@ Now, `f (y' <> y)` and `f y' <> f y` are not equal.
 
 ### A. 3. 2. What is in an error?
 
-`ParseError e` is just a thin wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change the `ParseError` to
+`ParseError e` is just a thin wrapper around `e` for the short-circuiting accumulation strategy; any information specific to the error must be packed in the type `e`. But there are pieces of information that are useful independently of the error type `e`, and that thus are a better fit as fields of `ParseError`, for example a notion of _stream position_ to better locate the source of the error. So we change `ParseError` to
 
 ```haskell
 data ParseError s e
@@ -562,7 +562,7 @@ class HasPosition s where
     position :: s -> PositionOf s
 ```
 
-As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. It follows that every type `s` has an `HasPosition` instance by simply returning itself as the current position!
+As one can see, the entirety of `HasPosition` is nothing more than a getter for the input stream. It follows that every type `s` has at least one `HasPosition` instance by simply returning itself as the current position!
 
 ```haskell
 instance HasPosition s
@@ -572,11 +572,11 @@ instance HasPosition s
     position = id
 ```
 
-And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons that I can enjoin, to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want to `show` errors (we do), we will get this potentially enormous string filled with completely useless noise.
+And this notion of position is not entirely silly, because if the current position can be used to locate the source of the problem, much more so with the entire input stream. So strictly speaking there is no need for this lawless typeclass (and lawless typeclasses are a code smell). There are two reasons to put a position instead of the whole stream in `ParseError`. The first is that having the error carry a reference to the input stream potentially keeps it alive in memory for much longer than needed. The second is that if we want to `show` errors (we do), we would get this potentially enormous string filled with useless noise.
 
 ### A. 3. 3. Backtraces.
 
-Consider the following block
+Consider the following block,
 
 ```haskell
 parser = do
@@ -587,7 +587,7 @@ parser = do
     ...
 ```
 
-`p` and `q` must have the same error type. If `p` and `q` have different error types `e1` and `e2`, we must find a type `e` and a cospan of functions `e1 -> e <- e2` and write
+where `p` and `q` must have the same error type. If `p` and `q` have different error types `e1` and `e2`, we must find a type `e` and a cospan of functions `e1 -> e <- e2` and write
 
 ```haskell
 parser = do
@@ -598,7 +598,7 @@ parser = do
     ...
 ```
 
-Another option is to throw a different error `e'`, with the error thrown from `p` attached like an _exception backtrace_. The obvious problem is that the errors of `p` and `q` can be different so we must still find appropriate cospans; Haskell's GADT's and existentials to the rescue.
+Another option is to throw a different error `e'` with the error thrown from `p` attached like an _exception backtrace_. The obvious problem is that the errors of `p` and `q` can be different so we must still find appropriate cospans; Haskell's GADT's and existentials to the rescue.
 
 ```haskell
 data ParseError s e where
@@ -673,7 +673,7 @@ We are at the point where we can finally tackle the constraints needed for the i
 
 ### A. 4. 1. One out of `s`: the `Streamable` typeclass.
 
-What we need from `s`: an `uncons` operation with the return type depending on `s`.
+What we need from `s` is an `uncons` operation with the return type depending on `s`.
 
 ```haskell
 {- | The @Streamable@ typeclass of monomorphic input streams. -}
@@ -770,7 +770,9 @@ data InputError = InputError
 eoi :: Streamable s => Parser s Void Bool
 eoi = null <$> get
 
-one :: Streamable s => Parser s (ParseError (PositionOf s) InputError) (ElementOf s)
+one
+    :: (HasPosition s, Streamable s)
+    => Parser s (ParseError (PositionOf s) InputError) (ElementOf s)
 one = do
     xs <- get
     case uncons xs of
@@ -868,47 +870,47 @@ maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
 A first solution is to carry the codomain `s` of a serializer in a `Writer` monad as is done in say, the [cereal package](https://hackage.haskell.org/package/cereal).
 
 ```haskell
-data Writer w a = Writer w a
+data Writer m a = Writer m a
     deriving stock Functor
 
 -- Instances.
-instance Monoid w => Applicative (Writer w) where
-    pure :: a -> Writer w a
+instance Monoid m => Applicative (Writer m) where
+    pure :: a -> Writer m a
     pure = Writer mempty
 
-    (<*>) :: Writer w (a -> b) -> Writer w a -> Writer w b
+    (<*>) :: Writer m (a -> b) -> Writer m a -> Writer m b
     (<*>) (Writer m f) (Writer n x) = Writer (m <> n) (f x)
 
 instance Monoid m => Monad (Writer m) where
-    (>>=) :: Writer w a -> (a -> Writer w b) -> Writer w b
+    (>>=) :: Writer m a -> (a -> Writer m b) -> Writer m b
     (>>=) (Writer m x) h = let (Writer n y) = h x in Writer (m <> n) y 
 
 
 -- Basic functions.
-run :: Writer w a -> (w, a)
+run :: Writer m a -> (m, a)
 run (Writer m x) = (m, x)
 
-tell :: w -> Writer w ()
+tell :: m -> Writer m ()
 tell m = Writer m ()
 ```
 
-As is obvious from the code block, `Writer w a` is isomorphic to `w :*: a`. `w` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`. This detail is not really relevant for this section, so we can just take `w` to be `[Word8]` for the sake of concreteness.
+As is obvious from the code block, `Writer m a` is isomorphic to `m :*: a`. `m` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`.
 
 We get, from the `Writer` instances alone, a lot of power. For example, the zip combinator allows a to combine writers for `a` and `b` to a writer for `(a, b)`. Expanding the definition:
 
 ```haskell
-pair :: Writer w a -> Writer w b -> Writer w (a, b)
+pair :: Writer m a -> Writer m b -> Writer m (a, b)
 pair p q = do
     x <- p
     y <- q
     pure (x, y)
 ```
 
-The `w` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it at the end of a computation, by `fst . run`.
+The `m` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it at the end of a computation, by `fst . run`.
 
 ## B. 2. Two arguments.
 
-There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `w` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
+There are two arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `m` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
 
 ## B. 3. Serializers in the corepresentable representation.
 
@@ -929,12 +931,12 @@ The first difference with parsers is that a serializer is contravariant in `a`. 
 ```haskell
 instance Contravariant (Serializer m) where
     contramap :: (a -> b) -> Serializer m b -> Serializer m a
-    contramap f s = Serializer (run s . f)
+    contramap f s = Serializer $ run s . f
 ```
 
 ### B. 3. 1. Parsers and adjoint serializers.
 
-Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. We would like to say that this relation is symmetric and that `p` is the _adjoint_ parser of `s`, but here we have to be a bit careful as the parser type has an extra parameter `e` for the error type, so two parsers that differ only in how they handle errors should count as the same. So the solution is to keep track only whether the parser errors or not, and this is equivalent to instead of `p :: Parser s e a` take `first terminal p :: Parser s () a` with terminal the unique map `e -> ()` given by `const ()`. Since terminal is a monoid morphism, by the results of sections [Error laws](#a-2-3-1-error-laws) and [More laws](#a-2-5-5-more-laws) it preserves all the structures in sight. On the other hand, since `Either () a` is isomorphic to `Maybe a` the collapsing of the error type is equivalent to taking the returning type of parsing functions to be `Maybe (a, s)`.
+Given a parser `p :: Parser m e a` we have a way to decode an `x :: a` from an `xs :: m`. Intuitively, there should be an "inverse" serializer that encodes an `x :: a` into an `xs :: m`. Let us call such a putative serializer `s :: Serializer m a`, the _adjoint_ of `p`. We would like to say that this relation is symmetric and that `p` is the _adjoint_ parser of `s`, but here we have to be a bit careful as the parser type has an extra parameter `e` for the error type, so two parsers that differ only in how they handle errors should count as equal. So the solution is to keep track only whether the parser errors or not, and this is equivalent to instead of `p :: Parser m e a` take `first terminal p :: Parser m () a` with terminal the unique map `e -> ()` given by `const ()`. Since terminal is a monoid morphism, by the results of sections [Error laws](#a-2-3-1-error-laws) and [More laws](#a-2-5-5-more-laws) it preserves all the structure in sight. On the other hand, since `Either () a` is isomorphic to `Maybe a` the collapsing of the error type is equivalent to taking the return type of parsing functions to be `Maybe (a, m)`.
 
 Given all this, consider the functions,
 
@@ -966,11 +968,11 @@ __Theorem__: If a parser has an adjoint serializer, then it is unique.
 
 __Proof__: Since `pure . (, mempty)` is a composite of monomorphisms, it is a monomorphism. This implies by the first law that `decoder p . encoder s` is a monomorphism and consequently so is `encoder s`. By the same reasoning, using the second law and the fact that `pure` is a monomorphism, `decoder p` is also a monomorphism. Therefore given `p`, `encoder s` is unique by the first law. Since `encoder` is an isomorphism, `s` is unique.
 
-That a serializer uniquely determines its adjoint parser follows the same strategy of proof, but is a little bit more work because we have to use the second law and prove that `fmap (uncurry (<>) . first (encoder s))` is a monomorphism, but `fmap (uncurry (<>))` is not a monomorphism in general. But first things first.
+The proof that a serializer uniquely determines its adjoint parser follows the same strategy, that is, we prove that `fmap (uncurry (<>) . first (encoder s))` is a monomorphism and then use the second law to get uniqueness. The problem is that `fmap (uncurry (<>))` is not a monomorphism in general so we will have to do a little bit more work. But first things first.
 
 __Lemma__: If `f :: a -> b` is a monomorphism, then `fmap (first f) :: Maybe (a, c) -> Maybe (b, c)` is a monomorphism.
 
-To get rid of the term `fmap (uncurry)` note that if the parser consumes all the input on success, then `fmap (uncurry (<>))` is just the the function that to `(s, mempty)` associates `s`, which is indeed a monomorphism. So in the case the adjoint parser consumes all input, then it must be a monomorphism and therefore `decoder p` is unique, and since `decoder` is an isomorphism, `p` is unique. To finish the proof, note now that the only way a serializer could have two distinct adjoint parsers `p` and `p'` is if `p` and `p'` have distinct remainders for some input `xs :: s`, but this is not possible for as they define the same adjoint serializer.
+To get rid of the term `fmap (uncurry)` note that if the parser consumes all the input on success, then `fmap (uncurry (<>))` is just the the function that to `\ (s, mempty) -> s` which is indeed a monomorphism. So in the case the adjoint parser consumes all input, then it must be a monomorphism and therefore `decoder p` is unique, and since `decoder` is an isomorphism, `p` is unique. To finish the proof, note now that the only way a serializer could have two distinct adjoint parsers `p` and `p'` is if `p` and `p'` have distinct remainders for some input `xs :: s`, but this is not possible because the adjoint serializers of `p` and `p'` are the same by the previous theorem.
 
 __Theorem__: If a serializer has an adjoint parser, then it is unique.
 
@@ -982,7 +984,7 @@ The problem now becomes how to construct adjoint pairs and this is done by _fixi
 
 ### B. 4. 1. The lax monoidal structure for products.
 
-As mentioned in [Equivalent description of `Applicative`](#a-2-2-3-equivalent-description-of-applicative), the applicative structure is equivalent to a lax-monoidal structure for the product monoidal structure. The corresponding structure for serializers is the same lax-monoidal structure:
+As mentioned in [Equivalent description of `Applicative`](#a-2-2-3-equivalent-description-of-applicative), the applicative structure is equivalent to a lax-monoidal structure for the product monoidal structure. The corresponding structure for serializers is also a lax-monoidal structure:
 
 ```haskell
 zip :: Monoid m => Serializer m a -> Serializer m b -> Serializer m (a, b)
@@ -999,16 +1001,15 @@ instance Monoid m => Divisible (Serializer m) where
     conquer :: Serializer m a
     conquer = Serializer $ const mempty
 
-    divide :: forall a b c . (c -> a :*: b) -> Serializer m a -> Serializer m b -> Serializer m c
+    divide :: (c -> a :*: b) -> Serializer m a -> Serializer m b -> Serializer m c
     divide f s t = Serializer $ g . f
         where
-            g :: a :*: b -> m
             g = uncurry (<>) . bimap (run s) (run t)
 ```
 
 ### B. 4. 2. The monoid instance.
 
-There is also a `Monoid` instance for `Serializer m a` that allows to combine two serializers.
+There is also a `Monoid` instance for `Serializer m a` that allows us to combine two serializers.
 
 ```haskell
 instance Semigroup m => Semigroup (Serializer m a) where
@@ -1074,7 +1075,7 @@ s :: Serializer m (T a_0 ... a_n)
     <> s_n (f_n x)
 ```
 
-Dually, assume there are parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`. A parser for `T` we have to apply the parsers `p_i` consecutively and then apply the `T` constructor to the results. Fixing a cospan `f_i :: e_i -> e`:
+Dually, assume there are parsers `p_i :: Parser s e_i a_i` with `i` ranging from `0` to `n`. A parser for `T` applies the parsers `p_i` consecutively and then the `T` constructor. Fixing a cospan `f_i :: e_i -> e`:
 
 ```haskell
 p :: Parser s e (T a_0 ... a_n)
@@ -1159,12 +1160,7 @@ s = Serializer $ x ->
         T_n x_n -> s_n x_n 
 ```
 
-The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`, which can be expressed in terms of the prisms for `a_i` and the alternative instance for `Maybe`, e. g. denoting the prism getters `T a_0 ... a_n -> Maybe a_i` by `p_i` then:
-
-```haskell
-eliminator :: (a_0 -> b) -> ... -> (a_n -> b) -> T a_0 ... a_n -> b
-eliminator f_0 ... f_n r = asum [f_0 $ p_0 r, ..., f_n $ p_n r]
-```
+The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`.
 
 Dually, assume the existence of parsers `p_i :: Parser s e_i a_i` and a cospan `f :: e_i -> e`. Also assume the existence of a primitive parser `word :: Parser s d Word` and an error conversion function `f :: d -> e`. Then the parser for this format is just:
 
@@ -1179,7 +1175,7 @@ parser = do
         _          -> throwError e
 ```
 
-Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, and we have to add a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
+Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, adding a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
 
 ### B. 4. 7. The prism for sequences.
 
@@ -1195,7 +1191,7 @@ To parse this format, we need to first be able to construct a `t` from a list.
 
 __Definition__: A foldable `f` is a _sequence_ if `toList :: f a -> [a]` is an isomorphism.
 
-We denote the inverse of `toList` by `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order. A second related reason is that `Set a` does not have a `Functor` instance.
+We denote the inverse of `toList` by `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order and therefore `fromList` is only a left inverse. A second related reason is that `Set a` does not have a `Functor` instance.
 
 With the `fromList` inverse, and assuming the existence of a parser `p :; Parser s e a`, we have,
 
