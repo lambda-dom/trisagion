@@ -72,7 +72,7 @@ class Streamable s => Splittable s where
 
     {- | Return the remainder of the stream.
 
-    Default implementation is @'splitWit' (const True)@ but instances almost always can define a
+    Default implementation is @'splitWith' (const True)@ but instances almost always can define a
     faster implementation using a nullary operation @empty :: s@.
     -}
     remainder :: s -> (PrefixOf s, s)
