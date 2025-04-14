@@ -66,7 +66,7 @@ import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, makeParseError)
 import Trisagion.Typeclasses.HasPosition (HasPosition(..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.Splittable (Splittable (PrefixOf, splitAt, splitWith))
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
