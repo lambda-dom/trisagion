@@ -69,16 +69,23 @@ instance (Splittable s, MonoFoldable (PrefixOf s)) => Splittable (Counter s) whe
     splitAt :: Word -> Counter s -> (PrefixOf (Counter s), Counter s)
     splitAt n (Counter offset xs) =
         let
-            (prefix, suffix) = splitAt n xs
+            (prefix, rest) = splitAt n xs
         in
-            (prefix, Counter (offset + monolength prefix) suffix)
+            (prefix, Counter (offset + monolength prefix) rest)
 
     splitWith :: (ElementOf (Counter s) -> Bool) -> Counter s -> (PrefixOf (Counter s), Counter s)
     splitWith p (Counter offset xs) =
         let
-            (prefix, suffix) = splitWith p xs
+            (prefix, rest) = splitWith p xs
         in
-            (prefix, Counter (offset + monolength prefix) suffix)
+            (prefix, Counter (offset + monolength prefix) rest)
+
+    remainder :: Counter s -> (PrefixOf s, Counter s)
+    remainder (Counter offset xs) =
+        let
+            (prefix, rest) = remainder xs
+        in
+            (prefix, Counter (offset + monolength prefix) rest)
 
 
 {- | Construct a t'Counter' from a 'Streamable'. -}
