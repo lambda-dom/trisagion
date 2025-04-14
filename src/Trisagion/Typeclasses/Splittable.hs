@@ -16,16 +16,16 @@ import Data.Kind (Type)
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, span, splitAt)
-import qualified Data.ByteString.Lazy as LazyBytes (ByteString, span, splitAt)
-import qualified Data.ByteString.Short as ShortBytes (ShortByteString, span, splitAt)
-import qualified Data.Text as Text (Text, span, splitAt)
-import qualified Data.Text.Lazy as LazyText (Text, span, splitAt)
-import qualified Data.Sequence as Seq (Seq, spanl, splitAt)
-import qualified Data.Vector as Vector (Vector, span, splitAt)
-import qualified Data.Vector.Strict as StrictVector (Vector, span, splitAt)
-import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, span, splitAt)
-import qualified Data.Vector.Storable as StorableVector (Vector, Storable, span, splitAt)
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty)
+import qualified Data.ByteString.Lazy as LazyBytes (ByteString, span, splitAt, empty)
+import qualified Data.ByteString.Short as ShortBytes (ShortByteString, span, splitAt, empty)
+import qualified Data.Text as Text (Text, span, splitAt, empty)
+import qualified Data.Text.Lazy as LazyText (Text, span, splitAt, empty)
+import qualified Data.Sequence as Seq (Seq, spanl, splitAt, empty)
+import qualified Data.Vector as Vector (Vector, span, splitAt, empty)
+import qualified Data.Vector.Strict as StrictVector (Vector, span, splitAt, empty)
+import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, span, splitAt, empty)
+import qualified Data.Vector.Storable as StorableVector (Vector, Storable, span, splitAt, empty)
 
 -- non-Hackage libraries.
 import Data.MonoFunctor (MonoFunctor (..))
@@ -70,6 +70,14 @@ class Streamable s => Splittable s where
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 
+    {- | Return the remainder of the stream.
+
+    Default implementation is @'splitWit' (const True)@ but instances almost always can define a
+    faster implementation using a nullary operation @empty :: s@.
+    -}
+    remainder :: s -> (PrefixOf s, s)
+    remainder = splitWith (const True)
+
 -- Instances.
 instance Splittable Bytes.ByteString where
     type PrefixOf Bytes.ByteString = Bytes.ByteString
@@ -80,6 +88,9 @@ instance Splittable Bytes.ByteString where
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitWith = Bytes.span
 
+    remainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    remainder s = (s, Bytes.empty)
+
 instance Splittable LazyBytes.ByteString where
     type PrefixOf LazyBytes.ByteString = LazyBytes.ByteString
 
@@ -88,6 +99,9 @@ instance Splittable LazyBytes.ByteString where
 
     splitWith :: (Word8 -> Bool) -> LazyBytes.ByteString -> (LazyBytes.ByteString, LazyBytes.ByteString)
     splitWith = LazyBytes.span
+
+    remainder :: LazyBytes.ByteString -> (LazyBytes.ByteString, LazyBytes.ByteString)
+    remainder s = (s, LazyBytes.empty)
 
 instance Splittable ShortBytes.ShortByteString where
     type PrefixOf ShortBytes.ShortByteString = ShortBytes.ShortByteString
@@ -98,6 +112,9 @@ instance Splittable ShortBytes.ShortByteString where
     splitWith :: (Word8 -> Bool) -> ShortBytes.ShortByteString -> (ShortBytes.ShortByteString, ShortBytes.ShortByteString)
     splitWith = ShortBytes.span
 
+    remainder :: ShortBytes.ShortByteString -> (ShortBytes.ShortByteString, ShortBytes.ShortByteString)
+    remainder s = (s, ShortBytes.empty)
+
 instance Splittable Text.Text where
     type PrefixOf Text.Text = Text.Text
 
@@ -106,6 +123,9 @@ instance Splittable Text.Text where
 
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
     splitWith = Text.span
+
+    remainder :: Text.Text -> (Text.Text, Text.Text)
+    remainder s = (s, Text.empty)
 
 instance Splittable LazyText.Text where
     type PrefixOf LazyText.Text = LazyText.Text
@@ -116,6 +136,9 @@ instance Splittable LazyText.Text where
     splitWith :: (Char -> Bool) -> LazyText.Text -> (LazyText.Text, LazyText.Text)
     splitWith = LazyText.span
 
+    remainder :: LazyText.Text -> (LazyText.Text, LazyText.Text)
+    remainder s = (s, LazyText.empty)
+
 instance Splittable [a] where
     type PrefixOf [a] = [a]
 
@@ -124,6 +147,9 @@ instance Splittable [a] where
 
     splitWith :: (a -> Bool) -> [a] -> ([a], [a])
     splitWith = span
+
+    remainder :: [a] -> ([a], [a])
+    remainder xs = (xs, [])
 
 instance Splittable (Seq.Seq a) where
     type PrefixOf (Seq.Seq a) = Seq.Seq a
@@ -134,6 +160,9 @@ instance Splittable (Seq.Seq a) where
     splitWith :: (a -> Bool) -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitWith = Seq.spanl
 
+    remainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
+    remainder xs = (xs, Seq.empty)
+
 instance Splittable (Vector.Vector a) where
     type PrefixOf (Vector.Vector a) = Vector.Vector a
 
@@ -142,6 +171,9 @@ instance Splittable (Vector.Vector a) where
 
     splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitWith = Vector.span
+
+    remainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    remainder xs = (xs, Vector.empty)
 
 instance Splittable (StrictVector.Vector a) where
     type PrefixOf (StrictVector.Vector a) = StrictVector.Vector a
@@ -152,6 +184,9 @@ instance Splittable (StrictVector.Vector a) where
     splitWith :: (a -> Bool) -> StrictVector.Vector a -> (StrictVector.Vector a, StrictVector.Vector a)
     splitWith = StrictVector.span
 
+    remainder :: StrictVector.Vector a -> (StrictVector.Vector a, StrictVector.Vector a)
+    remainder xs = (xs, StrictVector.empty)
+
 instance UnboxedVector.Unbox a => Splittable (UnboxedVector.Vector a) where
     type PrefixOf (UnboxedVector.Vector a) = UnboxedVector.Vector a
 
@@ -161,6 +196,9 @@ instance UnboxedVector.Unbox a => Splittable (UnboxedVector.Vector a) where
     splitWith :: (a -> Bool) -> UnboxedVector.Vector a -> (UnboxedVector.Vector a, UnboxedVector.Vector a)
     splitWith = UnboxedVector.span
 
+    remainder :: UnboxedVector.Vector a -> (UnboxedVector.Vector a, UnboxedVector.Vector a)
+    remainder xs = (xs, UnboxedVector.empty)
+
 instance StorableVector.Storable a => Splittable (StorableVector.Vector a) where
     type PrefixOf (StorableVector.Vector a) = StorableVector.Vector a
 
@@ -169,3 +207,6 @@ instance StorableVector.Storable a => Splittable (StorableVector.Vector a) where
 
     splitWith :: (a -> Bool) -> StorableVector.Vector a -> (StorableVector.Vector a, StorableVector.Vector a)
     splitWith = StorableVector.span
+
+    remainder :: StorableVector.Vector a -> (StorableVector.Vector a, StorableVector.Vector a)
+    remainder xs = (xs, StorableVector.empty)
