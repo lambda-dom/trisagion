@@ -59,7 +59,7 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), toEither, withResult)

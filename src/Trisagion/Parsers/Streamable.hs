@@ -21,7 +21,7 @@ import Prelude hiding (null)
 import Data.Void (Void)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))

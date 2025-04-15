@@ -19,8 +19,8 @@ module Trisagion.Streams.Counter (
 import Prelude hiding (splitAt)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
-import Data.MonoFoldable (MonoFoldable (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))

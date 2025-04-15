@@ -28,7 +28,7 @@ import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, span, spli
 import qualified Data.Vector.Storable as StorableVector (Vector, Storable, span, splitAt, empty)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable)
