@@ -24,14 +24,14 @@ module Trisagion.Parsers.Word8 (
 
 -- Imports.
 -- Base.
-import Data.Bits (Bits(..), FiniteBits (..))
-import Data.Foldable (Foldable (..))
+import Data.Bits (FiniteBits)
 import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
-import Data.MonoFoldable (MonoFoldable (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+import Mono.Types.IntegralBytes (byteCount, pack, packReverse)
 
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition)
@@ -56,12 +56,8 @@ integralLe
     .  (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
     => ParserPE s InputError w
 integralLe = do
-        s <- takeExact $ fromIntegral n
-        let xs = zip [0 .. n - 1] (monotoList s)
-        pure $ foldl' (.|.) 0 [shiftL (fromIntegral b) (i * 8) | (i, b) <- xs]
-    where
-        n :: Int
-        n = finiteBitSize @w 0 `quot` 8
+        s <- takeExact $ byteCount @w 0
+        pure $ pack (monotoList s)
 
 {- | Parse a machine-width integral in big-endian format. -}
 integralBe
@@ -69,12 +65,8 @@ integralBe
     .  (HasPosition s, Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
     => ParserPE s InputError w
 integralBe = do
-        s <- takeExact $ fromIntegral n
-        let xs = zip [n - 1, n - 2 .. 0] (monotoList s)
-        pure $ foldl' (.|.) 0 [shiftL (fromIntegral b) (i * 8) | (i, b) <- xs]
-    where
-        n :: Int
-        n = finiteBitSize @w 0 `quot` 8
+        s <- takeExact $ byteCount @w 0
+        pure $ packReverse (monotoList s)
 
 
 {- | Parse a 'Word16' in little-endian format. -}

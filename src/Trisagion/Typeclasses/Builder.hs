@@ -22,7 +22,7 @@ import qualified Data.Text.Lazy as LazyText (Text)
 import qualified Data.Text.Lazy.Builder as Text (Builder, toLazyText, singleton, fromString, fromLazyText)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (ElementOf)
+import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable)

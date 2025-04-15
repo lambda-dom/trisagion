@@ -24,7 +24,8 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Void (Void, absurd)
 
 -- non-Hackage libraries.
-import Data.MonoFoldable (MonoFoldable (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.HasPosition (HasPosition (..))
@@ -32,7 +33,6 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser, ParserPE, InputError (..), (:+:), takePrefix, takePrefixWith)
 import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Parsers.ParseError (ValidationError (..), validate, capture, throwParseError)
-import Data.MonoFunctor (MonoFunctor(..))
 import Trisagion.Parsers.Streamable (eoi)
 
 

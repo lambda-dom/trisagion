@@ -40,7 +40,7 @@ import qualified Data.Vector.Unboxed as UnboxedVector (Vector, Unbox, uncons, nu
 import qualified Data.Vector.Storable as StorableVector (Vector, Storable, uncons, null)
 
 -- non-Hackage libraries.
-import Data.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 
 {- | The @Streamable@ typeclass of monomorphic, streamable functors.
