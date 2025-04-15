@@ -67,6 +67,7 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
         Trisagion.Typeclasses.Builder
+        Trisagion.Typeclasses.Mergeable
         Trisagion.Streams.Counter
         Trisagion.Parser
         Trisagion.Parsers.Combinators
