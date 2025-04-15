@@ -31,9 +31,9 @@ class (Monoid m, Streamable (BuilderOf m)) => Builder m where
     {- | The monoid-isomorphism with what the builder builds. -}
     unpack :: m -> BuilderOf m
 
-    {- | Build from an @'ElementOf' ('BuilderOf' m)@. -}
+    {- | Build from one @'ElementOf' ('BuilderOf' m)@. -}
     one :: ElementOf (BuilderOf m) -> m
 
-    {- | Build from a list of @'ElementOf' ('BuilderOf' m)@. -}
-    many :: [ElementOf (BuilderOf m)] -> m
+    {- | Build from a foldable of many @'ElementOf' ('BuilderOf' m)@. -}
+    many :: Foldable t => t (ElementOf (BuilderOf m)) -> m
     many = foldMap' one
