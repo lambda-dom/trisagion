@@ -1207,3 +1207,6 @@ repeat :: Word -> Parser s e a -> Parser s e [a]
 repeat 0 _ = pure []
 repeat n p = (:) <$> p <*> repeat (pred n) p
 ```
+
+## B. 5. Typeclasses for builders.
+
