@@ -1,2 +1,3 @@
-# trisagion
+# Trisagion.
+
 A monadic parsing library.
