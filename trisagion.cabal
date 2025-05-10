@@ -46,5 +46,6 @@ library
         -- GHC 9.6
         base >=4.18 && <4.19,
     other-modules:
+        Trisagion.Types.Result
     exposed-modules:
         Trisagion.Parser
