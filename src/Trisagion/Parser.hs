@@ -24,9 +24,16 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
+
+    -- * Parsers without errors.
+    lookAhead,
+    maybe,
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (maybe)
+
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
@@ -229,3 +236,19 @@ catch p h = Parser $ \ xs ->
     case run p xs of
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
+
+
+{- | Run the parser and return the result, but do not consume any input. -}
+lookAhead :: Parser s e a -> Parser s Void (e :+: a)
+lookAhead p = eval p <$> first absurd get
+
+{- | Run the parser and return the result as a 'Just'. If it errors, backtrack and return 'Nothing'.
+
+The difference with @'Control.Applicative.optional'@ is the more precise type signature.
+-}
+maybe :: Parser s e a -> Parser s Void (Maybe a)
+maybe p = rightToMaybe <$> try p
+    where
+        rightToMaybe :: e :+: a -> Maybe a
+        rightToMaybe (Left _)  = Nothing
+        rightToMaybe (Right x) = Just x
