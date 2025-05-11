@@ -26,8 +26,15 @@ module Trisagion.Parser (
     catch,
 
     -- * Parsers without errors.
+    value,
     lookAhead,
     maybe,
+
+    -- * 'Applicative' parsers.
+    skip,
+    before,
+    after,
+    between,
 ) where
 
 -- Imports.
@@ -37,6 +44,7 @@ import Prelude hiding (maybe)
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -238,7 +246,16 @@ catch p h = Parser $ \ xs ->
         Success x ys -> Success x ys
 
 
+{- | Embed a value in the 'Parser' monad.
+
+The difference with 'pure' from 'Applicative' is the more precise signature.
+-}
+{-# INLINE value #-}
+value :: a -> Parser s Void a
+value = pure
+
 {- | Run the parser and return the result, but do not consume any input. -}
+{-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = eval p <$> first absurd get
 
@@ -246,9 +263,41 @@ lookAhead p = eval p <$> first absurd get
 
 The difference with @'Control.Applicative.optional'@ is the more precise type signature.
 -}
+{-# INLINE maybe #-}
 maybe :: Parser s e a -> Parser s Void (Maybe a)
 maybe p = rightToMaybe <$> try p
     where
         rightToMaybe :: e :+: a -> Maybe a
         rightToMaybe (Left _)  = Nothing
         rightToMaybe (Right x) = Just x
+
+
+{- | Run the parser and discard the result. -}
+{-# INLINE skip #-}
+skip :: Parser s e a -> Parser s e ()
+skip = ($> ())
+
+{- | The parser @'before' b p@ parses @b@ and @p@ in succession, returning the result of @p@. -}
+{-# INLINE before #-}
+before
+    :: Parser s e b                     -- ^ Opening parser.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s e a
+before = (*>)
+
+{- | The parser @'after' a p@ parses @p@ and @a@ in succession, returning the result of @p@. -}
+{-# INLINE after #-}
+after
+    :: Parser s e b                     -- ^ Closing parser.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s e a
+after = flip (<*)
+
+{- | The parser @'between' o c p@ parses @o@, @p@ and @c@ in succession, returning the result of @p@. -}
+{-# INLINE between #-}
+between
+    :: Parser s e b                     -- ^ Opening parser.
+    -> Parser s e c                     -- ^ Closing parser.
+    -> Parser s e a                     -- ^ Parser to run in-between.
+    -> Parser s e a
+between open close = before open . after close
