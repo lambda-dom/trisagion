@@ -45,6 +45,7 @@ library
     build-depends:
         -- GHC 9.6
         base >=4.18 && <4.19,
+        mtl >=2.3 && <2.4,
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
