@@ -114,19 +114,19 @@ between
     -> Parser s e a
 between open close = before open . after close
 
-{- | Sequence two actions and zip the results in a pair. -}
+{- | Sequence two parsers and zip the results in a pair. -}
 {-# INLINE zip #-}
-zip :: Applicative m => m a -> m b -> m (a, b)
+zip :: Parser s e a -> Parser s e b -> Parser s e (a, b)
 zip = liftA2 (,)
 
-{- | Sequence two actions and zip the results with a binary function. -}
+{- | Sequence two parsers and zip the results with a binary function. -}
 {-# INLINE zipWith #-}
-zipWith :: Applicative m => (a -> b -> c) -> m a -> m b -> m c
+zipWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
 zipWith = liftA2
 
-{- | Run the action @n@ times and return the list of results. -}
+{- | Run the parser @n@ times and return the list of results. -}
 {-# INLINEABLE repeat #-}
-repeat :: Applicative m => Word -> m a -> m [a]
+repeat :: Word -> Parser s e a -> Parser s e [a]
 repeat n p = go n
     where
         go 0 = pure []
@@ -138,20 +138,20 @@ sequence :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 sequence = sequenceA
 
 
-{- | Choose between two alternatives.
+{- | Choose between two parsers.
 
-Run the first action and if it fails run the second. Return the results as an @'Either'@.
+Run the first parser and if it fails run the second. Return the results as an @'Either'@.
 -}
 {-# INLINE choose #-}
-choose :: Alternative m => m a -> m b -> m (a :+: b)
+choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
 choose q p = (Left <$> q) <|> (Right <$> p)
 
-{- | Pick between alternatives.
+{- | Pick between a list of parsers.
 
-Run the alternatives in succession returning the result of the first successful one.
+Run the parsers in succession returning the result of the first successful one.
 -}
 {-# INLINE pick #-}
-pick :: Alternative m => [m a] -> m a
+pick :: Monoid e => [Parser s e a] -> Parser s e a
 pick = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
@@ -202,7 +202,7 @@ skipSome p = p *> first absurd (skipMany p)
 
 {- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
 {-# INLINEABLE untilEnd #-}
-untilEnd :: (Monad m, Alternative m) => m a -> m a -> m (NonEmpty a)
+untilEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
 untilEnd end p = go
     where
         go = do
@@ -213,7 +213,7 @@ untilEnd end p = go
 
 {- | @'manyTill' end p@ runs @p@ until @end@ succeeds, returning the results of @p@. -}
 {-# INLINEABLE manyTill #-}
-manyTill :: (Monad m, Alternative m) => m a -> m b -> m [b]
+manyTill :: Monoid e => Parser s e a -> Parser s e b -> Parser s e [b]
 manyTill end p = go
     where
         go = do
