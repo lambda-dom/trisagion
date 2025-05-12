@@ -7,7 +7,6 @@ The @Parser@ monad.
 module Trisagion.Parser (
     -- * Type operators.
     (:+:),
-    (:*:),
 
     -- * The parsing monad.
     Parser,
@@ -20,10 +19,12 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
     try,
+    isolate,
 
     -- * Error parsers.
     throw,
     catch,
+
 ) where
 
 -- Imports.
@@ -42,10 +43,6 @@ import Trisagion.Types.Result (Result (..), toEither, withResult)
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:
-
-{- | Right-associative type operator version of the @(,)@ tuple type constructor. -}
-type a :*: b = (a, b)
-infixr 6 :*:
 
 
 {- | The parsing monad. -}
@@ -109,9 +106,9 @@ backtrack and run @q@ on the same input.
 The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
 
 prop> pure x <|> p == pure x
-prop> empty >>= f == empty
+prop> empty >>= h == empty
 
-but /not/ right catch and right zero @f >>= const empty == empty@, because of short-circuiting.
+but /not/ right catch and right zero @p >>= const empty == empty@, because of short-circuiting.
 
 note(s):
 
@@ -169,7 +166,7 @@ run (Parser p) = p
 
 {- | Parse the input and return the results. -}
 {-# INLINE parse #-}
-parse :: Parser s e a -> s -> e :+: (a :*: s)
+parse :: Parser s e a -> s -> e :+: (a, s)
 parse p = toEither . run p
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
@@ -212,6 +209,24 @@ try p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
+
+{- | Run a parser isolated to a prefix of the stream.
+
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
+'Control.Monad.guard' the parser to run with an appropriate check.
+-}
+{-# INLINE isolate #-}
+isolate
+    :: (s -> d :+: (s, s))              -- ^ Stream splitter with @'Left' d@ signalling an error.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) a
+isolate h p = Parser $ \xs ->
+    case h xs of
+        Left d                 -> Error $ Left d
+        Right (prefix, suffix) ->
+            case eval p prefix of
+                Left e  -> Error $ Right e
+                Right x -> Success x suffix
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
