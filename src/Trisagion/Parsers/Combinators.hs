@@ -9,7 +9,7 @@ module Trisagion.Parsers.Combinators (
     validate,
 
     -- * Parsers without errors.
-    maybeP,
+    maybe,
     lookAhead,
 
     -- * 'Applicative' parsers.
@@ -17,14 +17,19 @@ module Trisagion.Parsers.Combinators (
     before,
     after,
     between,
-    zipA,
-    zipWithA,
-    repeatA,
+    zip,
+    zipWith,
+    repeat,
+    sequence,
 
     -- * 'Alternative' parsers.
-    manyP,
-    someP,
+    many,
+    some,
+    skipMany,
+    skipSome,
     choose,
+    pick,
+    manyTill,
     untilEnd,
 
     -- * List parsers.
@@ -33,6 +38,9 @@ module Trisagion.Parsers.Combinators (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
+
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
 import Data.Bifunctor (Bifunctor (..))
@@ -45,6 +53,7 @@ import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Parser ((:+:), Parser, eval, get, try)
+import Data.Foldable (asum)
 
 
 {- | Run the parser and return the result, validating it. -}
@@ -60,14 +69,14 @@ validate v p = do
         Right y -> pure y
 
 
-{- | @'maybeP' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
+{- | @'maybe' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
 more precise type signature.
 -}
-{-# INLINE maybeP #-}
-maybeP :: Parser s e a -> Parser s Void (Maybe a)
-maybeP p = either (const Nothing) Just <$> try p
+{-# INLINE maybe #-}
+maybe :: Parser s e a -> Parser s Void (Maybe a)
+maybe p = either (const Nothing) Just <$> try p
 
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
@@ -106,31 +115,44 @@ between
 between open close = before open . after close
 
 {- | Sequence two actions and zip the results in a pair. -}
-{-# INLINE zipA #-}
-zipA :: Applicative m => m a -> m b -> m (a, b)
-zipA = liftA2 (,)
+{-# INLINE zip #-}
+zip :: Applicative m => m a -> m b -> m (a, b)
+zip = liftA2 (,)
 
 {- | Sequence two actions and zip the results with a binary function. -}
-{-# INLINE zipWithA #-}
-zipWithA :: Applicative m => (a -> b -> c) -> m a -> m b -> m c
-zipWithA = liftA2
+{-# INLINE zipWith #-}
+zipWith :: Applicative m => (a -> b -> c) -> m a -> m b -> m c
+zipWith = liftA2
 
 {- | Run the action @n@ times and return the list of results. -}
-{-# INLINEABLE repeatA #-}
-repeatA :: Applicative m => Word -> m a -> m [a]
-repeatA n p = go n
+{-# INLINEABLE repeat #-}
+repeat :: Applicative m => Word -> m a -> m [a]
+repeat n p = go n
     where
         go 0 = pure []
         go m = (:) <$> p <*> go (pred m)
 
+{- | Sequence a traversable of parsers and return the traversable of results. -}
+{-# INLINE sequence #-}
+sequence :: Traversable t => t (Parser s e a) -> Parser s e (t a)
+sequence = sequenceA
 
-{- | Choose between alternatives.
+
+{- | Choose between two alternatives.
 
 Run the first action and if it fails run the second. Return the results as an @'Either'@.
 -}
 {-# INLINE choose #-}
 choose :: Alternative m => m a -> m b -> m (a :+: b)
 choose q p = (Left <$> q) <|> (Right <$> p)
+
+{- | Pick between alternatives.
+
+Run the alternatives in succession returning the result of the first successful one.
+-}
+{-# INLINE pick #-}
+pick :: Alternative m => [m a] -> m a
+pick = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
 
@@ -139,13 +161,13 @@ precise type signature.
 
 note(s):
 
-  * The @'manyP' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
+  * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
   does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
   variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
 -}
-{-# INLINEABLE manyP #-}
-manyP :: Parser s e a -> Parser s Void [a]
-manyP p = go
+{-# INLINEABLE many #-}
+many :: Parser s e a -> Parser s Void [a]
+many p = go
     where
         go = do
             r <- try p
@@ -153,14 +175,30 @@ manyP p = go
                 Left _  -> pure []
                 Right x -> (x :) <$> go
 
-{- | Run the parser one or more times and return the results as a @'NonEmpty'@.
+{- | Run the parser one or more times until it fails and return the results as a @'NonEmpty'@.
 
 The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
 precise type signature.
 -}
-{-# INLINEABLE someP #-}
-someP :: Parser s e a -> Parser s e (NonEmpty a)
-someP p = liftA2 (:|) p (first absurd $ manyP p)
+{-# INLINEABLE some #-}
+some :: Parser s e a -> Parser s e (NonEmpty a)
+some p = liftA2 (:|) p (first absurd $ many p)
+
+{- | Run the parser zero or more times until it fails and discard the results. -}
+{-# INLINEABLE skipMany #-}
+skipMany :: Parser s e a -> Parser s Void ()
+skipMany p = go
+    where
+        go = do
+            r <- try p
+            case r of
+                Left _  -> pure ()
+                Right _ -> go
+
+{- | Run the parser one or more times until it fails and discard the results. -}
+{-# INLINE skipSome #-}
+skipSome :: Parser s e a -> Parser s e ()
+skipSome p = p *> first absurd (skipMany p)
 
 {- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
 {-# INLINEABLE untilEnd #-}
@@ -173,6 +211,17 @@ untilEnd end p = go
                 Left e  -> pure $ e :| []
                 Right x -> (x <|) <$> go
 
+{- | @'manyTill' end p@ runs @p@ until @end@ succeeds, returning the results of @p@. -}
+{-# INLINEABLE manyTill #-}
+manyTill :: (Monad m, Alternative m) => m a -> m b -> m [b]
+manyTill end p = go
+    where
+        go = do
+            r <- choose end p
+            case r of
+                Left _  -> pure []
+                Right x -> (x :) <$> go
+
 {- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
 {-# INLINEABLE sepBy #-}
 sepBy :: Parser s e a -> Parser s e b -> Parser s Void [b]
@@ -180,7 +229,7 @@ sepBy sep p = do
     x <- try p
     case x of
         Left _  -> pure []
-        Right y -> (y :) <$> manyP (before sep p)
+        Right y -> (y :) <$> many (before sep p)
 
 {- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
 {-# INLINEABLE sepBy1 #-}
