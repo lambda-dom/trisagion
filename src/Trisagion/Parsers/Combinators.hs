@@ -60,7 +60,11 @@ validate v p = do
         Right y -> pure y
 
 
-{- | @'maybeP' p@ runs @p@ returning the result as a 'Just'. If it fails, backtrack and return 'Nothing'. -}
+{- | @'maybeP' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
+
+The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
+more precise type signature.
+-}
 {-# INLINE maybeP #-}
 maybeP :: Parser s e a -> Parser s Void (Maybe a)
 maybeP p = either (const Nothing) Just <$> try p
@@ -104,7 +108,7 @@ between open close = before open . after close
 {- | Sequence two actions and zip the results in a pair. -}
 {-# INLINE zipA #-}
 zipA :: Applicative m => m a -> m b -> m (a, b)
-zipA = zipWithA (,)
+zipA = liftA2 (,)
 
 {- | Sequence two actions and zip the results with a binary function. -}
 {-# INLINE zipWithA #-}
@@ -172,9 +176,13 @@ untilEnd end p = go
 {- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
 {-# INLINEABLE sepBy #-}
 sepBy :: Parser s e a -> Parser s e b -> Parser s Void [b]
-sepBy sep = manyP . before sep
+sepBy sep p = do
+    x <- try p
+    case x of
+        Left _  -> pure []
+        Right y -> (y :) <$> manyP (before sep p)
 
 {- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
 {-# INLINEABLE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
-sepBy1 sep p = zipWithA (:|) p (first absurd $ sepBy sep p)
+sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)
