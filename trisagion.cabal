@@ -49,6 +49,7 @@ library
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
+        Trisagion.Types.ParseError
         Trisagion.Typeclasses.HasPosition
         Trisagion.Parser
         Trisagion.Parsers.Combinators
