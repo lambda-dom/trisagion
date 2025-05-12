@@ -7,7 +7,6 @@ The @Parser@ monad.
 module Trisagion.Parser (
     -- * Type operators.
     (:+:),
-    (:*:),
 
     -- * The parsing monad.
     Parser,
@@ -25,31 +24,13 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
-    validate,
 
-    -- * Parsers without errors.
-    value,
-    lookAhead,
-
-    -- * 'Applicative' parsers.
-    skip,
-    before,
-    after,
-    between,
-
-    -- * 'Alternative' parsers.
-    choose,
-    many,
-    some,
-    untilEnd,
 ) where
 
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Functor (($>))
-import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -62,10 +43,6 @@ import Trisagion.Types.Result (Result (..), toEither, withResult)
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:
-
-{- | Right-associative type operator version of the @(,)@ tuple type constructor. -}
-type a :*: b = (a, b)
-infixr 6 :*:
 
 
 {- | The parsing monad. -}
@@ -93,7 +70,7 @@ instance Applicative (Parser s e) where
     pure :: a -> Parser s e a
     pure x = Parser $ \ s -> Success x s
 
-    {-# INLINE (<*>) #-}
+    {-# INLINEABLE (<*>) #-}
     (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
     (<*>) p q = Parser $ \ xs ->
         case run p xs of
@@ -113,7 +90,7 @@ note(s):
   * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
 -}
 instance Monad (Parser s e) where
-    {-# INLINE (>>=) #-}
+    {-# INLINEABLE (>>=) #-}
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
     (>>=) p h = Parser $ \ xs ->
         case run p xs of
@@ -142,7 +119,7 @@ instance Monoid e => Alternative (Parser s e) where
     empty :: Parser s e a
     empty = Parser $ const (Error mempty)
 
-    {-# INLINE (<|>) #-}
+    {-# INLINEABLE (<|>) #-}
     (<|>) :: Parser s e a -> Parser s e a -> Parser s e a
     (<|>) p q = Parser $ \ s ->
         case run p s of
@@ -173,7 +150,7 @@ instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
     throwError = fmap absurd . throw
 
-    {-# INLINE catchError #-}
+    {-# INLINEABLE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
     catchError p h = Parser $ \ s ->
         -- Case statement instead of 'catch' to make use of sharing in the Success branch.
@@ -189,7 +166,7 @@ run (Parser p) = p
 
 {- | Parse the input and return the results. -}
 {-# INLINE parse #-}
-parse :: Parser s e a -> s -> e :+: (a :*: s)
+parse :: Parser s e a -> s -> e :+: (a, s)
 parse p = toEither . run p
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
@@ -226,7 +203,7 @@ get = Parser $ \ s -> Success s s
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
 backtracks and returns the error as a 'Left'.
 -}
-{-# INLINE try #-}
+{-# INLINEABLE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
 try p = Parser $ \ xs ->
     case run p xs of
@@ -238,7 +215,7 @@ try p = Parser $ \ xs ->
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
 'Control.Monad.guard' the parser to run with an appropriate check.
 -}
-{-# INLINE isolate #-}
+{-# INLINEABLE isolate #-}
 isolate
     :: (s -> d :+: (s, s))              -- ^ Stream splitter with @'Left' d@ signalling an error.
     -> Parser s e a                     -- ^ Parser to run.
@@ -258,7 +235,7 @@ throw :: e -> Parser s e Void
 throw e = Parser $ const (Error e)
 
 {- | Type-changing version of 'catchError'. -}
-{-# INLINE catch #-}
+{-# INLINEABLE catch #-}
 catch
     :: Parser s d a                     -- ^ Parser to try.
     -> (d -> Parser s e a)              -- ^ Error handler.
@@ -267,108 +244,3 @@ catch p h = Parser $ \ xs ->
     case run p xs of
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
-
-{- | Run the parser and return the result, validating it. -}
-{-# INLINE validate #-}
-validate
-    :: (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
-validate v p = do
-    x <- first Right p
-    case v x of
-        Left d  -> throwError $ Left d
-        Right y -> pure y
-
-
-{- | Embed a value in the 'Parser' monad.
-
-The difference with 'pure' from 'Applicative' is the more precise signature.
--}
-{-# INLINE value #-}
-value :: a -> Parser s Void a
-value = pure
-
-{- | Run the parser and return the result, but do not consume any input. -}
-{-# INLINE lookAhead #-}
-lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = eval p <$> first absurd get
-
-
-{- | Run the parser and discard the result. -}
-{-# INLINE skip #-}
-skip :: Parser s e a -> Parser s e ()
-skip = ($> ())
-
-{- | The parser @'before' b p@ runs @b@ and @p@ in succession, returning the result of @p@. -}
-{-# INLINE before #-}
-before
-    :: Parser s e b                     -- ^ Opening parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-before = (*>)
-
-{- | The parser @'after' a p@ runs @p@ and @a@ in succession, returning the result of @p@. -}
-{-# INLINE after #-}
-after
-    :: Parser s e b                     -- ^ Closing parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-after = flip (<*)
-
-{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
-{-# INLINE between #-}
-between
-    :: Parser s e b                     -- ^ Opening parser.
-    -> Parser s e c                     -- ^ Closing parser.
-    -> Parser s e a                     -- ^ Parser to run in-between.
-    -> Parser s e a
-between open close = before open . after close
-
-
-{- | Choose between alternatives.
-
-Run the first alternative and if it fails run the second. Return the result as an @'Either'@.
--}
-{-# INLINE choose #-}
-choose :: Alternative m => m a -> m b -> m (a :+: b)
-choose q p = (Left <$> q) <|> (Right <$> p)
-
-{- | Run the parser zero or more times until it fails, returning the list of results.
-
-The difference with @'Control.Applicative.many'@ from 'Control.Applicative.Alternative' is the more
-precise type signature.
-
-note(s):
-
-  * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
-  does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
-  variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
--}
-many :: Parser s e a -> Parser s Void [a]
-many p = go
-    where
-        go = do
-            r <- try p
-            case r of
-                Left _  -> pure []
-                Right x -> (x :) <$> go
-
-{- | Run the parser one or more times and return the results as a @'NonEmpty'@.
-
-The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
-precise type signature.
--}
-{-# INLINE some #-}
-some :: Parser s e a -> Parser s e (NonEmpty a)
-some p = liftA2 (:|) p (first absurd $ many p)
-
-{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
-untilEnd :: (Monad m, Alternative m) => m a -> m a -> m (NonEmpty a)
-untilEnd end p = go
-    where
-        go = do
-            r <- choose end p
-            case r of
-                Left e  -> pure $ e :| []
-                Right x -> (x <|) <$> go

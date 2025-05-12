@@ -50,3 +50,4 @@ library
         Trisagion.Types.Result
     exposed-modules:
         Trisagion.Parser
+        Trisagion.Parsers.Combinators
