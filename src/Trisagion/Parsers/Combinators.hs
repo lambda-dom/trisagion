@@ -57,7 +57,7 @@ import Data.Foldable (asum)
 
 
 {- | Run the parser and return the result, validating it. -}
-{-# INLINEABLE validate #-}
+{-# INLINE validate #-}
 validate
     :: (a -> d :+: b)                   -- ^ Validator.
     -> Parser s e a                     -- ^ Parser to run.
@@ -180,7 +180,7 @@ many p = go
 The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
 precise type signature.
 -}
-{-# INLINEABLE some #-}
+{-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
 some p = liftA2 (:|) p (first absurd $ many p)
 
@@ -223,7 +223,7 @@ manyTill end p = go
                 Right x -> (x :) <$> go
 
 {- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
-{-# INLINEABLE sepBy #-}
+{-# INLINE sepBy #-}
 sepBy :: Parser s e a -> Parser s e b -> Parser s Void [b]
 sepBy sep p = do
     x <- try p
@@ -232,6 +232,6 @@ sepBy sep p = do
         Right y -> (y :) <$> many (before sep p)
 
 {- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
-{-# INLINEABLE sepBy1 #-}
+{-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
 sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)

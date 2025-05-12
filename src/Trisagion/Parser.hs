@@ -70,7 +70,7 @@ instance Applicative (Parser s e) where
     pure :: a -> Parser s e a
     pure x = Parser $ \ s -> Success x s
 
-    {-# INLINEABLE (<*>) #-}
+    {-# INLINE (<*>) #-}
     (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
     (<*>) p q = Parser $ \ xs ->
         case run p xs of
@@ -90,7 +90,7 @@ note(s):
   * As with @p \<*\> q@, @p >>= f@ short-circuits on @p@ erroring out.
 -}
 instance Monad (Parser s e) where
-    {-# INLINEABLE (>>=) #-}
+    {-# INLINE (>>=) #-}
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
     (>>=) p h = Parser $ \ xs ->
         case run p xs of
@@ -119,7 +119,7 @@ instance Monoid e => Alternative (Parser s e) where
     empty :: Parser s e a
     empty = Parser $ const (Error mempty)
 
-    {-# INLINEABLE (<|>) #-}
+    {-# INLINE (<|>) #-}
     (<|>) :: Parser s e a -> Parser s e a -> Parser s e a
     (<|>) p q = Parser $ \ s ->
         case run p s of
@@ -150,7 +150,7 @@ instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
     throwError = fmap absurd . throw
 
-    {-# INLINEABLE catchError #-}
+    {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
     catchError p h = Parser $ \ s ->
         -- Case statement instead of 'catch' to make use of sharing in the Success branch.
@@ -203,7 +203,7 @@ get = Parser $ \ s -> Success s s
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
 backtracks and returns the error as a 'Left'.
 -}
-{-# INLINEABLE try #-}
+{-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
 try p = Parser $ \ xs ->
     case run p xs of
@@ -215,7 +215,7 @@ try p = Parser $ \ xs ->
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
 'Control.Monad.guard' the parser to run with an appropriate check.
 -}
-{-# INLINEABLE isolate #-}
+{-# INLINE isolate #-}
 isolate
     :: (s -> d :+: (s, s))              -- ^ Stream splitter with @'Left' d@ signalling an error.
     -> Parser s e a                     -- ^ Parser to run.
@@ -235,7 +235,7 @@ throw :: e -> Parser s e Void
 throw e = Parser $ const (Error e)
 
 {- | Type-changing version of 'catchError'. -}
-{-# INLINEABLE catch #-}
+{-# INLINE catch #-}
 catch
     :: Parser s d a                     -- ^ Parser to try.
     -> (d -> Parser s e a)              -- ^ Error handler.
