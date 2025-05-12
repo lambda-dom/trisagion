@@ -1,7 +1,8 @@
 {- |
 Module: Trisagion.Parsers.Combinators
 
-Various parser combinators.
+Various parser combinators. The module should be imported qualified because some of the exported
+conflict with base.
 -}
 
 module Trisagion.Parsers.Combinators (
