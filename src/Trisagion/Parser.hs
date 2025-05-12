@@ -20,10 +20,13 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
     try,
+    isolate,
 
     -- * Error parsers.
     throw,
     catch,
+    validate,
+    guardWith,
 
     -- * Parsers without errors.
     value,
@@ -228,6 +231,24 @@ try p = Parser $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
+{- | Run a parser isolated to a prefix of the stream.
+
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
+parser to run with an appropriate check -- see 'guardWith'.
+-}
+{-# INLINE isolate #-}
+isolate
+    :: (s -> d :+: (s, s))              -- ^ Stream splitter with @'Left' d@ signalling an error.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) a
+isolate h p = Parser $ \xs ->
+    case h xs of
+        Left d                 -> Error $ Left d
+        Right (prefix, suffix) ->
+            case eval p prefix of
+                Left e  -> Error $ Right e
+                Right x -> Success x suffix
+
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
 {-# INLINE throw #-}
@@ -245,6 +266,35 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) b
+validate v p = do
+    x <- first Right p
+    case v x of
+        Left d  -> throwError $ Left d
+        Right y -> pure y
+
+{- | Guard a parser with a monadic post-condition.
+
+A generalization of 'validate', where the post-condition can depend on the parser state. The
+post-condition parser is not allowed to throw an error, because first, ideally it should not
+consume input and second, the error part of the type signature is already complicated.
+-}
+{-# INLINE guardWith #-}
+guardWith
+    :: (a -> Parser s Void (d :+: b))   -- ^ Post-condition.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) b
+guardWith v p = do
+    x <- first Right p
+    b <- first absurd $ v x
+    case b of
+        Left d  -> throwError $ Left d
+        Right y -> pure y
 
 {- | Embed a value in the 'Parser' monad.
 
@@ -277,7 +327,7 @@ maybe p = rightToMaybe <$> try p
 skip :: Parser s e a -> Parser s e ()
 skip = ($> ())
 
-{- | The parser @'before' b p@ parses @b@ and @p@ in succession, returning the result of @p@. -}
+{- | The parser @'before' b p@ runs @b@ and @p@ in succession, returning the result of @p@. -}
 {-# INLINE before #-}
 before
     :: Parser s e b                     -- ^ Opening parser.
@@ -285,7 +335,7 @@ before
     -> Parser s e a
 before = (*>)
 
-{- | The parser @'after' a p@ parses @p@ and @a@ in succession, returning the result of @p@. -}
+{- | The parser @'after' a p@ runs @p@ and @a@ in succession, returning the result of @p@. -}
 {-# INLINE after #-}
 after
     :: Parser s e b                     -- ^ Closing parser.
@@ -293,7 +343,7 @@ after
     -> Parser s e a
 after = flip (<*)
 
-{- | The parser @'between' o c p@ parses @o@, @p@ and @c@ in succession, returning the result of @p@. -}
+{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
 {-# INLINE between #-}
 between
     :: Parser s e b                     -- ^ Opening parser.
