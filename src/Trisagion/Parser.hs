@@ -118,6 +118,10 @@ The @'empty'@ parser fails unconditionally with the monoid unit for @e@. The par
 represents choice. First run @p@ and if successful return the result. If it throws an error,
 backtrack and run @q@ on the same input.
 
+note(s):
+
+  * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+
 The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
 
 prop> pure x <|> p == pure x
@@ -131,10 +135,6 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 prop> (f <|> g) <*> x == (f <*> x) <|> (g <*> y)
-
-note(s):
-
-  * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
