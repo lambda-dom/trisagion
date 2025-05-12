@@ -24,7 +24,6 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
-
 ) where
 
 -- Imports.
@@ -49,7 +48,23 @@ infixr 6 :+:
 newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
 
-{- | The 'Bifunctor' instance, providing functoriality in the error type. -}
+{- | The 'Bifunctor' instance, providing functoriality in the error type.
+
+For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. Specifically,
+@'first' f@ preserves the 'Applicative' structure,
+
+prop> first f . pure == pure
+prop> (first f p) <*> (first f q) == first f (p <*> q)
+
+the 'Monad' structure,
+
+prop> (first f p) >>= (first f .  h) == first f (p >>= h)
+
+and the 'Alternative' structure,
+
+prop> first f empty == empty
+prop> (first f p) <|> (first f q) == first f (p <|> q)
+-}
 instance Bifunctor (Parser s) where
     {-# INLINE bimap #-}
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
@@ -103,12 +118,19 @@ The @'empty'@ parser fails unconditionally with the monoid unit for @e@. The par
 represents choice. First run @p@ and if successful return the result. If it throws an error,
 backtrack and run @q@ on the same input.
 
-The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
+The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
 
 prop> pure x <|> p == pure x
+prop> empty <*> p == empty
 prop> empty >>= h == empty
 
-but /not/ right catch and right zero @p >>= const empty == empty@, because of short-circuiting.
+but /not/ their right-sided versions because of short-circuiting.
+
+Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
+'Alternative' structure satisfies both /left/ and /right distributivity/:
+
+prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
+prop> (f <|> g) <*> x == (f <*> x) <|> (g <*> y)
 
 note(s):
 
