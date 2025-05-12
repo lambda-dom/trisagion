@@ -26,7 +26,6 @@ module Trisagion.Parser (
     throw,
     catch,
     validate,
-    guardWith,
 
     -- * Parsers without errors.
     value,
@@ -233,8 +232,8 @@ try p = Parser $ \ xs ->
 
 {- | Run a parser isolated to a prefix of the stream.
 
-Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable, guard the
-parser to run with an appropriate check -- see 'guardWith'.
+Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
+'Control.Monad.guard' the parser to run with an appropriate check.
 -}
 {-# INLINE isolate #-}
 isolate
@@ -278,23 +277,6 @@ validate v p = do
         Left d  -> throwError $ Left d
         Right y -> pure y
 
-{- | Guard a parser with a monadic post-condition.
-
-A generalization of 'validate', where the post-condition can depend on the parser state. The
-post-condition parser is not allowed to throw an error, because first, ideally it should not
-consume input and second, the error part of the type signature is already complicated.
--}
-{-# INLINE guardWith #-}
-guardWith
-    :: (a -> Parser s Void (d :+: b))   -- ^ Post-condition.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
-guardWith v p = do
-    x <- first Right p
-    b <- first absurd $ v x
-    case b of
-        Left d  -> throwError $ Left d
-        Right y -> pure y
 
 {- | Embed a value in the 'Parser' monad.
 
