@@ -38,9 +38,10 @@ module Trisagion.Parser (
     between,
 
     -- * 'Alternative' parsers.
-    eitherA,
+    choose,
     many,
     some,
+    untilEnd,
 ) where
 
 -- Imports.
@@ -48,7 +49,7 @@ module Trisagion.Parser (
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -325,10 +326,13 @@ between
 between open close = before open . after close
 
 
-{- | Run the first alternative and if it fails run the second. Return the result as an @'Either'@. -}
-{-# INLINE eitherA #-}
-eitherA :: Alternative m => m a -> m b -> m (a :+: b)
-eitherA q p = (Left <$> q) <|> (Right <$> p)
+{- | Choose between alternatives.
+
+Run the first alternative and if it fails run the second. Return the result as an @'Either'@.
+-}
+{-# INLINE choose #-}
+choose :: Alternative m => m a -> m b -> m (a :+: b)
+choose q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
 
@@ -358,3 +362,13 @@ precise type signature.
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
 some p = liftA2 (:|) p (first absurd $ many p)
+
+{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
+untilEnd :: (Monad m, Alternative m) => m a -> m a -> m (NonEmpty a)
+untilEnd end p = go
+    where
+        go = do
+            r <- choose end p
+            case r of
+                Left e  -> pure $ e :| []
+                Right x -> (x <|) <$> go
