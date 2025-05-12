@@ -30,23 +30,25 @@ module Trisagion.Parser (
     -- * Parsers without errors.
     value,
     lookAhead,
-    maybe,
 
     -- * 'Applicative' parsers.
     skip,
     before,
     after,
     between,
+
+    -- * 'Alternative' parsers.
+    eitherA,
+    many,
+    some,
 ) where
 
 -- Imports.
--- Prelude hiding.
-import Prelude hiding (maybe)
-
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -126,9 +128,9 @@ backtrack and run @q@ on the same input.
 The 'Alternative' instance obeys the /left catch/ and /left zero/ laws,
 
 prop> pure x <|> p == pure x
-prop> empty >>= f == empty
+prop> empty >>= h == empty
 
-but /not/ right catch and right zero @f >>= const empty == empty@, because of short-circuiting.
+but /not/ right catch and right zero @p >>= const empty == empty@, because of short-circuiting.
 
 note(s):
 
@@ -291,18 +293,6 @@ value = pure
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = eval p <$> first absurd get
 
-{- | Run the parser and return the result as a 'Just'. If it errors, backtrack and return 'Nothing'.
-
-The difference with @'Control.Applicative.optional'@ is the more precise type signature.
--}
-{-# INLINE maybe #-}
-maybe :: Parser s e a -> Parser s Void (Maybe a)
-maybe p = rightToMaybe <$> try p
-    where
-        rightToMaybe :: e :+: a -> Maybe a
-        rightToMaybe (Left _)  = Nothing
-        rightToMaybe (Right x) = Just x
-
 
 {- | Run the parser and discard the result. -}
 {-# INLINE skip #-}
@@ -333,3 +323,38 @@ between
     -> Parser s e a                     -- ^ Parser to run in-between.
     -> Parser s e a
 between open close = before open . after close
+
+
+{- | Run the first alternative and if it fails run the second. Return the result as an @'Either'@. -}
+{-# INLINE eitherA #-}
+eitherA :: Alternative m => m a -> m b -> m (a :+: b)
+eitherA q p = (Left <$> q) <|> (Right <$> p)
+
+{- | Run the parser zero or more times until it fails, returning the list of results.
+
+The difference with @'Control.Applicative.many'@ from 'Control.Applicative.Alternative' is the more
+precise type signature.
+
+note(s):
+
+  * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
+  does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
+  variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
+-}
+many :: Parser s e a -> Parser s Void [a]
+many p = go
+    where
+        go = do
+            r <- try p
+            case r of
+                Left _  -> pure []
+                Right x -> (x :) <$> go
+
+{- | Run the parser one or more times and return the results as a @'NonEmpty'@.
+
+The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
+precise type signature.
+-}
+{-# INLINE some #-}
+some :: Parser s e a -> Parser s e (NonEmpty a)
+some p = liftA2 (:|) p (first absurd $ many p)
