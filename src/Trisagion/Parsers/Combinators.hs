@@ -45,6 +45,7 @@ import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (asum)
 import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.Void (Void, absurd)
@@ -54,7 +55,6 @@ import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Parser ((:+:), Parser, eval, get, try)
-import Data.Foldable (asum)
 
 
 {- | Run the parser and return the result, validating it. -}
@@ -147,12 +147,12 @@ Run the first parser and if it fails run the second. Return the results as an @'
 choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
 choose q p = (Left <$> q) <|> (Right <$> p)
 
-{- | Pick between a list of parsers.
+{- | Pick between a foldable of parsers.
 
 Run the parsers in succession returning the result of the first successful one.
 -}
 {-# INLINE pick #-}
-pick :: Monoid e => [Parser s e a] -> Parser s e a
+pick :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
 pick = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
