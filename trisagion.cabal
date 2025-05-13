@@ -50,6 +50,8 @@ library
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
+        Trisagion.Types.Error
         Trisagion.Types.ParseError
         Trisagion.Parser
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.ParseError

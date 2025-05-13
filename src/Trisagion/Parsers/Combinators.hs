@@ -12,6 +12,7 @@ module Trisagion.Parsers.Combinators (
     -- * Parsers without errors.
     maybe,
     lookAhead,
+    failIff,
 
     -- * 'Applicative' parsers.
     skip,
@@ -30,8 +31,9 @@ module Trisagion.Parsers.Combinators (
     skipSome,
     choose,
     pick,
-    manyTill,
+    until,
     untilEnd,
+    manyTill,
 
     -- * List parsers.
     sepBy,
@@ -40,7 +42,7 @@ module Trisagion.Parsers.Combinators (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
+import Prelude hiding (maybe, repeat, sequence, until, zip, zipWith)
 
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
@@ -54,7 +56,7 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError (..))
 
 -- Package.
-import Trisagion.Parser ((:+:), Parser, eval, get, try)
+import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
 
 
 {- | Run the parser and return the result, validating it. -}
@@ -83,6 +85,22 @@ maybe p = either (const Nothing) Just <$> try p
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = eval p <$> get
+
+{- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
+
+The parser does not consume input and throws the monoid unit for @e@ if @p@ succeeds.
+
+note(s):
+
+  * This parser can be used to implement the longest match rule -- see 'until'.
+-}
+{-# INLINE failIff #-}
+failIff :: Monoid e => Parser s e a -> Parser s e ()
+failIff p = do
+    r <- first absurd $ lookAhead p
+    case r of
+        Left  _ -> pure ()
+        Right _ -> absurd <$> throw mempty
 
 
 {- | Run the parser and discard the result. -}
@@ -200,6 +218,20 @@ skipMany p = go
 {-# INLINE skipSome #-}
 skipSome :: Parser s e a -> Parser s e ()
 skipSome p = p *> first absurd (skipMany p)
+
+{- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds.
+
+note(s):
+
+  * The difference with 'manyTill' is that the @end@ parser will not consume any input.
+-}
+{-# INLINE until #-}
+until
+    :: Monoid e
+    => Parser s e b                   -- ^ Closing parser.
+    -> Parser s e a                   -- ^ Parser to run.
+    -> Parser s Void [a]
+until end p = many $ failIff end *> p
 
 {- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
 {-# INLINEABLE untilEnd #-}
