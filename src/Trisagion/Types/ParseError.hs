@@ -5,145 +5,150 @@ The @ParseError@ error type.
 -}
 
 module Trisagion.Types.ParseError (
-    -- * Types.
+    -- * The basic error type.
+    ErrorItem,
+
+    -- ** Constructors.
+    makeErrorItem,
+
+    -- ** Lenses.
+    input,
+    tag,
+
+    -- * The 'ParseError' error type.
     ParseError,
 
     -- ** Constructors.
-    makeParseError,
-    makeBacktrace,
+    singleton,
+    cons,
 
-    -- ** Prisms.
-    stream,
-    tag,
-    backtrace,
-
-    -- * Elimination functions.
-    withParseError,
-    initial,
+    -- ** Elimination functions.
+    trace,
+    top,
+    unconsWith,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
-import Data.Void (Void)
 
--- Package.
-import Trisagion.Typeclasses.HasPosition (HasPosition (..))
+-- Library.
+import Optics.Lens (Lens', lens)
 
 
-{- | The @ParseError s e@ error type. -}
+{- | The t'ErrorItem' error type with input stream @s@ and error tag @e@. -}
+data ErrorItem s e = ErrorItem !s !e
+    deriving stock (Eq, Show, Functor)
+
+
+{- | Construct an t'ErrorItem' from an input stream and an error tag. -}
+{-# INLINE makeErrorItem #-}
+makeErrorItem :: s -> e -> ErrorItem s e
+makeErrorItem = ErrorItem
+
+
+{- | The lens for the input stream of an t'ErrorItem'. -}
+{-# INLINE input #-}
+input :: Lens' (ErrorItem s e) s
+input = lens get set
+    where
+        get :: ErrorItem s e -> s
+        get (ErrorItem xs _) = xs
+
+        set :: ErrorItem s e -> s -> ErrorItem s e
+        set (ErrorItem _ err) xs = ErrorItem xs err
+
+{- | The lens for the error tag of an t'ErrorItem'. -}
+{-# INLINE tag #-}
+tag :: Lens' (ErrorItem s e) e
+tag = lens get set
+    where
+        get :: ErrorItem s e -> e
+        get (ErrorItem _ err) = err
+
+        set :: ErrorItem s e -> e -> ErrorItem s e
+        set (ErrorItem xs _) = ErrorItem xs
+
+
+{- | The 'ParseError' type. -}
 data ParseError s e where
-    -- | Error with no indication of its origin. The monoid unit for 'ParseError'.
-    Fail :: ParseError s e
+    -- | The Empty constructor, the monoid unit for 'ParseError'.
+    Empty :: ParseError s e
 
-    -- | Error without a backtrace.
-    Error
-        :: !s                           -- ^ Input stream.
-        -> !e                           -- ^ Error tag.
-        -> ParseError s e
+    -- | A 'ParseError' with no backtrace.
+    Single :: !(ErrorItem s e) -> ParseError s e
 
-    -- | Error with a backtrace.
-    Backtrace
+    -- | A 'ParseError' with a backtrace.
+    Cons
         :: (Typeable d, Eq d, Show d)
-        => ParseError s d               -- ^ Backtrace. Lazy for list-like behavior.
-        -> !s                           -- ^ Input stream.
-        -> !e                           -- ^ Error tag.
+        => !(ErrorItem s e)             -- ^ Error at the top of the stack.
+        -> ParseError s d               -- ^ Backtrace.
         -> ParseError s e
 
 -- Instances.
-deriving stock instance (Show s, Show e) => Show (ParseError s e)
 deriving stock instance Functor (ParseError s)
+deriving stock instance (Show s, Show e) => Show (ParseError s e)
 
 instance (Eq s, Eq e) => Eq (ParseError s e) where
+    {-# INLINEABLE (==) #-}
     (==) :: ParseError s e -> ParseError s e -> Bool
-    (==) Fail Fail = True
-    (==) (Error s e) (Error s' e') = e == e' && s == s'
-    (==) (Backtrace (b :: ParseError s d) s e ) (Backtrace (b' :: ParseError s d') s' e') =
+    (==) Empty Empty = True
+    (==) (Single e) (Single e') = e == e'
+    (==) (Cons e (b :: ParseError s d) ) (Cons e' (b' :: ParseError s d')) =
         case eqT @d @d' of
             Nothing   -> False
-            Just Refl -> e == e' && s == s' && b == b'
+            Just Refl -> e == e' && b == b'
     (==) _ _ = False
 
-{- | The 'Bifunctor' instance. -}
-instance Bifunctor ParseError where
-    bimap :: forall s t d e . (s -> t) -> (d -> e) -> ParseError s d -> ParseError t e
-    bimap _ _ Fail              = Fail
-    bimap f g (Error s e)       = Error (f s) (g e)
-    bimap f g (Backtrace b s e) = Backtrace (first f b) (f s) (g e)
-
 instance Semigroup (ParseError s e) where
+    {-# INLINE (<>) #-}
     (<>) :: ParseError s e -> ParseError s e -> ParseError s e
-    (<>) Fail x = x
+    (<>) Empty x = x
     (<>) x    _ = x
 
 instance Monoid (ParseError s e) where
+    {-# INLINE mempty #-}
     mempty :: ParseError s e
-    mempty = Fail
+    mempty = Empty
 
 
-{- | Construct a 'ParseError' value with no backtrace. -}
-makeParseError
-    :: HasPosition s
-    => s                                -- ^ Input stream.
-    -> e                                -- ^ Error tag.
-    -> ParseError (PositionOf s) e
-makeParseError s = Error (position s)
+{- | Construct a 'ParseError' with no backtrace -}
+{-# INLINE singleton #-}
+singleton :: ErrorItem s e -> ParseError s e
+singleton = Single
 
-{- | Construct a 'ParseError' value with a backtrace.
+{- | Construct a 'ParseError' from an error and a backtrace.
 
 note(s):
 
-    * Since a @Fail@ backtrace is functionally equivalent to no backtrace, 'makeBacktrace'
-    normalizes it.
+  * Performs normalization on an empty backtrace.
 -}
-makeBacktrace
-    :: forall d s e . (HasPosition s, Typeable d, Eq d, Show d)
-    => ParseError (PositionOf s) d      -- ^ Backtrace.
-    -> s                                -- ^ Input stream.
-    -> e                                -- ^ Error tag.
-    -> ParseError (PositionOf s) e
-makeBacktrace b s =
-    case b of
-        Fail -> Error (position s)
-        _    -> Backtrace b (position s)
+{-# INLINE cons #-}
+cons :: (Typeable d, Eq d, Show d) => ErrorItem s e -> ParseError s d -> ParseError s e
+cons err Empty = Single err
+cons err back  = Cons err back
 
 
-{- | Prism for the input stream component. -}
-stream :: ParseError s e -> Maybe s
-stream Fail              = Nothing
-stream (Error s _)       = Just s
-stream (Backtrace _ s _) = Just s
-
-{- | Prism for the error tag. -}
-tag :: ParseError s e -> Maybe e
-tag Fail              = Nothing
-tag (Error _ e)       = Just e
-tag (Backtrace _ _ e) = Just e
-
-{- | Prism for the backtrace of an error as an elimination function. -}
-backtrace :: forall s e a . (forall d . s -> d -> a) -> ParseError s e -> [a]
-backtrace f = go
+{- | Getter for the entire trace of a 'ParseError' as an elimination function. -}
+{-# INLINEABLE trace #-}
+trace :: forall s e a . (forall d . ErrorItem s d -> a) -> ParseError s e -> [a]
+trace f = go
     where
         go :: ParseError s c -> [a]
-        go Fail              = []
-        go (Error s e)       = [f s e]
-        go (Backtrace b s e) = f s e : go b
+        go Empty           = []
+        go (Single err)    = [f err]
+        go (Cons err back) = f err : go back
 
+{- | Getter for the t'ErrorItem' at the top of a 'ParseError'. -}
+{-# INLINE top #-}
+top :: ParseError s e -> Maybe (ErrorItem s e)
+top Empty        = Nothing
+top (Single err) = Just err
+top (Cons err _) = Just err
 
-{- | Case analysis elimination function for the 'ParseError' type. -}
-withParseError
-    :: a
-    -> (s -> e -> a)
-    -> (forall d . ParseError s d -> s -> e -> a)
-    -> ParseError s e
-    -> a
-withParseError x _ _ Fail              = x
-withParseError _ f _ (Error s e)       = f s e
-withParseError _ _ g (Backtrace b s e) = g b s e
-
-{- | The universal property of the initial monoid @'ParseError' s 'Void'@. -}
-initial :: Monoid m => ParseError s Void -> m
-initial e =
-    case e of
-        Fail -> mempty
+{- | Uncons a 'ParseError' with an elimination function. -}
+{-# INLINE unconsWith #-}
+unconsWith :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
+unconsWith _ Empty           = Nothing
+unconsWith _ (Single err)    = Just (err, [])
+unconsWith f (Cons err back) = Just (err, trace f back)
