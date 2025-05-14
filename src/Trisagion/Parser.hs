@@ -24,19 +24,32 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
+
+    -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
+    one,
+    skipOne,
 ) where
 
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (ElementOf)
+
 -- Package.
+import Trisagion.Typeclasses.Streamable (Streamable (..))
+import qualified Trisagion.Typeclasses.Streamable as Streamable (tail)
 import Trisagion.Types.Result (Result (..), toEither, withResult)
+import Trisagion.Types.ParseError (ParseError, singleton)
+import Optics ((%), review)
+import Trisagion.Types.ErrorItem (endOfInput)
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -235,7 +248,8 @@ try p = Parser $ \ xs ->
 {- | Run a parser isolated to a prefix of the stream.
 
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
-'Control.Monad.guard' the parser to run with an appropriate check.
+'Control.Monad.guard' the parser to run with an appropriate check -- see
+'Trisagion.Parsers.Streamable.ensureEOI'.
 -}
 {-# INLINE isolate #-}
 isolate
@@ -266,3 +280,17 @@ catch p h = Parser $ \ xs ->
     case run p xs of
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
+
+
+{- | Parse one @'ElementOf' s@ from the input stream. -}
+{-# INLINE one #-}
+one :: Streamable s => Parser s (ParseError s Void) (ElementOf s)
+one = Parser $ \ s ->
+    case uncons s of
+        Nothing      -> Error $ review (singleton % endOfInput) 1
+        Just (x, xs) -> Success x xs
+
+{- | Skip one @'ElementOf' s@ from the input stream. -}
+{-# INLINE skipOne #-}
+skipOne :: Streamable s => Parser s Void ()
+skipOne = Parser $ \ s -> Success () (fromMaybe s $ Streamable.tail s)

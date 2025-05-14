@@ -6,7 +6,7 @@ conflict with base.
 -}
 
 module Trisagion.Parsers.Combinators (
-    -- * Error parsers.
+    -- * Validators.
     validate,
 
     -- * Parsers without errors.
@@ -59,7 +59,13 @@ import Control.Monad.Except (MonadError (..))
 import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
 
 
-{- | Run the parser and return the result, validating it. -}
+{- | Run the parser and return the result, validating it.
+
+note(s):
+
+  * See 'Trisagion.Parsers.ParseError.validate' for a version more suited for dealing with
+  'Trisagion.Types.ParseError.ParseError' errors.
+-}
 {-# INLINE validate #-}
 validate
     :: (a -> d :+: b)                   -- ^ Validator.

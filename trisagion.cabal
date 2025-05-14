@@ -47,11 +47,19 @@ library
         base >=4.18 && <4.19,
         mtl >=2.3 && <2.4,
         optics >= 0.4.2 && <0.4.3,
+        bytestring >=0.11 && <0.13,
+        text >=2.0 && <2.2,
+        containers >=0.6 && <0.8,
+        vector >=0.13 && <0.14,
+        -- Non-hackage libraries.
+        mono >=0.1 && <0.2,
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
-        Trisagion.Types.Error
+        Trisagion.Typeclasses.Streamable
+        Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
+        Trisagion.Parsers.Streamable

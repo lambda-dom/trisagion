@@ -5,27 +5,47 @@ Parsers to handle 'Trisagion.Types.ParseError' errors.
 -}
 
 module Trisagion.Parsers.ParseError (
+    -- * Error tag types.
+    ValidationError,
+
     -- * Handling 'Trisagion.Types.ParseError' errors.
     throwParseError,
     capture,
     onParseError,
+
+    -- * Validators.
+    validate,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+import Data.Functor.Identity (Identity (..))
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Optics ((%), review)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, cons, modify)
-import Trisagion.Parser (Parser, get, throw, catch)
+import Trisagion.Types.ParseError (ParseError, singleton, cons)
+import Trisagion.Parser (Parser, (:+:), get, throw, catch)
+import Trisagion.Types.ErrorItem (errorItem)
+
+
+{- | The t'ValidationError' error tag type thrown on failed validations. -}
+newtype ValidationError e = ValidationError e
+    deriving stock (Eq, Show, Functor, Foldable, Traversable)
+    deriving (Applicative, Monad) via Identity
 
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
 throwParseError :: e -> Parser s (ParseError s e) Void
-throwParseError err = first absurd get >>= throw . flip singleton err
+throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 
@@ -52,7 +72,7 @@ parser = capture $ do
 capture :: Parser s (ParseError s e) a -> Parser s (ParseError s e) a
 capture p = do
     xs <- first absurd get
-    first (modify (const xs)) p
+    first (monomap (const xs)) p
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
 
@@ -70,3 +90,16 @@ onParseError e p = do
     catch
         p
         (fmap absurd . throw . cons xs e)
+
+
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s (ParseError s e) a      -- ^ Parser to run.
+    -> Parser s (ParseError s (d :+: e)) b
+validate v p = do
+    x <- first (fmap Right) p
+    case v x of
+        Left d  -> absurd <$> throwParseError (Left d)
+        Right y -> pure y
