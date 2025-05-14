@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use drop" #-}
+
 {- |
 Module: Trisagion.Typeclasses.Splittable
 
@@ -7,9 +10,16 @@ The @Splittable@ typeclass.
 module Trisagion.Typeclasses.Splittable (
     -- * Typeclasses.
     Splittable (..),
+
+    -- * Functions.
+    dropAt,
+    dropWhile,
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (splitAt, dropWhile)
+
 -- Base.
 import qualified Data.List as List (splitAt)
 import Data.Kind (Type)
@@ -210,3 +220,12 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
 
     remainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     remainder xs = (xs, StVector.empty)
+
+
+{- | Drop a fixed-size prefix from the stream. -}
+dropAt :: Splittable s => Word -> s -> s
+dropAt n = snd . splitAt n
+
+{- | Drop the longest prefix satisfying a predicate from the stream. -}
+dropWhile :: Splittable s => (ElementOf s -> Bool) -> s -> s
+dropWhile p = snd . splitWith p
