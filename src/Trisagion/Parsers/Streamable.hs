@@ -9,6 +9,9 @@ module Trisagion.Parsers.Streamable (
     eoi,
     ensureEOI,
     peek,
+    satisfy,
+    matchElem,
+    oneOf,
 ) where
 
 -- Imports.
@@ -26,9 +29,11 @@ import Control.Monad.Except (MonadError (..))
 import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
+import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Parser (Parser, (:+:), get, one)
 import Trisagion.Parsers.Combinators (lookAhead)
+import Trisagion.Parsers.ParseError (ValidationError, validate)
 
 
 {- | Return @'True'@ if all input is consumed. -}
@@ -50,3 +55,29 @@ ensureEOI err p = do
 {-# INLINE peek #-}
 peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = either (const Nothing) Just <$> lookAhead one
+
+{- | Parse one @'ElementOf' s@ satisfying a predicate. -}
+{-# INLINE satisfy #-}
+satisfy
+    :: Streamable s
+    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
+    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+satisfy p = first (fmap (either id absurd)) $ validate v one
+    where
+        v x = if p x then Right x else Left $ pure x
+
+{- | Parse one element matching a @'ElementOf' s@. -}
+{-# INLINE matchElem #-}
+matchElem
+    :: (Streamable s, Eq (ElementOf s))
+    => ElementOf s                      -- ^ Matching @'ElementOf' s@.
+    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+matchElem x = satisfy (== x)
+
+{- | Parse one @'ElementOf' s@ that is an element of a foldable. -}
+{-# INLINE oneOf #-}
+oneOf
+    :: (Streamable s, Eq (ElementOf s), Foldable t)
+    => t (ElementOf s)                  -- ^ Foldable of @'ElementOf' s@ to test inclusion.
+    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+oneOf xs = satisfy (`elem` xs)

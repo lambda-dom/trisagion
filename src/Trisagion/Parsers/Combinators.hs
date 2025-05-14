@@ -64,7 +64,7 @@ import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
 note(s):
 
   * See 'Trisagion.Parsers.ParseError.validate' for a version more suited for dealing with
-  'Trisagion.Types.ParseError.ParseError'.
+  'Trisagion.Types.ParseError.ParseError' errors.
 -}
 {-# INLINE validate #-}
 validate
