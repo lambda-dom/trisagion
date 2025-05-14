@@ -149,7 +149,7 @@ note(s):
 -}
 comment
     :: (Splittable s, ElementOf s ~ Char)
-    => Parser s e (PrefixOf s)          -- ^ Parser for start of line comment.
+    => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
 comment p = do
     _ <- p
