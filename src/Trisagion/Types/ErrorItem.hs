@@ -37,7 +37,7 @@ instance Bifunctor ErrorItem where
 
 {- | Prism for the end of input error.
 
-@'Word'@ parameter is the amount of elements requested, @0@ if it cannot be determined.
+@'Word'@ parameter is the amount of elements requested, @0@ if this cannot be determined.
 -}
 {-# INLINE endOfInput #-}
 endOfInput :: Prism' (ErrorItem s e) Word
