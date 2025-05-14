@@ -47,7 +47,9 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (tail)
 import Trisagion.Types.Result (Result (..), toEither, withResult)
-import Trisagion.Types.ParseError (ParseError, endOfInput)
+import Trisagion.Types.ParseError (ParseError, singleton)
+import Optics ((%), review)
+import Trisagion.Types.ErrorItem (endOfInput)
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -284,7 +286,7 @@ catch p h = Parser $ \ xs ->
 one :: Streamable s => Parser s (ParseError s Void) (ElementOf s)
 one = Parser $ \ s ->
     case uncons s of
-        Nothing      -> Error $ endOfInput 1
+        Nothing      -> Error $ review (singleton % endOfInput) 1
         Just (x, xs) -> Success x xs
 
 {- | Skip one @'ElementOf' s@ from the input stream. -}

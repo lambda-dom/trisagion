@@ -13,13 +13,11 @@ module Trisagion.Types.ParseError (
     singleton,
 
     -- ** Constructors.
-    endOfInput,
     cons,
 
     -- * Functions.
     backtrace,
     toListWith,
-    isEndOfInput,
 ) where
 
 -- Imports.
@@ -35,7 +33,6 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
-import qualified Trisagion.Types.ErrorItem as ErrorItem (endOfInput, isEndOfInput)
 
 
 {- | The 'ParseError' type.
@@ -118,12 +115,6 @@ singleton = prism' construct match
         match (Singleton err) = Just err
         match _               = Nothing
 
-
-{- | Construct an end of input 'ParseError'. -}
-{-# INLINE endOfInput #-}
-endOfInput :: Word -> ParseError s e
-endOfInput n = Singleton $ review ErrorItem.endOfInput n
-
 {- | Construct a 'ParseError' from an error and a 'ParseError'.
 
 note(s):
@@ -151,14 +142,3 @@ toListWith f = go
         go Empty            = []
         go (Singleton err)  = [f err]
         go (Cons err trace) = f err : go trace
-
-{- | Return True if 'ParseError' is an end of input error.
-
-note(s):
-
-  * By construction an end of input 'ParseError' does not have a backtrace.
--}
-{-# INLINE isEndOfInput #-}
-isEndOfInput :: ParseError s e -> Bool
-isEndOfInput (Singleton err) = ErrorItem.isEndOfInput err
-isEndOfInput _               = False
