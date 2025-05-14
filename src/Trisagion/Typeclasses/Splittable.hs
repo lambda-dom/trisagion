@@ -13,7 +13,7 @@ module Trisagion.Typeclasses.Splittable (
 
     -- * Functions.
     dropAt,
-    dropWhile,
+    dropWith,
 ) where
 
 -- Imports.
@@ -80,9 +80,9 @@ class Streamable s => Splittable s where
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 
-    {- | Return the remainder of the stream.
+    {- | Return the remainder of the stream as a prefix.
 
-    Default implementation is @'splitWith' (const True)@ but instances almost always can define a
+    Default implementation is @'splitWith' (const True)@ but instances can (almost) always define a
     faster implementation using a nullary operation @empty :: s@.
     -}
     splitRemainder :: s -> (PrefixOf s, s)
@@ -261,6 +261,6 @@ dropAt :: Splittable s => Word -> s -> s
 dropAt n = snd . splitAt n
 
 {- | Drop the longest prefix satisfying a predicate from the stream. -}
-{-# INLINE dropWhile #-}
-dropWhile :: Splittable s => (ElementOf s -> Bool) -> s -> s
-dropWhile p = snd . splitWith p
+{-# INLINE dropWith #-}
+dropWith :: Splittable s => (ElementOf s -> Bool) -> s -> s
+dropWith p = snd . splitWith p

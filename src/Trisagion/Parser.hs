@@ -28,6 +28,13 @@ module Trisagion.Parser (
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     one,
     skipOne,
+
+    -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
+    takePrefix,
+    dropPrefix,
+    takePrefixWith,
+    dropPrefixWith,
+    takeRemainder,
 ) where
 
 -- Imports.
@@ -39,6 +46,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Optics ((%), review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
@@ -46,9 +54,10 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (tail)
+import Trisagion.Typeclasses.Splittable (Splittable (PrefixOf, splitWith, splitRemainder), dropAt, dropWith)
+import qualified Trisagion.Typeclasses.Splittable as Splittable (Splittable (splitAt))
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, singleton)
-import Optics ((%), review)
 import Trisagion.Types.ErrorItem (endOfInput)
 
 
@@ -297,3 +306,31 @@ one = Parser $ \ s ->
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
 skipOne = Parser $ \ s -> Success () (fromMaybe s $ Streamable.tail s)
+
+{- | Parse a fixed size prefix.
+
+The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
+-}
+{-# INLINE takePrefix #-}
+takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
+takePrefix n = Parser $ \ xs -> uncurry Success (Splittable.splitAt n xs)
+
+{- | Drop a fixed size prefix from the stream. -}
+{-# INLINE dropPrefix #-}
+dropPrefix :: Splittable s => Word -> Parser s Void ()
+dropPrefix n = Parser $ \ xs -> Success () (dropAt n xs)
+
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
+{-# INLINE takePrefixWith #-}
+takePrefixWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
+takePrefixWith p = Parser $ \ xs -> uncurry Success (splitWith p xs)
+
+{- | Drop a fixed size prefix from the stream. -}
+{-# INLINE dropPrefixWith #-}
+dropPrefixWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
+dropPrefixWith p = Parser $ \ xs -> Success () (dropWith p xs)
+
+{- | Parse the remainder of the stream as a prefix. -}
+{-# INLINE takeRemainder #-}
+takeRemainder :: Splittable s => Parser s Void (PrefixOf s)
+takeRemainder = Parser $ \ xs -> uncurry Success (splitRemainder xs)
