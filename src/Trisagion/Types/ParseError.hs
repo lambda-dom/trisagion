@@ -24,25 +24,28 @@ import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
+-- Libraries.
+import Optics (review)
+
 -- Package.
-import Trisagion.Types.Error (Error, makeError)
+import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
 
 
 {- | The 'ParseError' type.
 
-Functionally, a @'ParseError' s e@ is a, possibly empty, list of t'Error' values, with a
-@t'Error' s e@ value in the head and a tail of @t'Error' s d@ values with @d@ an unknown type with
-constraints @('Typeable' d, 'Eq' d, 'Show' d)@.
+Functionally, a @'ParseError' s e@ is a, possibly empty, list of t'ErrorItem' values, with a
+@t'ErrorItem' s e@ value in the head and a tail of @t'ErrorItem' s d@ values with @d@ an unknown
+type with constraints @('Typeable' d, 'Eq' d, 'Show' d)@.
 -}
 data ParseError s e where
     -- | The Empty constructor, the monoid unit for 'ParseError'.
     Empty :: ParseError s e
 
     -- | A 'ParseError' with no backtrace.
-    Single :: !(Error s e) -> ParseError s e
+    Single :: !(ErrorItem s e) -> ParseError s e
 
     -- | A 'ParseError' with a backtrace.
-    Cons :: (Typeable d, Eq d, Show d) => !(Error s e) -> ParseError s d -> ParseError s e
+    Cons :: (Typeable d, Eq d, Show d) => !(ErrorItem s e) -> ParseError s d -> ParseError s e
 
 -- Instances.
 deriving stock instance Functor (ParseError s)
@@ -84,7 +87,7 @@ instance Monoid (ParseError s e) where
 {- | Construct a 'ParseError' with no backtrace -}
 {-# INLINE singleton #-}
 singleton :: s -> e -> ParseError s e
-singleton xs = Single . makeError xs
+singleton xs = Single . review errorItem . (xs, )
 
 {- | Construct a 'ParseError' from an error and a backtrace.
 
@@ -94,13 +97,13 @@ note(s):
 -}
 {-# INLINE backtrace #-}
 backtrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-backtrace xs e Empty = Single (makeError xs e)
-backtrace xs e back  = Cons (makeError xs e) back
+backtrace xs e Empty = Single (curry (review errorItem) xs e)
+backtrace xs e back  = Cons (curry (review errorItem) xs e) back
 
 
 {- | Convert a 'ParseError' to a list. -}
 {-# INLINEABLE toListWith #-}
-toListWith :: forall s e a . (forall d . Error s d -> a) -> ParseError s e -> [a]
+toListWith :: forall s e a . (forall d . ErrorItem s d -> a) -> ParseError s e -> [a]
 toListWith f = go
     where
         go :: ParseError s c -> [a]
