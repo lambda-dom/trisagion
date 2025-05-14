@@ -144,10 +144,13 @@ prop> empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' structure satisfies both /left/ and /right distributivity/:
+'Alternative' structure also satisfies /left distributivity/:
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
-prop> (f <|> g) <*> x == (f <*> x) <|> (g <*> y)
+
+note(s):
+
+  * Right distributivity is violated even with an idempotent monoid. See the tests for an example.
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
