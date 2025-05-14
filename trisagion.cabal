@@ -57,6 +57,7 @@ library
         Trisagion.Types.Result
     exposed-modules:
         Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
         Trisagion.Parser
