@@ -65,3 +65,4 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
+        Trisagion.Parsers.Char
