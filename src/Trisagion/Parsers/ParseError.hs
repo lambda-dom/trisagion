@@ -24,7 +24,7 @@ import Optics (review)
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, backtrace)
+import Trisagion.Types.ParseError (ParseError, singleton, cons)
 import Trisagion.Parser (Parser, get, throw, catch)
 
 
@@ -75,4 +75,4 @@ onParseError e p = do
     xs <- first absurd get
     catch
         p
-        (fmap absurd . throw . backtrace xs e)
+        (fmap absurd . throw . cons xs e)

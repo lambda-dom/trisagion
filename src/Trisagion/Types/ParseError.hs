@@ -13,9 +13,10 @@ module Trisagion.Types.ParseError (
     singleton,
 
     -- ** Constructors.
-    backtrace,
+    cons,
 
     -- ** Elimination functions.
+    backtrace,
     toListWith,
 ) where
 
@@ -24,12 +25,11 @@ module Trisagion.Types.ParseError (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
--- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-
 -- Libraries.
 import Optics (Prism', prism', review, preview)
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
@@ -104,6 +104,7 @@ empty = prism' construct match
         match _     = Nothing
 
 {- | Prism for 'ParseError' values without a backtrace. -}
+{-# INLINE singleton #-}
 singleton :: Prism' (ParseError s e) (s, e)
 singleton = prism' construct match
     where
@@ -115,17 +116,23 @@ singleton = prism' construct match
         match _               = Nothing
 
 
-{- | Construct a 'ParseError' from an error and a backtrace.
+{- | Construct a 'ParseError' from an error and a 'ParseError'.
 
 note(s):
 
   * Performs normalization on an empty backtrace.
 -}
-{-# INLINE backtrace #-}
-backtrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-backtrace xs e Empty = Singleton (curry (review errorItem) xs e)
-backtrace xs e back  = Cons (curry (review errorItem) xs e) back
+{-# INLINE cons #-}
+cons :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
+cons xs e Empty = curry (review singleton) xs e
+cons xs e trace = Cons (curry (review errorItem) xs e) trace
 
+
+{- | Getter for the top t'ErrorItem' and backtrace. -}
+{-# INLINE backtrace #-}
+backtrace :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
+backtrace f (Cons err trace) = Just (err, toListWith f trace)
+backtrace _ _                = Nothing
 
 {- | Convert a 'ParseError' to a list. -}
 {-# INLINEABLE toListWith #-}
@@ -133,6 +140,6 @@ toListWith :: forall s e a . (forall d . ErrorItem s d -> a) -> ParseError s e -
 toListWith f = go
     where
         go :: ParseError s c -> [a]
-        go Empty           = []
-        go (Singleton err) = [f err]
-        go (Cons err back) = f err : go back
+        go Empty            = []
+        go (Singleton err)  = [f err]
+        go (Cons err trace) = f err : go trace
