@@ -85,147 +85,182 @@ class Streamable s => Splittable s where
     Default implementation is @'splitWith' (const True)@ but instances almost always can define a
     faster implementation using a nullary operation @empty :: s@.
     -}
-    remainder :: s -> (PrefixOf s, s)
-    remainder = splitWith (const True)
+    splitRemainder :: s -> (PrefixOf s, s)
+    splitRemainder = splitWith (const True)
 
 -- Instances.
 instance Splittable Bytes.ByteString where
     type PrefixOf Bytes.ByteString = Bytes.ByteString
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitAt n = Bytes.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitWith = Bytes.span
 
-    remainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
-    remainder s = (s, Bytes.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitRemainder s = (s, Bytes.empty)
 
 instance Splittable LBytes.ByteString where
     type PrefixOf LBytes.ByteString = LBytes.ByteString
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitAt n = LBytes.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitWith = LBytes.span
 
-    remainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
-    remainder s = (s, LBytes.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitRemainder s = (s, LBytes.empty)
 
 instance Splittable SBytes.ShortByteString where
     type PrefixOf SBytes.ShortByteString = SBytes.ShortByteString
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitAt n = SBytes.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitWith = SBytes.span
 
-    remainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
-    remainder s = (s, SBytes.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitRemainder s = (s, SBytes.empty)
 
 instance Splittable Text.Text where
     type PrefixOf Text.Text = Text.Text
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> Text.Text -> (Text.Text, Text.Text)
     splitAt n = Text.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
     splitWith = Text.span
 
-    remainder :: Text.Text -> (Text.Text, Text.Text)
-    remainder s = (s, Text.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Text.Text -> (Text.Text, Text.Text)
+    splitRemainder s = (s, Text.empty)
 
 instance Splittable LText.Text where
     type PrefixOf LText.Text = LText.Text
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> LText.Text -> (LText.Text, LText.Text)
     splitAt n = LText.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
     splitWith = LText.span
 
-    remainder :: LText.Text -> (LText.Text, LText.Text)
-    remainder s = (s, LText.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: LText.Text -> (LText.Text, LText.Text)
+    splitRemainder s = (s, LText.empty)
 
 instance Splittable [a] where
     type PrefixOf [a] = [a]
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> [a] -> ([a], [a])
     splitAt n = List.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> [a] -> ([a], [a])
     splitWith = span
 
-    remainder :: [a] -> ([a], [a])
-    remainder xs = (xs, [])
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: [a] -> ([a], [a])
+    splitRemainder xs = (xs, [])
 
 instance Splittable (Seq.Seq a) where
     type PrefixOf (Seq.Seq a) = Seq.Seq a
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitAt n = Seq.splitAt $ fromIntegral n
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitWith = Seq.spanl
 
-    remainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
-    remainder xs = (xs, Seq.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
+    splitRemainder xs = (xs, Seq.empty)
 
 instance Splittable (Vector.Vector a) where
     type PrefixOf (Vector.Vector a) = Vector.Vector a
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitAt n = Vector.splitAt (fromIntegral n)
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitWith = Vector.span
 
-    remainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
-    remainder xs = (xs, Vector.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    splitRemainder xs = (xs, Vector.empty)
 
 instance Splittable (SVector.Vector a) where
     type PrefixOf (SVector.Vector a) = SVector.Vector a
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitAt n = SVector.splitAt (fromIntegral n)
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitWith = SVector.span
 
-    remainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
-    remainder xs = (xs, SVector.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
+    splitRemainder xs = (xs, SVector.empty)
 
 instance UVector.Unbox a => Splittable (UVector.Vector a) where
     type PrefixOf (UVector.Vector a) = UVector.Vector a
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitAt n = UVector.splitAt (fromIntegral n)
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitWith = UVector.span
 
-    remainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
-    remainder xs = (xs, UVector.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
+    splitRemainder xs = (xs, UVector.empty)
 
 instance StVector.Storable a => Splittable (StVector.Vector a) where
     type PrefixOf (StVector.Vector a) = StVector.Vector a
 
+    {-# INLINE splitAt #-}
     splitAt :: Word -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitAt n = StVector.splitAt (fromIntegral n)
 
+    {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitWith = StVector.span
 
-    remainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
-    remainder xs = (xs, StVector.empty)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
+    splitRemainder xs = (xs, StVector.empty)
 
 
 {- | Drop a fixed-size prefix from the stream. -}
+{-# INLINE dropAt #-}
 dropAt :: Splittable s => Word -> s -> s
 dropAt n = snd . splitAt n
 
 {- | Drop the longest prefix satisfying a predicate from the stream. -}
+{-# INLINE dropWhile #-}
 dropWhile :: Splittable s => (ElementOf s -> Bool) -> s -> s
 dropWhile p = snd . splitWith p
