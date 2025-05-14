@@ -8,9 +8,12 @@ module Trisagion.Types.ErrorItem (
     -- * Error type.
     ErrorItem,
 
-    -- ** Prisms.
+    -- * Prisms.
     endOfInput,
     errorItem,
+
+    -- * Functions.
+    isEndOfInput,
 ) where
 
 -- Imports.
@@ -61,3 +64,10 @@ errorItem = prism' construct match
         match :: ErrorItem s e -> Maybe (s, e)
         match (ErrorItem xs e) = Just (xs, e)
         match _                = Nothing
+
+
+{- | Return True if t'ErrorItem' is an end of input error. -}
+{-# INLINE isEndOfInput #-}
+isEndOfInput :: ErrorItem s e -> Bool
+isEndOfInput (EndOfInput _) = True
+isEndOfInput _              = False

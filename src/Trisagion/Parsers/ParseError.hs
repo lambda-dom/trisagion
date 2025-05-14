@@ -18,7 +18,7 @@ import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Optics (review)
+import Optics ((%), review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -26,12 +26,13 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 -- Package.
 import Trisagion.Types.ParseError (ParseError, singleton, cons)
 import Trisagion.Parser (Parser, get, throw, catch)
+import Trisagion.Types.ErrorItem (errorItem)
 
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
 throwParseError :: e -> Parser s (ParseError s e) Void
-throwParseError err = first absurd get >>= throw . review singleton . (, err)
+throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 

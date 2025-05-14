@@ -13,11 +13,13 @@ module Trisagion.Types.ParseError (
     singleton,
 
     -- ** Constructors.
+    endOfInput,
     cons,
 
-    -- ** Elimination functions.
+    -- * Functions.
     backtrace,
     toListWith,
+    isEndOfInput,
 ) where
 
 -- Imports.
@@ -26,13 +28,14 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Libraries.
-import Optics (Prism', prism', review, preview)
+import Optics (Prism', (%), prism', review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
+import qualified Trisagion.Types.ErrorItem as ErrorItem (endOfInput, isEndOfInput)
 
 
 {- | The 'ParseError' type.
@@ -105,16 +108,21 @@ empty = prism' construct match
 
 {- | Prism for 'ParseError' values without a backtrace. -}
 {-# INLINE singleton #-}
-singleton :: Prism' (ParseError s e) (s, e)
+singleton :: Prism' (ParseError s e) (ErrorItem s e)
 singleton = prism' construct match
     where
-        construct :: (s, e) -> ParseError s e
-        construct = Singleton . review errorItem 
+        construct :: ErrorItem s e -> ParseError s e
+        construct = Singleton
 
-        match :: ParseError s e -> Maybe (s, e)
-        match (Singleton err) = preview errorItem err
+        match :: ParseError s e -> Maybe (ErrorItem s e)
+        match (Singleton err) = Just err
         match _               = Nothing
 
+
+{- | Construct an end of input 'ParseError'. -}
+{-# INLINE endOfInput #-}
+endOfInput :: Word -> ParseError s e
+endOfInput n = Singleton $ review ErrorItem.endOfInput n
 
 {- | Construct a 'ParseError' from an error and a 'ParseError'.
 
@@ -124,11 +132,11 @@ note(s):
 -}
 {-# INLINE cons #-}
 cons :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-cons xs e Empty = curry (review singleton) xs e
+cons xs e Empty = curry (review (singleton % errorItem)) xs e
 cons xs e trace = Cons (curry (review errorItem) xs e) trace
 
 
-{- | Getter for the top t'ErrorItem' and backtrace. -}
+{- | Getter for the top t'ErrorItem' and the backtrace of a 'ParseError'. -}
 {-# INLINE backtrace #-}
 backtrace :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
 backtrace f (Cons err trace) = Just (err, toListWith f trace)
@@ -143,3 +151,14 @@ toListWith f = go
         go Empty            = []
         go (Singleton err)  = [f err]
         go (Cons err trace) = f err : go trace
+
+{- | Return True if 'ParseError' is an end of input error.
+
+note(s):
+
+  * By construction an end of input 'ParseError' does not have a backtrace.
+-}
+{-# INLINE isEndOfInput #-}
+isEndOfInput :: ParseError s e -> Bool
+isEndOfInput (Singleton err) = ErrorItem.isEndOfInput err
+isEndOfInput _               = False
