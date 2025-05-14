@@ -26,7 +26,9 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Libraries.
-import Optics (Prism', (%), prism', review)
+import Optics.Optic ((%))
+import Optics.Prism (Prism', prism')
+import Optics.Review (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
