@@ -18,7 +18,7 @@ module Trisagion.Types.ErrorItem (
 import Data.Bifunctor (Bifunctor (..))
 
 -- Library.
-import Optics.Prism (Prism', prism')
+import Optics (Prism', prism')
 
 
 {- | The t'ErrorItem' error type. -}

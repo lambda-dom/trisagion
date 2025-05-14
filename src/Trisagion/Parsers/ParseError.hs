@@ -17,6 +17,9 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Optics (review)
+
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
@@ -28,7 +31,7 @@ import Trisagion.Parser (Parser, get, throw, catch)
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
 throwParseError :: e -> Parser s (ParseError s e) Void
-throwParseError err = first absurd get >>= throw . flip singleton err
+throwParseError err = first absurd get >>= throw . review singleton . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 

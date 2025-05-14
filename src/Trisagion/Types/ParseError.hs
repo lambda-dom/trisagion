@@ -8,8 +8,11 @@ module Trisagion.Types.ParseError (
     -- * The 'ParseError' error type.
     ParseError,
 
-    -- ** Constructors.
+    -- ** Prisms.
+    empty,
     singleton,
+
+    -- ** Constructors.
     backtrace,
 
     -- ** Elimination functions.
@@ -25,7 +28,8 @@ import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Libraries.
-import Optics (review)
+import Optics (Prism', prism', review, preview)
+
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
@@ -42,7 +46,7 @@ data ParseError s e where
     Empty :: ParseError s e
 
     -- | A 'ParseError' with no backtrace.
-    Single :: !(ErrorItem s e) -> ParseError s e
+    Singleton :: !(ErrorItem s e) -> ParseError s e
 
     -- | A 'ParseError' with a backtrace.
     Cons :: (Typeable d, Eq d, Show d) => !(ErrorItem s e) -> ParseError s d -> ParseError s e
@@ -58,14 +62,14 @@ instance MonoFunctor (ParseError s e) where
     {-# INLINE monomap #-}
     monomap :: (s -> s) -> ParseError s e -> ParseError s e
     monomap _ Empty           = Empty
-    monomap f (Single err)    = Single (first f err)
+    monomap f (Singleton err) = Singleton (first f err)
     monomap f (Cons err back) = Cons (first f err) back
 
 instance (Eq s, Eq e) => Eq (ParseError s e) where
     {-# INLINEABLE (==) #-}
     (==) :: ParseError s e -> ParseError s e -> Bool
     (==) Empty Empty = True
-    (==) (Single e) (Single e') = e == e'
+    (==) (Singleton e) (Singleton e') = e == e'
     (==) (Cons e (b :: ParseError s d) ) (Cons e' (b' :: ParseError s d')) =
         case eqT @d @d' of
             Nothing   -> False
@@ -84,10 +88,32 @@ instance Monoid (ParseError s e) where
     mempty = Empty
 
 
-{- | Construct a 'ParseError' with no backtrace -}
-{-# INLINE singleton #-}
-singleton :: s -> e -> ParseError s e
-singleton xs = Single . review errorItem . (xs, )
+{- | Prism for the empty value.
+
+The empty value can also be constructed by 'mempty'.
+-}
+{-# INLINE empty #-}
+empty :: Prism' (ParseError s e) ()
+empty = prism' construct match
+    where
+        construct :: () -> ParseError s e
+        construct _ = Empty
+
+        match :: ParseError s e -> Maybe ()
+        match Empty = Just ()
+        match _     = Nothing
+
+{- | Prism for 'ParseError' values without a backtrace. -}
+singleton :: Prism' (ParseError s e) (s, e)
+singleton = prism' construct match
+    where
+        construct :: (s, e) -> ParseError s e
+        construct = Singleton . review errorItem 
+
+        match :: ParseError s e -> Maybe (s, e)
+        match (Singleton err) = preview errorItem err
+        match _               = Nothing
+
 
 {- | Construct a 'ParseError' from an error and a backtrace.
 
@@ -97,7 +123,7 @@ note(s):
 -}
 {-# INLINE backtrace #-}
 backtrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-backtrace xs e Empty = Single (curry (review errorItem) xs e)
+backtrace xs e Empty = Singleton (curry (review errorItem) xs e)
 backtrace xs e back  = Cons (curry (review errorItem) xs e) back
 
 
@@ -108,5 +134,5 @@ toListWith f = go
     where
         go :: ParseError s c -> [a]
         go Empty           = []
-        go (Single err)    = [f err]
+        go (Singleton err) = [f err]
         go (Cons err back) = f err : go back
