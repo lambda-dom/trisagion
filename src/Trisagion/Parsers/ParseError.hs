@@ -17,8 +17,11 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, backtrace, modify)
+import Trisagion.Types.ParseError (ParseError, singleton, backtrace)
 import Trisagion.Parser (Parser, get, throw, catch)
 
 
@@ -52,7 +55,7 @@ parser = capture $ do
 capture :: Parser s (ParseError s e) a -> Parser s (ParseError s e) a
 capture p = do
     xs <- first absurd get
-    first (modify (const xs)) p
+    first (monomap (const xs)) p
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
 

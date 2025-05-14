@@ -14,15 +14,15 @@ module Trisagion.Types.ParseError (
 
     -- ** Elimination functions.
     toListWith,
-
-    -- ** Functions.
-    modify,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.Error (Error, makeError)
@@ -47,6 +47,16 @@ data ParseError s e where
 -- Instances.
 deriving stock instance Functor (ParseError s)
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
+
+{- | Provides monofunctoriality in the input stream @s@ for @'ParseError' s e@. -}
+instance MonoFunctor (ParseError s e) where
+    type ElementOf (ParseError s e) = s
+
+    {-# INLINE monomap #-}
+    monomap :: (s -> s) -> ParseError s e -> ParseError s e
+    monomap _ Empty           = Empty
+    monomap f (Single err)    = Single (first f err)
+    monomap f (Cons err back) = Cons (first f err) back
 
 instance (Eq s, Eq e) => Eq (ParseError s e) where
     {-# INLINEABLE (==) #-}
@@ -97,14 +107,3 @@ toListWith f = go
         go Empty           = []
         go (Single err)    = [f err]
         go (Cons err back) = f err : go back
-
-
-{- | Apply a function to the input stream of the top error in a 'ParseError'.
-
-Provides monofunctoriality for 'ParseError' in the input stream type @s@.
--}
-{-# INLINE modify #-}
-modify :: (s -> s) -> ParseError s e -> ParseError s e
-modify _ Empty           = Empty
-modify f (Single err)    = Single (first f err)
-modify f (Cons err back) = Cons (first f err) back
