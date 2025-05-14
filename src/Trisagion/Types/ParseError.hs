@@ -16,7 +16,7 @@ module Trisagion.Types.ParseError (
     cons,
 
     -- * Functions.
-    backtrace,
+    unconsWith,
     toListWith,
 ) where
 
@@ -123,15 +123,16 @@ note(s):
 -}
 {-# INLINE cons #-}
 cons :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-cons xs e Empty = curry (review (singleton % errorItem)) xs e
-cons xs e trace = Cons (curry (review errorItem) xs e) trace
+cons xs e Empty = review (singleton % errorItem) (xs, e)
+cons xs e trace = Cons (review errorItem (xs, e)) trace
 
 
 {- | Getter for the top t'ErrorItem' and the backtrace of a 'ParseError'. -}
-{-# INLINE backtrace #-}
-backtrace :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
-backtrace f (Cons err trace) = Just (err, toListWith f trace)
-backtrace _ _                = Nothing
+{-# INLINE unconsWith #-}
+unconsWith :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
+unconsWith _ Empty            = Nothing
+unconsWith _ (Singleton err)  = Just (err, [])
+unconsWith f (Cons err trace) = Just (err, toListWith f trace)
 
 {- | Convert a 'ParseError' to a list. -}
 {-# INLINEABLE toListWith #-}
