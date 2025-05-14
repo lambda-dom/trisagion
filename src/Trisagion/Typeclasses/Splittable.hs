@@ -12,14 +12,11 @@ module Trisagion.Typeclasses.Splittable (
     Splittable (..),
 
     -- * Functions.
-    dropAt,
+    dropPrefix,
     dropWith,
 ) where
 
 -- Imports.
--- Prelude hiding.
-import Prelude hiding (splitAt, dropWhile)
-
 -- Base.
 import qualified Data.List as List (splitAt)
 import Data.Kind (Type)
@@ -67,13 +64,13 @@ __Compatibility__:
 prop> maybe [] (fmap (bimap singleton toList)) . uncons = bimap monotoList toList . splitAt 1
  -}
 class Streamable s => Splittable s where
-    {-# MINIMAL splitAt, splitWith #-}
+    {-# MINIMAL splitPrefix , splitWith #-}
 
     {- | The type of prefixes of the streamable. -}
     type PrefixOf s :: Type
 
     {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
-    splitAt :: Word -> s -> (PrefixOf s, s)
+    splitPrefix :: Word -> s -> (PrefixOf s, s)
 
     {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
 
@@ -92,9 +89,9 @@ class Streamable s => Splittable s where
 instance Splittable Bytes.ByteString where
     type PrefixOf Bytes.ByteString = Bytes.ByteString
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
-    splitAt n = Bytes.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitPrefix n = Bytes.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
@@ -107,9 +104,9 @@ instance Splittable Bytes.ByteString where
 instance Splittable LBytes.ByteString where
     type PrefixOf LBytes.ByteString = LBytes.ByteString
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
-    splitAt n = LBytes.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitPrefix n = LBytes.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
@@ -122,9 +119,9 @@ instance Splittable LBytes.ByteString where
 instance Splittable SBytes.ShortByteString where
     type PrefixOf SBytes.ShortByteString = SBytes.ShortByteString
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
-    splitAt n = SBytes.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitPrefix n = SBytes.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
@@ -137,9 +134,9 @@ instance Splittable SBytes.ShortByteString where
 instance Splittable Text.Text where
     type PrefixOf Text.Text = Text.Text
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> Text.Text -> (Text.Text, Text.Text)
-    splitAt n = Text.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Text.Text -> (Text.Text, Text.Text)
+    splitPrefix n = Text.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
@@ -152,9 +149,9 @@ instance Splittable Text.Text where
 instance Splittable LText.Text where
     type PrefixOf LText.Text = LText.Text
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> LText.Text -> (LText.Text, LText.Text)
-    splitAt n = LText.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> LText.Text -> (LText.Text, LText.Text)
+    splitPrefix n = LText.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
@@ -167,9 +164,9 @@ instance Splittable LText.Text where
 instance Splittable [a] where
     type PrefixOf [a] = [a]
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> [a] -> ([a], [a])
-    splitAt n = List.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> [a] -> ([a], [a])
+    splitPrefix n = List.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> [a] -> ([a], [a])
@@ -182,9 +179,9 @@ instance Splittable [a] where
 instance Splittable (Seq.Seq a) where
     type PrefixOf (Seq.Seq a) = Seq.Seq a
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
-    splitAt n = Seq.splitAt $ fromIntegral n
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
+    splitPrefix n = Seq.splitAt $ fromIntegral n
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
@@ -197,9 +194,9 @@ instance Splittable (Seq.Seq a) where
 instance Splittable (Vector.Vector a) where
     type PrefixOf (Vector.Vector a) = Vector.Vector a
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
-    splitAt n = Vector.splitAt (fromIntegral n)
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    splitPrefix n = Vector.splitAt (fromIntegral n)
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
@@ -212,9 +209,9 @@ instance Splittable (Vector.Vector a) where
 instance Splittable (SVector.Vector a) where
     type PrefixOf (SVector.Vector a) = SVector.Vector a
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
-    splitAt n = SVector.splitAt (fromIntegral n)
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
+    splitPrefix n = SVector.splitAt (fromIntegral n)
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
@@ -227,9 +224,9 @@ instance Splittable (SVector.Vector a) where
 instance UVector.Unbox a => Splittable (UVector.Vector a) where
     type PrefixOf (UVector.Vector a) = UVector.Vector a
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
-    splitAt n = UVector.splitAt (fromIntegral n)
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
+    splitPrefix n = UVector.splitAt (fromIntegral n)
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
@@ -242,9 +239,9 @@ instance UVector.Unbox a => Splittable (UVector.Vector a) where
 instance StVector.Storable a => Splittable (StVector.Vector a) where
     type PrefixOf (StVector.Vector a) = StVector.Vector a
 
-    {-# INLINE splitAt #-}
-    splitAt :: Word -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
-    splitAt n = StVector.splitAt (fromIntegral n)
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
+    splitPrefix n = StVector.splitAt (fromIntegral n)
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
@@ -256,9 +253,9 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
 
 
 {- | Drop a fixed-size prefix from the stream. -}
-{-# INLINE dropAt #-}
-dropAt :: Splittable s => Word -> s -> s
-dropAt n = snd . splitAt n
+{-# INLINE dropPrefix #-}
+dropPrefix :: Splittable s => Word -> s -> s
+dropPrefix n = snd . splitPrefix n
 
 {- | Drop the longest prefix satisfying a predicate from the stream. -}
 {-# INLINE dropWith #-}
