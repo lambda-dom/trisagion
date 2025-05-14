@@ -28,6 +28,13 @@ module Trisagion.Parser (
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     one,
     skipOne,
+
+    -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
+    takePrefix,
+    skipPrefix,
+    takeWith,
+    skipWith,
+    takeRemainder,
 ) where
 
 -- Imports.
@@ -39,6 +46,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Optics ((%), review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
@@ -46,9 +54,9 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (tail)
+import Trisagion.Typeclasses.Splittable (Splittable (..), dropPrefix, dropWith)
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, singleton)
-import Optics ((%), review)
 import Trisagion.Types.ErrorItem (endOfInput)
 
 
@@ -144,10 +152,13 @@ prop> empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' structure satisfies both /left/ and /right distributivity/:
+'Alternative' structure also satisfies /left distributivity/:
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
-prop> (f <|> g) <*> x == (f <*> x) <|> (g <*> y)
+
+note(s):
+
+  * Right distributivity is violated even with an idempotent monoid. See the tests for an example.
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
@@ -294,3 +305,31 @@ one = Parser $ \ s ->
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
 skipOne = Parser $ \ s -> Success () (fromMaybe s $ Streamable.tail s)
+
+{- | Parse a fixed size prefix.
+
+The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
+-}
+{-# INLINE takePrefix #-}
+takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
+takePrefix n = Parser $ \ xs -> uncurry Success (splitPrefix n xs)
+
+{- | Drop a fixed size prefix from the stream. -}
+{-# INLINE skipPrefix #-}
+skipPrefix :: Splittable s => Word -> Parser s Void ()
+skipPrefix n = Parser $ \ xs -> Success () (dropPrefix n xs)
+
+{- | Parse the longest prefix whose elements satisfy a predicate. -}
+{-# INLINE takeWith #-}
+takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
+takeWith p = Parser $ \ xs -> uncurry Success (splitWith p xs)
+
+{- | Drop the longest prefix whose elements satisfy a predicate. -}
+{-# INLINE skipWith #-}
+skipWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
+skipWith p = Parser $ \ xs -> Success () (dropWith p xs)
+
+{- | Parse the remainder of the stream as a prefix. -}
+{-# INLINE takeRemainder #-}
+takeRemainder :: Splittable s => Parser s Void (PrefixOf s)
+takeRemainder = Parser $ \ xs -> uncurry Success (splitRemainder xs)
