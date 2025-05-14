@@ -151,6 +151,4 @@ comment
     :: (Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
-comment p = do
-    _ <- p
-    first absurd $ takeWith (/= '\n') <* Combinators.maybe cr
+comment p = p *> first absurd (takeWith (/= '\n') <* Combinators.maybe cr)
