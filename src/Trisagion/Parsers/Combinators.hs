@@ -63,8 +63,8 @@ import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
 
 note(s):
 
-  * See 'Trisagion.Parsers.ParseError.validate' for a version more suited for dealing with
-  'Trisagion.Types.ParseError.ParseError' errors.
+  * See 'Trisagion.Parsers.ParseError.validate' in 'Trisagion.Parsers.ParseError' for a version
+  more suited for dealing with 'Trisagion.Types.ParseError.ParseError' errors.
 -}
 {-# INLINE validate #-}
 validate
@@ -270,7 +270,7 @@ sepBy sep p = do
         Left _  -> pure []
         Right y -> (y :) <$> many (before sep p)
 
-{- | The parser @'sepBy' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+{- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
 {-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
 sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)
