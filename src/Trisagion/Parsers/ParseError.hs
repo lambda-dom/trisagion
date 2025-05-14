@@ -18,7 +18,7 @@ import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, cons, modify)
+import Trisagion.Types.ParseError (ParseError, singleton, backtrace, modify)
 import Trisagion.Parser (Parser, get, throw, catch)
 
 
@@ -69,4 +69,4 @@ onParseError e p = do
     xs <- first absurd get
     catch
         p
-        (fmap absurd . throw . cons xs e)
+        (fmap absurd . throw . backtrace xs e)

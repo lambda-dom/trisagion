@@ -10,11 +10,10 @@ module Trisagion.Types.ParseError (
 
     -- ** Constructors.
     singleton,
-    cons,
+    backtrace,
 
     -- ** Elimination functions.
-    trace,
-    top,
+    toListWith,
 
     -- ** Functions.
     modify,
@@ -83,28 +82,21 @@ note(s):
 
   * Performs normalization on an empty backtrace.
 -}
-{-# INLINE cons #-}
-cons :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-cons xs e Empty = Single (makeError xs e)
-cons xs e back  = Cons (makeError xs e) back
+{-# INLINE backtrace #-}
+backtrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
+backtrace xs e Empty = Single (makeError xs e)
+backtrace xs e back  = Cons (makeError xs e) back
 
 
-{- | Getter for the entire trace of a 'ParseError' as an elimination function. -}
-{-# INLINEABLE trace #-}
-trace :: forall s e a . (forall d . Error s d -> a) -> ParseError s e -> [a]
-trace f = go
+{- | Convert a 'ParseError' to a list. -}
+{-# INLINEABLE toListWith #-}
+toListWith :: forall s e a . (forall d . Error s d -> a) -> ParseError s e -> [a]
+toListWith f = go
     where
         go :: ParseError s c -> [a]
         go Empty           = []
         go (Single err)    = [f err]
         go (Cons err back) = f err : go back
-
-{- | Getter for the t'Error' at the top of a 'ParseError'. -}
-{-# INLINE top #-}
-top :: ParseError s e -> Maybe (Error s e)
-top Empty        = Nothing
-top (Single err) = Just err
-top (Cons err _) = Just err
 
 
 {- | Apply a function to the input stream of the top error in a 'ParseError'.
