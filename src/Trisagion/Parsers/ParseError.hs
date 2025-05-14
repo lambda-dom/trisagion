@@ -9,6 +9,9 @@ module Trisagion.Parsers.ParseError (
     throwParseError,
     capture,
     onParseError,
+
+    -- * Validators.
+    validate,
 ) where
 
 -- Imports.
@@ -25,7 +28,7 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError, singleton, cons)
-import Trisagion.Parser (Parser, get, throw, catch)
+import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
 
 
@@ -77,3 +80,16 @@ onParseError e p = do
     catch
         p
         (fmap absurd . throw . cons xs e)
+
+
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s (ParseError s e) a      -- ^ Parser to run.
+    -> Parser s (ParseError s (d :+: e)) b
+validate v p = do
+    x <- first (fmap Right) p
+    case v x of
+        Left d  -> absurd <$> throwParseError (Left d)
+        Right y -> pure y

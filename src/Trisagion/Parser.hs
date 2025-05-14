@@ -248,7 +248,8 @@ try p = Parser $ \ xs ->
 {- | Run a parser isolated to a prefix of the stream.
 
 Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
-'Control.Monad.guard' the parser to run with an appropriate check.
+'Control.Monad.guard' the parser to run with an appropriate check -- see
+'Trisagion.Parsers.Streamable.ensureEOI'.
 -}
 {-# INLINE isolate #-}
 isolate
