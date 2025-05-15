@@ -46,7 +46,7 @@ library
         -- GHC 9.6
         base >=4.18 && <4.19,
         mtl >=2.3 && <2.4,
-        optics >= 0.4.2 && <0.4.3,
+        optics-core >= 0.4.1 && <0.4.2,
         bytestring >=0.11 && <0.13,
         text >=2.0 && <2.2,
         containers >=0.6 && <0.8,

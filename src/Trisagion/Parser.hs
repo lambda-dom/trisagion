@@ -46,7 +46,8 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Optics ((%), review)
+import Optics.Optic ((%))
+import Optics.Review (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)

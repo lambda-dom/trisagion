@@ -25,7 +25,8 @@ import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
 -- Libraries.
-import Optics ((%), review)
+import Optics.Optic ((%))
+import Optics.Review (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
