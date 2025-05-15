@@ -19,7 +19,7 @@ module Trisagion.Parsers.Splittable (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (Void, absurd)
+import Data.Void (absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
@@ -34,7 +34,7 @@ import Trisagion.Types.ErrorItem (endOfInput, errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, takePrefix, takeWith, get)
+import Trisagion.Parser (Parser, InputError, takePrefix, takeWith, get)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 
 
@@ -47,7 +47,7 @@ note(s):
 {-# INLINE takeExact #-}
 takeExact
     :: (Splittable s, MonoFoldable (PrefixOf s))
-    => Word -> Parser s (ParseError s Void) (PrefixOf s)
+    => Word -> Parser s (InputError s) (PrefixOf s)
 takeExact n = do
     prefix <- first absurd $ takePrefix n
     if monolength prefix /= n
