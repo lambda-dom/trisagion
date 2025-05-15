@@ -1,21 +1,28 @@
 {- |
 Module: Trisagion.Types.ErrorItem
 
-The @ErrorItem@ error type.
+The @ErrorItem@ type.
 -}
 
 module Trisagion.Types.ErrorItem (
-    -- * Error type.
-    ErrorItem,
+    -- * The @ErrorItem@ type.
+    ErrorItem (..),
 
-    -- * Prisms.
+    -- ** Prisms.
     endOfInput,
     errorItem,
+
+    -- * The @TraceItem@ type.
+    TraceItem,
+
+    -- ** Prisms.
+    traceItem,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Library.
 import Optics.Prism (Prism', prism')
@@ -61,3 +68,28 @@ errorItem = prism' construct match
         match :: ErrorItem s e -> Maybe (s, e)
         match (ErrorItem xs e) = Just (xs, e)
         match _                = Nothing
+
+
+{- | The @TraceItem s@ type, a wrapper around @forall d . 'ErrorItem' s d@. -}
+data TraceItem s where
+    TraceItem :: Typeable d => !(ErrorItem s d) -> TraceItem s
+
+-- Instances.
+instance Functor TraceItem where
+    {-# INLINE fmap #-}
+    fmap :: (s -> t) -> TraceItem s -> TraceItem t
+    fmap f (TraceItem ts) = TraceItem (first f ts)
+
+
+{- | The traceItem prism for 'TraceItem'. -}
+traceItem :: forall s e . Typeable e => Prism' (TraceItem s) (ErrorItem s e)
+traceItem = prism' construct match
+    where
+        construct :: ErrorItem s e -> TraceItem s
+        construct = TraceItem
+
+        match :: TraceItem s -> Maybe (ErrorItem s e)
+        match (TraceItem (err :: ErrorItem s d)) =
+            case eqT @d @e of
+                Nothing   -> Nothing
+                Just Refl -> Just err
