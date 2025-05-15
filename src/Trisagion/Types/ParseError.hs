@@ -5,66 +5,49 @@ The @ParseError@ error type.
 -}
 
 module Trisagion.Types.ParseError (
-    -- * The 'ParseError' error type.
+    -- * The @ParseError@ type.
     ParseError,
 
     -- ** Prisms.
     nil,
     cons,
-
-    -- * The 'Backtrace' type.
-    Backtrace,
-
-    -- ** Prisms.
-    backtrace,
-
-    -- * Functions.
-    uncons,
 ) where
 
 -- Imports.
 -- Base.
--- import Data.Bifunctor (Bifunctor (..))
-import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
+import Data.Bifunctor (Bifunctor (..))
+import Data.Typeable (Typeable)
 
 -- Libraries.
--- import Optics.Optic ((%))
-import Optics.Core (review)
 import Optics.Prism (Prism', prism')
 
 -- non-Hackage libraries.
--- import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, traceItem)
+import Trisagion.Types.ErrorItem (ErrorItem, TraceItem)
 
 
-{- | The 'ParseError' type.
-
-Functionally, a @'ParseError' s e@ is a, possibly empty, list of t'ErrorItem' values, with a
-@t'ErrorItem' s e@ value in the head and a tail of @t'ErrorItem' s d@ values with @d@ an unknown
-type with constraints @('Typeable' d, 'Eq' d, 'Show' d)@.
--}
+{- | The 'ParseError' type. -}
 data ParseError s e where
-    -- | The Nil constructor, the monoid unit for 'ParseError'.
+    -- | The Nil constructor.
     Nil :: ParseError s e
 
-    -- | A 'ParseError' with a backtrace.
-    Cons :: (Typeable d, Eq d, Show d) => !(ErrorItem s e) -> ParseError s d -> ParseError s e
+    -- | The Cons constructor.
+    Cons :: (Typeable e, Eq e, Show e) => !(ErrorItem s e) -> [TraceItem s] -> ParseError s e
 
 -- Instances.
-deriving stock instance Functor (ParseError s)
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
+deriving stock instance (Eq s, Eq e) => Eq (ParseError s e)
 
-instance (Eq s, Eq e) => Eq (ParseError s e) where
-    {-# INLINEABLE (==) #-}
-    (==) :: ParseError s e -> ParseError s e -> Bool
-    (==) Nil Nil = True
-    (==) (Cons e (b :: ParseError s d) ) (Cons e' (b' :: ParseError s d')) =
-        case eqT @d @d' of
-            Nothing   -> False
-            Just Refl -> e == e' && b == b'
-    (==) _ _ = False
+{- | Monofunctoriality for 'ParseError' in the input stream type. -}
+instance MonoFunctor (ParseError s e) where
+    type ElementOf (ParseError s e) = s
+
+    {-# INLINEABLE monomap #-}
+    monomap :: (s -> s) -> ParseError s e -> ParseError s e
+    monomap _ Nil         = Nil
+    monomap f (Cons e es) = Cons (first f e) (fmap (fmap f) es)
 
 instance Semigroup (ParseError s e) where
     {-# INLINE (<>) #-}
@@ -95,50 +78,12 @@ nil = prism' construct match
 
 {- | The cons prism for 'ParseError'. -}
 {-# INLINE cons #-}
-cons :: Prism' (ParseError s e) (ErrorItem s e, Backtrace s)
+cons :: forall s e . (Typeable e, Eq e, Show e) => Prism' (ParseError s e) (ErrorItem s e, [TraceItem s])
 cons = prism' construct match
     where
-        construct :: (ErrorItem s e, Backtrace s) -> ParseError s e
-        construct (err, Backtrace b) = Cons err b
+        construct :: (ErrorItem s e, [TraceItem s]) -> ParseError s e
+        construct = uncurry Cons
 
-        match :: ParseError s e -> Maybe (ErrorItem s e, Backtrace s)
-        match Nil           = Nothing
-        match (Cons err bs) = Just (err, Backtrace bs)
-
-
-{- | The @Backtrace s@ type, a wrapper around @forall d . 'ParseError' s d@. -}
-data Backtrace s where
-    Backtrace :: (Typeable d, Eq d, Show d) => !(ParseError s d) -> Backtrace s
-
--- Instances.
-deriving stock instance (Show s) => Show (Backtrace s)
-
-instance Eq s => Eq (Backtrace s) where
-    {-# INLINEABLE (==) #-}
-    (==) :: Backtrace s -> Backtrace s -> Bool
-    (==) (Backtrace (e :: ParseError s d)) (Backtrace (e' :: ParseError s d')) =
-        case eqT @d @d' of
-            Nothing   -> False
-            Just Refl -> e == e'
-
-{- | The backtrace prism for 'Backtrace'. -}
-{-# INLINE backtrace #-}
-backtrace :: forall s e . (Typeable e, Eq e, Show e) => Prism' (Backtrace s) (ParseError s e)
-backtrace = prism' construct match
-    where
-        construct :: ParseError s e -> Backtrace s
-        construct = Backtrace
-
-        match :: Backtrace s -> Maybe (ParseError s e)
-        match (Backtrace (err :: ParseError s d)) =
-            case eqT @d @e of
-                Nothing   -> Nothing
-                Just Refl -> Just err
-
-{- | Uncons a backtrace. -}
-uncons :: Backtrace s -> Maybe (TraceItem s, Backtrace s)
-uncons (Backtrace err) =
-    case err of
-        Nil       -> Nothing
-        Cons e es -> Just (review traceItem e, Backtrace es)
-
+        match :: ParseError s e -> Maybe (ErrorItem s e, [TraceItem s])
+        match Nil         = Nothing
+        match (Cons e es) = Just (e, es)
