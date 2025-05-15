@@ -24,6 +24,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable)
 
 -- Libraries.
+import Optics.Core (review, (%))
 import Optics.Prism (Prism', prism')
 
 -- non-Hackage libraries.
@@ -31,7 +32,6 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, errorItem, traceItem, endOfInput)
-import Optics.Core (review, (%))
 
 
 {- | The 'ParseError' type. -}
@@ -96,7 +96,9 @@ singleton = prism' construct match
 
 {- | The cons prism for 'ParseError' values with a backtrace. -}
 {-# INLINE cons #-}
-cons :: forall s e . (Typeable e, Eq e, Show e) => Prism' (ParseError s e) (ErrorItem s e, [TraceItem s])
+cons
+    :: forall s e . (Typeable e, Eq e, Show e)
+    => Prism' (ParseError s e) (ErrorItem s e, [TraceItem s])
 cons = prism' construct match
     where
         construct :: (ErrorItem s e, [TraceItem s]) -> ParseError s e
