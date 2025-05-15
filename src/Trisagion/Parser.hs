@@ -53,7 +53,7 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.Typeclasses.Splittable (Splittable (..), dropPrefix, dropWith)
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, singleton)
 import Trisagion.Types.ErrorItem (endOfInput)
