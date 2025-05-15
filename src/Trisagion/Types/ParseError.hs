@@ -10,6 +10,10 @@ module Trisagion.Types.ParseError (
 
     -- ** Getters.
     backtrace,
+
+    -- ** Prisms.
+    nil,
+    singleton,
 ) where
 
 -- Imports.
@@ -19,6 +23,7 @@ import Data.Typeable (Typeable)
 
 -- Libraries.
 import Optics.Core (review)
+import Optics.Prism (Prism', prism')
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -72,3 +77,31 @@ instance Monoid (ParseError s e) where
 backtrace :: ParseError s e -> [TraceItem s]
 backtrace Nil         = []
 backtrace (Cons _ xs) = fmap (review traceItem) xs
+
+
+{- | Prism for the nil value.
+
+The nil value can also be constructed by 'mempty'.
+-}
+{-# INLINE nil #-}
+nil :: Prism' (ParseError s e) ()
+nil = prism' construct match
+    where
+        construct :: () -> ParseError s e
+        construct _ = Nil
+
+        match :: ParseError s e -> Maybe ()
+        match Nil = Just ()
+        match _   = Nothing
+
+{- | The singleton prism for 'ParseError' values with no backtrace. -}
+{-# INLINE singleton #-}
+singleton :: forall s e . (Typeable e, Eq e, Show e) => Prism' (ParseError s e) (ErrorItem s e)
+singleton = prism' construct match
+    where
+        construct :: ErrorItem s e -> ParseError s e
+        construct e = let es = [] :: [ErrorItem s e] in Cons e es
+
+        match :: ParseError s e -> Maybe (ErrorItem s e)
+        match (Cons e []) = Just e
+        match _           = Nothing
