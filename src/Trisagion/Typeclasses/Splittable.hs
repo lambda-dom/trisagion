@@ -1,6 +1,3 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use drop" #-}
-
 {- |
 Module: Trisagion.Typeclasses.Splittable
 
@@ -19,16 +16,16 @@ import Data.Kind (Type)
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty)
-import qualified Data.Text as Text (Text, span, splitAt, empty)
-import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty)
-import qualified Data.Sequence as Seq (Seq, spanl, splitAt, empty)
-import qualified Data.Vector as Vector (Vector, span, splitAt, empty)
-import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty)
-import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty)
-import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty)
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Sequence as Seq (Seq, spanl, splitAt, empty, drop, dropWhileL)
+import qualified Data.Vector as Vector (Vector, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty, drop, dropWhile)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -107,6 +104,14 @@ instance Splittable Bytes.ByteString where
     splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitRemainder s = (s, Bytes.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Bytes.ByteString -> Bytes.ByteString
+    dropPrefix n = Bytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
+    dropWith = Bytes.dropWhile
+
 instance Splittable LBytes.ByteString where
     type PrefixOf LBytes.ByteString = LBytes.ByteString
 
@@ -121,6 +126,14 @@ instance Splittable LBytes.ByteString where
     {-# INLINE splitRemainder #-}
     splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitRemainder s = (s, LBytes.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> LBytes.ByteString -> LBytes.ByteString
+    dropPrefix n = LBytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> LBytes.ByteString -> LBytes.ByteString
+    dropWith = LBytes.dropWhile
 
 instance Splittable SBytes.ShortByteString where
     type PrefixOf SBytes.ShortByteString = SBytes.ShortByteString
@@ -137,6 +150,14 @@ instance Splittable SBytes.ShortByteString where
     splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitRemainder s = (s, SBytes.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> SBytes.ShortByteString -> SBytes.ShortByteString
+    dropPrefix n = SBytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
+    dropWith = SBytes.dropWhile
+
 instance Splittable Text.Text where
     type PrefixOf Text.Text = Text.Text
 
@@ -151,6 +172,14 @@ instance Splittable Text.Text where
     {-# INLINE splitRemainder #-}
     splitRemainder :: Text.Text -> (Text.Text, Text.Text)
     splitRemainder s = (s, Text.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Text.Text -> Text.Text
+    dropPrefix n = Text.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Char -> Bool) -> Text.Text -> Text.Text
+    dropWith = Text.dropWhile
 
 instance Splittable LText.Text where
     type PrefixOf LText.Text = LText.Text
@@ -167,6 +196,14 @@ instance Splittable LText.Text where
     splitRemainder :: LText.Text -> (LText.Text, LText.Text)
     splitRemainder s = (s, LText.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> LText.Text -> LText.Text
+    dropPrefix n = LText.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
+    dropWith = LText.dropWhile
+
 instance Splittable [a] where
     type PrefixOf [a] = [a]
 
@@ -181,6 +218,14 @@ instance Splittable [a] where
     {-# INLINE splitRemainder #-}
     splitRemainder :: [a] -> ([a], [a])
     splitRemainder xs = (xs, [])
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> [a] -> [a]
+    dropPrefix n = drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> [a] -> [a]
+    dropWith = dropWhile
 
 instance Splittable (Seq.Seq a) where
     type PrefixOf (Seq.Seq a) = Seq.Seq a
@@ -197,6 +242,14 @@ instance Splittable (Seq.Seq a) where
     splitRemainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitRemainder xs = (xs, Seq.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Seq.Seq a -> Seq.Seq a
+    dropPrefix n = Seq.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> Seq.Seq a -> Seq.Seq a
+    dropWith = Seq.dropWhileL
+
 instance Splittable (Vector.Vector a) where
     type PrefixOf (Vector.Vector a) = Vector.Vector a
 
@@ -211,6 +264,14 @@ instance Splittable (Vector.Vector a) where
     {-# INLINE splitRemainder #-}
     splitRemainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitRemainder xs = (xs, Vector.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Vector.Vector a -> Vector.Vector a
+    dropPrefix n = Vector.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> Vector.Vector a -> Vector.Vector a
+    dropWith = Vector.dropWhile
 
 instance Splittable (SVector.Vector a) where
     type PrefixOf (SVector.Vector a) = SVector.Vector a
@@ -227,6 +288,14 @@ instance Splittable (SVector.Vector a) where
     splitRemainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitRemainder xs = (xs, SVector.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> SVector.Vector a -> SVector.Vector a
+    dropPrefix n = SVector.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> SVector.Vector a -> SVector.Vector a
+    dropWith = SVector.dropWhile
+
 instance UVector.Unbox a => Splittable (UVector.Vector a) where
     type PrefixOf (UVector.Vector a) = UVector.Vector a
 
@@ -242,6 +311,14 @@ instance UVector.Unbox a => Splittable (UVector.Vector a) where
     splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitRemainder xs = (xs, UVector.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> UVector.Vector a -> UVector.Vector a
+    dropPrefix n = UVector.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> UVector.Vector a -> UVector.Vector a
+    dropWith = UVector.dropWhile
+
 instance StVector.Storable a => Splittable (StVector.Vector a) where
     type PrefixOf (StVector.Vector a) = StVector.Vector a
 
@@ -256,3 +333,11 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
     {-# INLINE splitRemainder #-}
     splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitRemainder xs = (xs, StVector.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> StVector.Vector a -> StVector.Vector a
+    dropPrefix n = StVector.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> StVector.Vector a -> StVector.Vector a
+    dropWith = StVector.dropWhile

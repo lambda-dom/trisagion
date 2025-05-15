@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               trisagion
 version:            0.1.0.0
-synopsis:           A simple monadic parsing library.
+synopsis:           A monadic parsing library.
 description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
 category:           Parsing
 homepage:           https://github.com/lambda-dom/trisagion#readme

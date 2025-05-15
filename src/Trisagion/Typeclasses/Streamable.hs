@@ -7,6 +7,9 @@ The @Streamable@ typeclass.
 module Trisagion.Typeclasses.Streamable (
     -- * Typeclasses.
     Streamable (..),
+
+    -- * Functions.
+    isSuffix,
 ) where
 
 -- Imports.
@@ -14,24 +17,24 @@ module Trisagion.Typeclasses.Streamable (
 import Prelude hiding (head, tail)
 
 -- Base.
-import qualified Data.Foldable as Foldable (null)
+import qualified Data.Foldable as Foldable (null, toList)
 import Data.List (unfoldr, singleton)
 import qualified Data.List as List (uncons, isSuffixOf)
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, uncons, null)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, uncons, null)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, uncons, null)
-import qualified Data.Text as Text (Text, uncons, null)
-import qualified Data.Text.Lazy as LText (Text, uncons, null)
+import qualified Data.ByteString as Bytes (ByteString, uncons, null, unpack)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, uncons, null, unpack)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, uncons, null, unpack)
+import qualified Data.Text as Text (Text, uncons, null, unpack)
+import qualified Data.Text.Lazy as LText (Text, uncons, null, unpack)
 import Data.Sequence (Seq (..))
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (uncons)
 import qualified Data.Vector.Strict as SVector (Vector, uncons)
-import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null)
-import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null)
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null, toList)
+import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null, toList)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -94,11 +97,6 @@ class MonoFunctor s => Streamable s where
     toList :: s -> [ElementOf s]
     toList = unfoldr uncons
 
-    {- | Return 'True' if @xs@ is a suffix of @ys@. -}
-    {-# INLINE isSuffix #-}
-    isSuffix :: Eq (ElementOf s) => s -> s -> Bool
-    isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
-
 -- Instances.
 instance Streamable Bytes.ByteString where
     {-# INLINE uncons #-}
@@ -109,6 +107,10 @@ instance Streamable Bytes.ByteString where
     null :: Bytes.ByteString -> Bool
     null = Bytes.null
 
+    {-# INLINE toList #-}
+    toList :: Bytes.ByteString -> [Word8]
+    toList = Bytes.unpack
+
 instance Streamable LBytes.ByteString where
     {-# INLINE uncons #-}
     uncons :: LBytes.ByteString -> Maybe (Word8, LBytes.ByteString)
@@ -117,6 +119,10 @@ instance Streamable LBytes.ByteString where
     {-# INLINE null #-}
     null :: LBytes.ByteString -> Bool
     null = LBytes.null
+
+    {-# INLINE toList #-}
+    toList :: LBytes.ByteString -> [Word8]
+    toList = LBytes.unpack
 
 instance Streamable SBytes.ShortByteString where
     {-# INLINE uncons #-}
@@ -127,6 +133,10 @@ instance Streamable SBytes.ShortByteString where
     null :: SBytes.ShortByteString -> Bool
     null = SBytes.null
 
+    {-# INLINE toList #-}
+    toList :: SBytes.ShortByteString -> [Word8]
+    toList = SBytes.unpack
+
 instance Streamable Text.Text where
     {-# INLINE uncons #-}
     uncons :: Text.Text -> Maybe (Char, Text.Text)
@@ -136,6 +146,10 @@ instance Streamable Text.Text where
     null :: Text.Text -> Bool
     null = Text.null
 
+    {-# INLINE toList #-}
+    toList :: Text.Text -> [Char]
+    toList = Text.unpack
+
 instance Streamable LText.Text where
     {-# INLINE uncons #-}
     uncons :: LText.Text -> Maybe (Char, LText.Text)
@@ -144,6 +158,10 @@ instance Streamable LText.Text where
     {-# INLINE null #-}
     null :: LText.Text -> Bool
     null = LText.null
+
+    {-# INLINE toList #-}
+    toList :: LText.Text -> [Char]
+    toList = LText.unpack
 
 instance Streamable (Maybe a) where
     {-# INLINE uncons #-}
@@ -164,12 +182,6 @@ instance Streamable (Maybe a) where
     toList :: Maybe a -> [a]
     toList = maybe [] singleton
 
-    {-# INLINE isSuffix #-}
-    isSuffix :: Eq a => Maybe a -> Maybe a -> Bool
-    isSuffix Nothing  _        = True
-    isSuffix (Just x) (Just y) = x == y
-    isSuffix _        _        = False
-
 instance Streamable [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
@@ -188,9 +200,6 @@ instance Streamable [a] where
     toList :: [a] -> [a]
     toList = id
 
-    {-# INLINE isSuffix #-}
-    isSuffix = List.isSuffixOf
-
 instance Streamable (Seq a) where
     {-# INLINE uncons #-}
     uncons :: Seq a -> Maybe (a, Seq a)
@@ -201,6 +210,10 @@ instance Streamable (Seq a) where
     null :: Seq a -> Bool
     null = Foldable.null
 
+    {-# INLINE toList #-}
+    toList :: Seq a -> [a]
+    toList = Foldable.toList
+
 instance Streamable (Vector a) where
     {-# INLINE uncons #-}
     uncons :: Vector a -> Maybe (a, Vector a)
@@ -209,6 +222,10 @@ instance Streamable (Vector a) where
     {-# INLINE null #-}
     null :: Vector a -> Bool
     null = Foldable.null
+
+    {-# INLINE toList #-}
+    toList :: Vector a -> [a]
+    toList = Foldable.toList
 
 instance Streamable (SVector.Vector a) where
     {-# INLINE uncons #-}
@@ -219,6 +236,10 @@ instance Streamable (SVector.Vector a) where
     null :: SVector.Vector a -> Bool
     null = Foldable.null
 
+    {-# INLINE toList #-}
+    toList :: SVector.Vector a -> [a]
+    toList = Foldable.toList
+
 instance UVector.Unbox a => Streamable (UVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: UVector.Vector a -> Maybe (a, UVector.Vector a)
@@ -228,6 +249,10 @@ instance UVector.Unbox a => Streamable (UVector.Vector a) where
     null :: UVector.Vector a -> Bool
     null = UVector.null
 
+    {-# INLINE toList #-}
+    toList :: UVector.Vector a -> [a]
+    toList = UVector.toList
+
 instance StVector.Storable a => Streamable (StVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: StVector.Vector a -> Maybe (a, StVector.Vector a)
@@ -236,3 +261,13 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     {-# INLINE null #-}
     null :: StVector.Vector a -> Bool
     null = StVector.null
+
+    {-# INLINE toList #-}
+    toList :: StVector.Vector a -> [a]
+    toList = StVector.toList
+
+
+{- | Return 'True' if @xs@ is a suffix of @ys@. -}
+{-# INLINE isSuffix #-}
+isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffix xs ys = toList xs `List.isSuffixOf` toList ys

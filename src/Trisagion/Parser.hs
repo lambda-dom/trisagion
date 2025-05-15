@@ -8,6 +8,9 @@ module Trisagion.Parser (
     -- * Type operators.
     (:+:),
 
+    -- * Type aliases.
+    InputError,
+
     -- * The parsing monad.
     Parser,
 
@@ -62,6 +65,10 @@ import Trisagion.Types.ErrorItem (endOfInput)
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:
+
+
+{- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
+type InputError s = ParseError s Void
 
 
 {- | The parsing monad. -}
@@ -294,7 +301,7 @@ catch p h = Parser $ \ xs ->
 
 {- | Parse one @'ElementOf' s@ from the input stream. -}
 {-# INLINE one #-}
-one :: Streamable s => Parser s (ParseError s Void) (ElementOf s)
+one :: Streamable s => Parser s (InputError s) (ElementOf s)
 one = Parser $ \ s ->
     case uncons s of
         Nothing      -> Error $ review (singleton % endOfInput) 1
