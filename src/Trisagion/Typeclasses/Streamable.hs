@@ -96,7 +96,7 @@ class MonoFunctor s => Streamable s where
 
     {- | Return 'True' if @xs@ is a suffix of @ys@. -}
     {-# INLINE isSuffix #-}
-    isSuffix :: (Eq (ElementOf s)) => s -> s -> Bool
+    isSuffix :: Eq (ElementOf s) => s -> s -> Bool
     isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
 
 -- Instances.
