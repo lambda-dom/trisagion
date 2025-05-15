@@ -10,10 +10,6 @@ The @Splittable@ typeclass.
 module Trisagion.Typeclasses.Splittable (
     -- * Typeclasses.
     Splittable (..),
-
-    -- * Functions.
-    dropPrefix,
-    dropWith,
 ) where
 
 -- Imports.
@@ -84,6 +80,16 @@ class Streamable s => Splittable s where
     -}
     splitRemainder :: s -> (PrefixOf s, s)
     splitRemainder = splitWith (const True)
+
+    {- | Drop a fixed-size prefix from the stream. -}
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> s -> s
+    dropPrefix n = snd . splitPrefix n
+
+    {- | Drop the longest prefix satisfying a predicate from the stream. -}
+    {-# INLINE dropWith #-}
+    dropWith :: (ElementOf s -> Bool) -> s -> s
+    dropWith p = snd . splitWith p
 
 -- Instances.
 instance Splittable Bytes.ByteString where
@@ -250,14 +256,3 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
     {-# INLINE splitRemainder #-}
     splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitRemainder xs = (xs, StVector.empty)
-
-
-{- | Drop a fixed-size prefix from the stream. -}
-{-# INLINE dropPrefix #-}
-dropPrefix :: Splittable s => Word -> s -> s
-dropPrefix n = snd . splitPrefix n
-
-{- | Drop the longest prefix satisfying a predicate from the stream. -}
-{-# INLINE dropWith #-}
-dropWith :: Splittable s => (ElementOf s -> Bool) -> s -> s
-dropWith p = snd . splitWith p
