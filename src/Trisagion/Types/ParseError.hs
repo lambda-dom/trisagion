@@ -12,6 +12,10 @@ module Trisagion.Types.ParseError (
     nil,
     singleton,
     cons,
+
+    -- ** Constructors.
+    makeTrace,
+    makeEOI,
 ) where
 
 -- Imports.
@@ -26,7 +30,8 @@ import Optics.Prism (Prism', prism')
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ErrorItem (ErrorItem, TraceItem)
+import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, errorItem, traceItem, endOfInput)
+import Optics.Core (review, (%))
 
 
 {- | The 'ParseError' type. -}
@@ -100,3 +105,14 @@ cons = prism' construct match
         match :: ParseError s e -> Maybe (ErrorItem s e, [TraceItem s])
         match Nil         = Nothing
         match (Cons e es) = Just (e, es)
+
+
+{- | Constructor helper to build a 'ParseError' with a backtrace. -}
+{-# INLINE makeTrace #-}
+makeTrace :: (Typeable e, Eq e, Show e) => s -> e -> ParseError s d -> ParseError s e
+makeTrace xs e Nil         = review (singleton % errorItem) (xs, e)
+makeTrace xs e (Cons y ys) = Cons (review errorItem (xs, e)) (review traceItem y : ys)
+
+{- | Constructor helper to build an end of input 'ParseError'. -}
+makeEOI :: (Typeable e, Eq e, Show e) => Word -> ParseError s e
+makeEOI = review (singleton % endOfInput)
