@@ -7,6 +7,9 @@ The @Streamable@ typeclass.
 module Trisagion.Typeclasses.Streamable (
     -- * Typeclasses.
     Streamable (..),
+
+    -- * Functions.
+    isSuffix,
 ) where
 
 -- Imports.
@@ -94,11 +97,6 @@ class MonoFunctor s => Streamable s where
     toList :: s -> [ElementOf s]
     toList = unfoldr uncons
 
-    {- | Return 'True' if @xs@ is a suffix of @ys@. -}
-    {-# INLINE isSuffix #-}
-    isSuffix :: Eq (ElementOf s) => s -> s -> Bool
-    isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
-
 -- Instances.
 instance Streamable Bytes.ByteString where
     {-# INLINE uncons #-}
@@ -164,12 +162,6 @@ instance Streamable (Maybe a) where
     toList :: Maybe a -> [a]
     toList = maybe [] singleton
 
-    {-# INLINE isSuffix #-}
-    isSuffix :: Eq a => Maybe a -> Maybe a -> Bool
-    isSuffix Nothing  _        = True
-    isSuffix (Just x) (Just y) = x == y
-    isSuffix _        _        = False
-
 instance Streamable [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
@@ -187,9 +179,6 @@ instance Streamable [a] where
     {-# INLINE toList #-}
     toList :: [a] -> [a]
     toList = id
-
-    {-# INLINE isSuffix #-}
-    isSuffix = List.isSuffixOf
 
 instance Streamable (Seq a) where
     {-# INLINE uncons #-}
@@ -236,3 +225,9 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     {-# INLINE null #-}
     null :: StVector.Vector a -> Bool
     null = StVector.null
+
+
+{- | Return 'True' if @xs@ is a suffix of @ys@. -}
+{-# INLINE isSuffix #-}
+isSuffix :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
+isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
