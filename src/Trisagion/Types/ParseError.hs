@@ -26,9 +26,6 @@ import Data.Typeable (Typeable)
 -- Libraries.
 import Optics.Core (Prism', (%), prism', review)
 
--- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, traceItem)
 
@@ -46,14 +43,10 @@ deriving stock instance Functor (ParseError s)
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
 deriving stock instance (Eq s, Eq e) => Eq (ParseError s e)
 
-{- | Monofunctoriality for 'ParseError' in the input stream type. -}
-instance MonoFunctor (ParseError s e) where
-    type ElementOf (ParseError s e) = s
-
-    {-# INLINEABLE monomap #-}
-    monomap :: (s -> s) -> ParseError s e -> ParseError s e
-    monomap _ Nil         = Nil
-    monomap f (Cons e es) = Cons (first f e) (fmap (fmap f) es)
+instance Bifunctor ParseError where
+    bimap :: (s -> t) -> (d -> e) -> ParseError s d -> ParseError t e
+    bimap _ _ Nil         = Nil
+    bimap f g (Cons e es) = Cons (bimap f g e) (fmap (fmap f) es)
 
 instance Semigroup (ParseError s e) where
     {-# INLINE (<>) #-}
