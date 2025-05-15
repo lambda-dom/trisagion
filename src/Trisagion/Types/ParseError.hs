@@ -17,6 +17,9 @@ module Trisagion.Types.ParseError (
 
     -- ** Prisms.
     backtrace,
+
+    -- * Functions.
+    uncons,
 ) where
 
 -- Imports.
@@ -26,14 +29,14 @@ import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Libraries.
 -- import Optics.Optic ((%))
+import Optics.Core (review)
 import Optics.Prism (Prism', prism')
--- import Optics.Review (review)
 
 -- non-Hackage libraries.
 -- import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ErrorItem (ErrorItem)
+import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, traceItem)
 
 
 {- | The 'ParseError' type.
@@ -131,3 +134,11 @@ backtrace = prism' construct match
             case eqT @d @e of
                 Nothing   -> Nothing
                 Just Refl -> Just err
+
+{- | Uncons a backtrace. -}
+uncons :: Backtrace s -> Maybe (TraceItem s, Backtrace s)
+uncons (Backtrace err) =
+    case err of
+        Nil       -> Nothing
+        Cons e es -> Just (review traceItem e, Backtrace es)
+
