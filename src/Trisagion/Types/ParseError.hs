@@ -14,10 +14,14 @@ module Trisagion.Types.ParseError (
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable)
 
 -- Libraries.
 import Optics.Core (review)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, traceItem)
@@ -41,6 +45,26 @@ instance (Eq s, Eq e) => Eq (ParseError s e) where
     (==) Nil          Nil          = True
     (==) r@(Cons d _) s@(Cons e _) = d == e && backtrace r == backtrace s
     (==) _            _            = False
+
+{- | Monofunctoriality for 'ParseError' in the input stream type. -}
+instance MonoFunctor (ParseError s e) where
+    type ElementOf (ParseError s e) = s
+
+    {-# INLINEABLE monomap #-}
+    monomap :: (s -> s) -> ParseError s e -> ParseError s e
+    monomap _ Nil         = Nil
+    monomap f (Cons e es) = Cons (first f e) (fmap (first f) es)
+
+instance Semigroup (ParseError s e) where
+    {-# INLINE (<>) #-}
+    (<>) :: ParseError s e -> ParseError s e -> ParseError s e
+    (<>) Nil x = x
+    (<>) x   _ = x
+
+instance Monoid (ParseError s e) where
+    {-# INLINE mempty #-}
+    mempty :: ParseError s e
+    mempty = Nil
 
 
 {- | The backtrace of a 'ParseError' as a list of 'TraceItem'. -}
