@@ -20,6 +20,7 @@ module Trisagion.Types.ErrorItem (
 
     -- * Functions.
     applyNat,
+    applyCone,
 ) where
 
 -- Imports.
@@ -113,3 +114,8 @@ traceItem = prism' construct match
 {-# INLINE applyNat #-}
 applyNat :: (forall d . ErrorItem s d -> ErrorItem t d) -> TraceItem s -> TraceItem t
 applyNat f (TraceItem e) = TraceItem (f e)
+
+{- | Apply a natural transformation @'ErrorItem' s -> Const a@, or a /cone/, to a 'TraceItem'. -}
+{-# INLINE applyCone #-}
+applyCone :: (forall d . ErrorItem s d -> a) -> TraceItem s -> a
+applyCone f (TraceItem e) = f e

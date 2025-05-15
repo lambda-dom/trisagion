@@ -7,12 +7,6 @@ The @Streamable@ typeclass.
 module Trisagion.Typeclasses.Streamable (
     -- * Typeclasses.
     Streamable (..),
-
-    -- * Functions.
-    head,
-    tail,
-    toList,
-    isSuffixOf,
 ) where
 
 -- Imports.
@@ -21,7 +15,7 @@ import Prelude hiding (head, tail)
 
 -- Base.
 import qualified Data.Foldable as Foldable (null)
-import Data.List (unfoldr)
+import Data.List (unfoldr, singleton)
 import qualified Data.List as List (uncons, isSuffixOf)
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
@@ -90,6 +84,20 @@ class MonoFunctor s => Streamable s where
     null :: s -> Bool
     null = isNothing . uncons
 
+    {- | Return the tail of the stream. -}
+    {-# INLINE dropOne #-}
+    dropOne :: s -> Maybe s
+    dropOne = fmap snd . uncons
+
+    {- | Convert a 'Streamable' to a list. -}
+    {-# INLINE toList #-}
+    toList :: s -> [ElementOf s]
+    toList = unfoldr uncons
+
+    {- | Return 'True' if @xs@ is a suffix of @ys@. -}
+    {-# INLINE isSuffix #-}
+    isSuffix :: Eq (ElementOf s) => s -> s -> Bool
+    isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
 
 -- Instances.
 instance Streamable Bytes.ByteString where
@@ -147,6 +155,21 @@ instance Streamable (Maybe a) where
     null :: Maybe a -> Bool
     null = isNothing
 
+    {-# INLINE dropOne #-}
+    dropOne :: Maybe a -> Maybe (Maybe a)
+    dropOne Nothing  = Nothing
+    dropOne (Just _) = Just Nothing
+
+    {-# INLINE toList #-}
+    toList :: Maybe a -> [a]
+    toList = maybe [] singleton
+
+    {-# INLINE isSuffix #-}
+    isSuffix :: Eq a => Maybe a -> Maybe a -> Bool
+    isSuffix Nothing  _        = True
+    isSuffix (Just x) (Just y) = x == y
+    isSuffix _        _        = False
+
 instance Streamable [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
@@ -155,6 +178,18 @@ instance Streamable [a] where
     {-# INLINE null #-}
     null :: [a] -> Bool
     null = Foldable.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: [a] -> Maybe [a]
+    dropOne []       = Nothing
+    dropOne (_ : xs) = Just xs
+
+    {-# INLINE toList #-}
+    toList :: [a] -> [a]
+    toList = id
+
+    {-# INLINE isSuffix #-}
+    isSuffix = List.isSuffixOf
 
 instance Streamable (Seq a) where
     {-# INLINE uncons #-}
@@ -201,24 +236,3 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     {-# INLINE null #-}
     null :: StVector.Vector a -> Bool
     null = StVector.null
-
-
-{- | The head of the stream. -}
-{-# INLINE head #-}
-head :: Streamable s => s -> Maybe (ElementOf s)
-head = fmap fst . uncons
-
-{- | The tail of the stream. -}
-{-# INLINE tail #-}
-tail :: Streamable s => s -> Maybe s
-tail = fmap snd . uncons
-
-{- | Convert a 'Streamable' to a list. -}
-{-# INLINEABLE toList #-}
-toList :: Streamable s => s -> [ElementOf s]
-toList = unfoldr uncons
-
-{- | Return 'True' if @xs@ is a suffix of @ys@. -}
-{-# INLINEABLE isSuffixOf #-}
-isSuffixOf :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
-isSuffixOf xs ys = toList xs `List.isSuffixOf` toList ys
