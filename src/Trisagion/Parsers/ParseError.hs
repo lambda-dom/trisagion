@@ -32,7 +32,7 @@ import Optics.Review (review)
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, cons)
+import Trisagion.Types.ParseError (ParseError, singleton, makeTrace)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
 
@@ -90,7 +90,7 @@ onParseError e p = do
     xs <- first absurd get
     catch
         p
-        (fmap absurd . throw . cons xs e)
+        (fmap absurd . throw . makeTrace xs e)
 
 
 {- | Run the parser and return the result, validating it. -}

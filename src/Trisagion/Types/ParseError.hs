@@ -5,143 +5,114 @@ The @ParseError@ error type.
 -}
 
 module Trisagion.Types.ParseError (
-    -- * The 'ParseError' error type.
-    ParseError,
+    -- * The @ParseError@ type.
+    ParseError (..),
 
     -- ** Prisms.
-    empty,
+    nil,
     singleton,
-
-    -- ** Constructors.
     cons,
 
-    -- * Functions.
-    unconsWith,
-    toListWith,
+    -- ** Constructors.
+    makeEOI,
+    makeTrace,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
+import Data.Typeable (Typeable)
 
 -- Libraries.
-import Optics.Optic ((%))
-import Optics.Prism (Prism', prism')
-import Optics.Review (review)
+import Optics.Core (Prism', (%), prism', review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ErrorItem (ErrorItem, errorItem)
+import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, traceItem)
 
 
-{- | The 'ParseError' type.
-
-Functionally, a @'ParseError' s e@ is a, possibly empty, list of t'ErrorItem' values, with a
-@t'ErrorItem' s e@ value in the head and a tail of @t'ErrorItem' s d@ values with @d@ an unknown
-type with constraints @('Typeable' d, 'Eq' d, 'Show' d)@.
--}
+{- | The 'ParseError' type. -}
 data ParseError s e where
-    -- | The Empty constructor, the monoid unit for 'ParseError'.
-    Empty :: ParseError s e
+    -- | The Nil constructor.
+    Nil :: ParseError s e
 
-    -- | A 'ParseError' with no backtrace.
-    Singleton :: !(ErrorItem s e) -> ParseError s e
-
-    -- | A 'ParseError' with a backtrace.
-    Cons :: (Typeable d, Eq d, Show d) => !(ErrorItem s e) -> ParseError s d -> ParseError s e
+    -- | The Cons constructor.
+    Cons :: !(ErrorItem s e) -> [TraceItem s] -> ParseError s e
 
 -- Instances.
 deriving stock instance Functor (ParseError s)
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
+deriving stock instance (Eq s, Eq e) => Eq (ParseError s e)
 
-{- | Provides monofunctoriality in the input stream @s@ for @'ParseError' s e@. -}
+{- | Monofunctoriality for 'ParseError' in the input stream type. -}
 instance MonoFunctor (ParseError s e) where
     type ElementOf (ParseError s e) = s
 
-    {-# INLINE monomap #-}
+    {-# INLINEABLE monomap #-}
     monomap :: (s -> s) -> ParseError s e -> ParseError s e
-    monomap _ Empty           = Empty
-    monomap f (Singleton err) = Singleton (first f err)
-    monomap f (Cons err back) = Cons (first f err) back
-
-instance (Eq s, Eq e) => Eq (ParseError s e) where
-    {-# INLINEABLE (==) #-}
-    (==) :: ParseError s e -> ParseError s e -> Bool
-    (==) Empty Empty = True
-    (==) (Singleton e) (Singleton e') = e == e'
-    (==) (Cons e (b :: ParseError s d) ) (Cons e' (b' :: ParseError s d')) =
-        case eqT @d @d' of
-            Nothing   -> False
-            Just Refl -> e == e' && b == b'
-    (==) _ _ = False
+    monomap _ Nil         = Nil
+    monomap f (Cons e es) = Cons (first f e) (fmap (fmap f) es)
 
 instance Semigroup (ParseError s e) where
     {-# INLINE (<>) #-}
     (<>) :: ParseError s e -> ParseError s e -> ParseError s e
-    (<>) Empty x = x
-    (<>) x    _ = x
+    (<>) Nil x = x
+    (<>) x   _ = x
 
 instance Monoid (ParseError s e) where
     {-# INLINE mempty #-}
     mempty :: ParseError s e
-    mempty = Empty
+    mempty = Nil
 
+{- | Prism for the nil value.
 
-{- | Prism for the empty value.
-
-The empty value can also be constructed by 'mempty'.
+The nil value can also be constructed by 'mempty'.
 -}
-{-# INLINE empty #-}
-empty :: Prism' (ParseError s e) ()
-empty = prism' construct match
+{-# INLINE nil #-}
+nil :: Prism' (ParseError s e) ()
+nil = prism' construct match
     where
         construct :: () -> ParseError s e
-        construct _ = Empty
+        construct _ = Nil
 
         match :: ParseError s e -> Maybe ()
-        match Empty = Just ()
-        match _     = Nothing
+        match Nil = Just ()
+        match _   = Nothing
 
-{- | Prism for 'ParseError' values without a backtrace. -}
+{- | The singleton prism for 'ParseError' values with no backtrace. -}
 {-# INLINE singleton #-}
 singleton :: Prism' (ParseError s e) (ErrorItem s e)
 singleton = prism' construct match
     where
         construct :: ErrorItem s e -> ParseError s e
-        construct = Singleton
+        construct e = Cons e []
 
         match :: ParseError s e -> Maybe (ErrorItem s e)
-        match (Singleton err) = Just err
-        match _               = Nothing
+        match (Cons e []) = Just e
+        match _           = Nothing
 
-{- | Construct a 'ParseError' from an error and a 'ParseError'.
-
-note(s):
-
-  * Performs normalization on an empty backtrace.
--}
+{- | The cons prism for 'ParseError' values with a backtrace. -}
 {-# INLINE cons #-}
-cons :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-cons xs e Empty = review (singleton % errorItem) (xs, e)
-cons xs e trace = Cons (review errorItem (xs, e)) trace
-
-
-{- | Getter for the top t'ErrorItem' and the backtrace of a 'ParseError'. -}
-{-# INLINE unconsWith #-}
-unconsWith :: (forall d . ErrorItem s d -> a) -> ParseError s e -> Maybe (ErrorItem s e, [a])
-unconsWith _ Empty            = Nothing
-unconsWith _ (Singleton err)  = Just (err, [])
-unconsWith f (Cons err trace) = Just (err, toListWith f trace)
-
-{- | Convert a 'ParseError' to a list. -}
-{-# INLINEABLE toListWith #-}
-toListWith :: forall s e a . (forall d . ErrorItem s d -> a) -> ParseError s e -> [a]
-toListWith f = go
+cons :: Prism' (ParseError s e) (ErrorItem s e, [TraceItem s])
+cons = prism' construct match
     where
-        go :: ParseError s c -> [a]
-        go Empty            = []
-        go (Singleton err)  = [f err]
-        go (Cons err trace) = f err : go trace
+        construct :: (ErrorItem s e, [TraceItem s]) -> ParseError s e
+        construct = uncurry Cons
+
+        match :: ParseError s e -> Maybe (ErrorItem s e, [TraceItem s])
+        match (Cons e es) = Just (e, es)
+        match _           = Nothing
+
+
+{- | Constructor helper to build an end of input 'ParseError'. -}
+{-# INLINE makeEOI #-}
+makeEOI :: Word -> ParseError s e
+makeEOI = review (singleton % endOfInput)
+
+{- | Constructor helper to build a 'ParseError' with a backtrace. -}
+{-# INLINE makeTrace #-}
+makeTrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
+makeTrace xs e Nil        = review (singleton % errorItem) (xs, e)
+makeTrace xs e (Cons y ys) = Cons (review errorItem (xs, e)) (review traceItem y : ys)
