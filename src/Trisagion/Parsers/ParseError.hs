@@ -45,7 +45,7 @@ newtype ValidationError e = ValidationError e
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
-throwParseError :: (Typeable e, Eq e, Show e) => e -> Parser s (ParseError s e) Void
+throwParseError :: e -> Parser s (ParseError s e) Void
 throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
@@ -82,7 +82,7 @@ The input stream of the thrown error is the input stream captured /before/ @p@ r
 -}
 {-# INLINE onParseError #-}
 onParseError
-    :: (Typeable e, Eq e, Show e)
+    :: (Typeable d, Eq d, Show d)
     => e                                -- ^ Error tag of new error.
     -> Parser s (ParseError s d) a      -- ^ Parser to run.
     -> Parser s (ParseError s e) a
@@ -96,8 +96,7 @@ onParseError e p = do
 {- | Run the parser and return the result, validating it. -}
 {-# INLINE validate #-}
 validate
-    :: (Typeable d, Eq d, Show d, Typeable e, Eq e, Show e)
-    => (a -> d :+: b)                   -- ^ Validator.
+    :: (a -> d :+: b)                   -- ^ Validator.
     -> Parser s (ParseError s e) a      -- ^ Parser to run.
     -> Parser s (ParseError s (d :+: e)) b
 validate v p = do
