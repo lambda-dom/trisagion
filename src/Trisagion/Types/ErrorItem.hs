@@ -72,9 +72,19 @@ errorItem = prism' construct match
 
 {- | The @TraceItem s@ type, a wrapper around @forall d . 'ErrorItem' s d@. -}
 data TraceItem s where
-    TraceItem :: Typeable d => !(ErrorItem s d) -> TraceItem s
+    TraceItem :: (Typeable d, Eq d, Show d) => !(ErrorItem s d) -> TraceItem s
 
 -- Instances.
+deriving stock instance (Show s) => Show (TraceItem s)
+
+instance Eq s => Eq (TraceItem s) where
+    {-# INLINEABLE (==) #-}
+    (==) :: TraceItem s -> TraceItem s -> Bool
+    (==) (TraceItem (e :: ErrorItem s d)) (TraceItem (e' :: ErrorItem s d')) =
+        case eqT @d @d' of
+            Nothing   -> False
+            Just Refl -> e == e'
+
 instance Functor TraceItem where
     {-# INLINE fmap #-}
     fmap :: (s -> t) -> TraceItem s -> TraceItem t
@@ -82,7 +92,8 @@ instance Functor TraceItem where
 
 
 {- | The traceItem prism for 'TraceItem'. -}
-traceItem :: forall s e . Typeable e => Prism' (TraceItem s) (ErrorItem s e)
+{-# INLINE traceItem #-}
+traceItem :: forall s e . (Typeable e, Eq e, Show e) => Prism' (TraceItem s) (ErrorItem s e)
 traceItem = prism' construct match
     where
         construct :: ErrorItem s e -> TraceItem s

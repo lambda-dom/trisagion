@@ -59,7 +59,7 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
-        -- Trisagion.Types.ParseError
+        Trisagion.Types.ParseError
         -- Trisagion.Parser
         -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.ParseError
