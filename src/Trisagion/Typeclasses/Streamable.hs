@@ -15,7 +15,7 @@ import Prelude hiding (head, tail)
 
 -- Base.
 import qualified Data.Foldable as Foldable (null)
-import Data.List (unfoldr)
+import Data.List (unfoldr, singleton)
 import qualified Data.List as List (uncons, isSuffixOf)
 import Data.Maybe (isNothing)
 import Data.Word (Word8)
@@ -155,6 +155,21 @@ instance Streamable (Maybe a) where
     null :: Maybe a -> Bool
     null = isNothing
 
+    {-# INLINE dropOne #-}
+    dropOne :: Maybe a -> Maybe (Maybe a)
+    dropOne Nothing  = Nothing
+    dropOne (Just _) = Just Nothing
+
+    {-# INLINE toList #-}
+    toList :: Maybe a -> [a]
+    toList = maybe [] singleton
+
+    {-# INLINE isSuffix #-}
+    isSuffix :: Eq a => Maybe a -> Maybe a -> Bool
+    isSuffix Nothing  _        = True
+    isSuffix (Just x) (Just y) = x == y
+    isSuffix _        _        = False
+
 instance Streamable [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
@@ -163,6 +178,18 @@ instance Streamable [a] where
     {-# INLINE null #-}
     null :: [a] -> Bool
     null = Foldable.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: [a] -> Maybe [a]
+    dropOne []       = Nothing
+    dropOne (_ : xs) = Just xs
+
+    {-# INLINE toList #-}
+    toList :: [a] -> [a]
+    toList = id
+
+    {-# INLINE isSuffix #-}
+    isSuffix = List.isSuffixOf
 
 instance Streamable (Seq a) where
     {-# INLINE uncons #-}
@@ -209,5 +236,3 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     {-# INLINE null #-}
     null :: StVector.Vector a -> Bool
     null = StVector.null
-
-
