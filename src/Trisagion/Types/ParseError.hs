@@ -6,7 +6,7 @@ The @ParseError@ error type.
 
 module Trisagion.Types.ParseError (
     -- * The @ParseError@ type.
-    ParseError (..),
+    ParseError,
 
     -- ** Prisms.
     nil,
