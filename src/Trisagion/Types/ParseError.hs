@@ -113,6 +113,11 @@ makeEOI = review (singleton % endOfInput)
 
 {- | Constructor helper to build a 'ParseError' with a backtrace. -}
 {-# INLINE makeTrace #-}
-makeTrace :: (Typeable d, Eq d, Show d) => s -> e -> ParseError s d -> ParseError s e
-makeTrace xs e Nil        = review (singleton % errorItem) (xs, e)
+makeTrace
+    :: (Typeable d, Eq d, Show d)
+    => s                                -- ^ Input stream.
+    -> e                                -- ^ Error tag.
+    -> ParseError s d                   -- ^ Backtrace.
+    -> ParseError s e
+makeTrace xs e Nil         = review (singleton % errorItem) (xs, e)
 makeTrace xs e (Cons y ys) = Cons (review errorItem (xs, e)) (review traceItem y : ys)
