@@ -9,7 +9,6 @@ module Trisagion.Typeclasses.Streamable (
     Streamable (..),
 
     -- * Functions.
-    head,
     tail,
     toList,
     isSuffixOf,
@@ -202,11 +201,6 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     null :: StVector.Vector a -> Bool
     null = StVector.null
 
-
-{- | The head of the stream. -}
-{-# INLINE head #-}
-head :: Streamable s => s -> Maybe (ElementOf s)
-head = fmap fst . uncons
 
 {- | The tail of the stream. -}
 {-# INLINE tail #-}
