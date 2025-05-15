@@ -7,11 +7,6 @@ The @Streamable@ typeclass.
 module Trisagion.Typeclasses.Streamable (
     -- * Typeclasses.
     Streamable (..),
-
-    -- * Functions.
-    tail,
-    toList,
-    isSuffixOf,
 ) where
 
 -- Imports.
@@ -89,6 +84,20 @@ class MonoFunctor s => Streamable s where
     null :: s -> Bool
     null = isNothing . uncons
 
+    {- | Return the tail of the stream. -}
+    {-# INLINE dropOne #-}
+    dropOne :: s -> Maybe s
+    dropOne = fmap snd . uncons
+
+    {- | Convert a 'Streamable' to a list. -}
+    {-# INLINE toList #-}
+    toList :: s -> [ElementOf s]
+    toList = unfoldr uncons
+
+    {- | Return 'True' if @xs@ is a suffix of @ys@. -}
+    {-# INLINE isSuffix #-}
+    isSuffix :: (Eq (ElementOf s)) => s -> s -> Bool
+    isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
 
 -- Instances.
 instance Streamable Bytes.ByteString where
@@ -202,17 +211,3 @@ instance StVector.Storable a => Streamable (StVector.Vector a) where
     null = StVector.null
 
 
-{- | The tail of the stream. -}
-{-# INLINE tail #-}
-tail :: Streamable s => s -> Maybe s
-tail = fmap snd . uncons
-
-{- | Convert a 'Streamable' to a list. -}
-{-# INLINEABLE toList #-}
-toList :: Streamable s => s -> [ElementOf s]
-toList = unfoldr uncons
-
-{- | Return 'True' if @xs@ is a suffix of @ys@. -}
-{-# INLINEABLE isSuffixOf #-}
-isSuffixOf :: (Streamable s, Eq (ElementOf s)) => s -> s -> Bool
-isSuffixOf xs ys = toList xs `List.isSuffixOf` toList ys

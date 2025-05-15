@@ -53,7 +53,6 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import qualified Trisagion.Typeclasses.Streamable as Streamable (tail)
 import Trisagion.Typeclasses.Splittable (Splittable (..), dropPrefix, dropWith)
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ParseError (ParseError, singleton)
@@ -304,7 +303,7 @@ one = Parser $ \ s ->
 {- | Skip one @'ElementOf' s@ from the input stream. -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
-skipOne = Parser $ \ s -> Success () (fromMaybe s $ Streamable.tail s)
+skipOne = Parser $ \ s -> Success () (fromMaybe s $ dropOne s)
 
 {- | Parse a fixed size prefix.
 
