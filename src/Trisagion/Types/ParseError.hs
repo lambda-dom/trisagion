@@ -7,12 +7,20 @@ The @ParseError@ error type.
 module Trisagion.Types.ParseError (
     -- * The 'ParseError' error type.
     ParseError,
+
+    -- ** Prisms.
+    nil,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
+
+-- Libraries.
+-- import Optics.Optic ((%))
+import Optics.Prism (Prism', prism')
+-- import Optics.Review (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -67,4 +75,20 @@ instance Monoid (ParseError s e) where
     {-# INLINE mempty #-}
     mempty :: ParseError s e
     mempty = Nil
+
+
+{- | Prism for the nil value.
+
+The nil value can also be constructed by 'mempty'.
+-}
+{-# INLINE nil #-}
+nil :: Prism' (ParseError s e) ()
+nil = prism' construct match
+    where
+        construct :: () -> ParseError s e
+        construct _ = Nil
+
+        match :: ParseError s e -> Maybe ()
+        match Nil = Just ()
+        match _   = Nothing
 
