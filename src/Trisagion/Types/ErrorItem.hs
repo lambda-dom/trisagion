@@ -17,6 +17,9 @@ module Trisagion.Types.ErrorItem (
 
     -- ** Prisms.
     traceItem,
+
+    -- * Functions.
+    applyNat,
 ) where
 
 -- Imports.
@@ -88,7 +91,7 @@ instance Eq s => Eq (TraceItem s) where
 instance Functor TraceItem where
     {-# INLINE fmap #-}
     fmap :: (s -> t) -> TraceItem s -> TraceItem t
-    fmap f (TraceItem ts) = TraceItem (first f ts)
+    fmap f = applyNat (first f)
 
 
 {- | The traceItem prism for 'TraceItem'. -}
@@ -104,3 +107,9 @@ traceItem = prism' construct match
             case eqT @d @e of
                 Nothing   -> Nothing
                 Just Refl -> Just err
+
+
+{- | Apply a natural transformation @'ErrorItem' s -> 'ErrorItem' t@ to a 'TraceItem'. -}
+{-# INLINE applyNat #-}
+applyNat :: (forall d . ErrorItem s d -> ErrorItem t d) -> TraceItem s -> TraceItem t
+applyNat f (TraceItem e) = TraceItem (f e)
