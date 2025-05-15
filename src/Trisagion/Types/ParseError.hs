@@ -10,6 +10,7 @@ module Trisagion.Types.ParseError (
 
     -- ** Prisms.
     nil,
+    singleton,
     cons,
 ) where
 
@@ -76,7 +77,19 @@ nil = prism' construct match
         match Nil = Just ()
         match _   = Nothing
 
-{- | The cons prism for 'ParseError'. -}
+{- | The singleton prism for 'ParseError' values with no backtrace. -}
+{-# INLINE singleton #-}
+singleton :: forall s e . (Typeable e, Eq e, Show e) => Prism' (ParseError s e) (ErrorItem s e)
+singleton = prism' construct match
+    where
+        construct :: ErrorItem s e -> ParseError s e
+        construct = flip Cons []
+
+        match :: ParseError s e -> Maybe (ErrorItem s e)
+        match (Cons e []) = Just e
+        match _           = Nothing
+
+{- | The cons prism for 'ParseError' values with a backtrace. -}
 {-# INLINE cons #-}
 cons :: forall s e . (Typeable e, Eq e, Show e) => Prism' (ParseError s e) (ErrorItem s e, [TraceItem s])
 cons = prism' construct match
