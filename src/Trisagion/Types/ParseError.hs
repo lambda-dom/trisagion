@@ -44,6 +44,7 @@ deriving stock instance (Show s, Show e) => Show (ParseError s e)
 deriving stock instance (Eq s, Eq e) => Eq (ParseError s e)
 
 instance Bifunctor ParseError where
+    {-# INLINE bimap #-}
     bimap :: (s -> t) -> (d -> e) -> ParseError s d -> ParseError t e
     bimap _ _ Nil         = Nil
     bimap f g (Cons e es) = Cons (bimap f g e) (fmap (fmap f) es)
