@@ -10,6 +10,7 @@ module Trisagion.Types.ParseError (
 
     -- ** Prisms.
     nil,
+    cons,
 
     -- * The 'Backtrace' type.
     Backtrace,
@@ -20,7 +21,7 @@ module Trisagion.Types.ParseError (
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
+-- import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Libraries.
@@ -29,7 +30,7 @@ import Optics.Prism (Prism', prism')
 -- import Optics.Review (review)
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+-- import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (ErrorItem)
@@ -51,19 +52,6 @@ data ParseError s e where
 -- Instances.
 deriving stock instance Functor (ParseError s)
 deriving stock instance (Show s, Show e) => Show (ParseError s e)
-
-{- | Provides functoriality in the input stream @s@ for @'ParseError' s e@.
-
-Applies the function @f@ to all 'ErrorItem' in the 'ParseError'. If need to apply the function
-only to the top error use the @cons@ prism.
--}
-instance MonoFunctor (ParseError s e) where
-    type ElementOf (ParseError s e) = s
-
-    {-# INLINEABLE monomap #-}
-    monomap :: (s -> s) -> ParseError s e -> ParseError s e
-    monomap _ Nil             = Nil
-    monomap f (Cons err back) = Cons (first f err) (monomap f back)
 
 instance (Eq s, Eq e) => Eq (ParseError s e) where
     {-# INLINEABLE (==) #-}
@@ -102,6 +90,19 @@ nil = prism' construct match
         match Nil = Just ()
         match _   = Nothing
 
+{- | The cons prism for 'ParseError'. -}
+{-# INLINE cons #-}
+cons :: Prism' (ParseError s e) (ErrorItem s e, Backtrace s)
+cons = prism' construct match
+    where
+        construct :: (ErrorItem s e, Backtrace s) -> ParseError s e
+        construct (err, Backtrace b) = Cons err b
+
+        match :: ParseError s e -> Maybe (ErrorItem s e, Backtrace s)
+        match Nil           = Nothing
+        match (Cons err bs) = Just (err, Backtrace bs)
+
+
 {- | The @Backtrace s@ type, a wrapper around @forall d . 'ParseError' s d@. -}
 data Backtrace s where
     Backtrace :: (Typeable d, Eq d, Show d) => !(ParseError s d) -> Backtrace s
@@ -116,13 +117,6 @@ instance Eq s => Eq (Backtrace s) where
         case eqT @d @d' of
             Nothing   -> False
             Just Refl -> e == e'
-
-instance MonoFunctor (Backtrace s) where
-    type ElementOf (Backtrace s) = s
-
-    {-# INLINE monomap #-}
-    monomap :: (s -> s) -> Backtrace s -> Backtrace s
-    monomap f (Backtrace err) = Backtrace (monomap f err)
 
 {- | The backtrace prism for 'Backtrace'. -}
 {-# INLINE backtrace #-}
