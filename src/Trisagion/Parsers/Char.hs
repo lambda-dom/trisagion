@@ -26,6 +26,7 @@ module Trisagion.Parsers.Char (
     letter,
     word,
     identifier,
+    quote,
     escape,
 
     -- * Other lexemes.
@@ -54,7 +55,7 @@ import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
 import Trisagion.Parsers.Combinators (lookAhead)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.ParseError (ValidationError, validate, throwParseError)
+import Trisagion.Parsers.ParseError (ValidationError, validate, throwParseError, capture)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
 import Trisagion.Parsers.Splittable (takeWith1)
 
@@ -177,6 +178,12 @@ identifier = do
         v :: Char -> Bool
         v c = isLetter c || isDigit c || '-' == c || '_' == c
 
+{- | Parse a string quote character, either @\'@ or @\"@. -}
+quote
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+quote = satisfy (\ c -> '\'' == c || '\"' == c)
+
 {- | Parse an escape sequence inside a quoted string.
 
 The escape sequences currently supported are:
@@ -202,24 +209,26 @@ The escape sequences currently supported are:
 +----------+-----+---------------------------+
 | @\\\\@   | 92  | character @\\@            |
 +----------+-----+---------------------------+
-
 -}
+
 {-# INLINE escape #-}
 escape
     :: (Streamable s, ElementOf s ~ Char)
     => Parser s (ParseError s (ValidationError Char)) Char
-escape = do
-    c <- matchElem '\\' *> first (fmap absurd) one
-    case c of
-        't'  -> pure '\t'
-        'n'  -> pure '\n'
-        'v'  -> pure '\v'
-        'f'  -> pure '\f'
-        'r'  -> pure '\r'
-        's'  -> pure ' '
-        '\'' -> pure '\''
-        '"'  -> pure '"'
-        _    -> throwParseError (pure c)
+escape = matchElem '\\' *> q
+    where
+        q = capture $ do
+            c <- first (fmap absurd) one
+            case c of
+                't'  -> pure '\t'
+                'n'  -> pure '\n'
+                'v'  -> pure '\v'
+                'f'  -> pure '\f'
+                'r'  -> pure '\r'
+                's'  -> pure ' '
+                '\'' -> pure '\''
+                '"'  -> pure '"'
+                _    -> throwParseError (pure c)
 
 {- | Parse a line comment.
 
