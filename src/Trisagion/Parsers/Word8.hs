@@ -24,10 +24,12 @@ import Trisagion.Parser (Parser, InputError, one)
 
 
 {- | Parse a single 'Word8'. -}
+{-# INLINE word8 #-}
 word8 :: (Streamable s, ElementOf s ~ Word8) => Parser s (InputError s) Word8
 word8 = one
 
 {- | Parse a single 'Int8'. -}
+{-# INLINE int8 #-}
 int8 :: (Streamable s, ElementOf s ~ Word8) => Parser s (InputError s) Int8
 int8 = fromIntegral <$> one
 
