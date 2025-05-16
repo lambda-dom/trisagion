@@ -39,22 +39,22 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 Mirroring the laws for the 'Streamable' typeclass, the first law is:
 
 __Mononaturality__: With the constraints @('MonoFunctor' ('PrefixOf' s), 'ElementOf' ('PrefixOf' s)
-~ 'ElementOf' s)@, for every @n@ and every @p@, both @splitAt n@ and @splitWith p@ are mononatural.
+~ 'ElementOf' s)@, for every @n@ and every @p@, both @splitPrefix n@ and @splitWith p@ are mononatural.
 
 For the second law, assuming @MonoFoldable ('PrefixOf' s)@ besides the @'MonoFunctor'@ constraint,
-then at the level of lists @splitAt@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
+then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
 __List identities__:
 
-prop> bimap monotoList toList . splitAt n = splitAt n . toList
+prop> bimap monotoList toList . splitPrefix n = splitPrefix n . toList
 prop> bimap monotoList toList . splitWith p = span p . toList
 
 The third and final law is a compatibility condition between
-'Trisagion.Typeclasses.Streamable.uncons' and @splitAt@:
+'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
 __Compatibility__:
 
-prop> maybe [] (fmap (bimap singleton toList)) . uncons = bimap monotoList toList . splitAt 1
+prop> maybe [] (fmap (bimap singleton toList)) . uncons = bimap monotoList toList . splitPrefix 1
  -}
 class Streamable s => Splittable s where
     {-# MINIMAL splitPrefix , splitWith #-}
