@@ -26,6 +26,7 @@ module Trisagion.Parsers.Char (
     letter,
     word,
     identifier,
+    escape,
 
     -- * Other lexemes.
     comment,
@@ -53,7 +54,7 @@ import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
 import Trisagion.Parsers.Combinators (lookAhead)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parsers.ParseError (ValidationError, validate, throwParseError)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
 import Trisagion.Parsers.Splittable (takeWith1)
 
@@ -176,6 +177,50 @@ identifier = do
         v :: Char -> Bool
         v c = isLetter c || isDigit c || '-' == c || '_' == c
 
+{- | Parse an escape sequence inside a quoted string.
+
+The escape sequences currently supported are:
+
++----------+-----+---------------------------+
+| Escape   | Ord | Meaning                   |
++==========+=====+===========================+
++----------+-----+---------------------------+
+| @\\t@    | 9   | horizontal tab            |
++----------+-----+---------------------------+
+| @\\n@    | 10  | new line                  |
++----------+-----+---------------------------+
+| @\\v@    | 11  | vertical tab              |
++----------+-----+---------------------------+
+| @\\f@    | 12  | form feed                 |
++----------+-----+---------------------------+
+| @\\r@    | 13  | carriage return           |
++----------+-----+---------------------------+
+| @\\s@    | 32  | space                     |
++----------+-----+---------------------------+
+| @\\\'@   | 39  | single quote              |
++----------+-----+---------------------------+
+| @\\\"@   | 34  | double quote              |
++----------+-----+---------------------------+
+| @\\\\@   | 92  | character @\\@            |
++----------+-----+---------------------------+
+
+-}
+{-# INLINE escape #-}
+escape
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+escape = do
+    c <- matchElem '\\' *> first (fmap absurd) one
+    case c of
+        't'  -> pure '\t'
+        'n'  -> pure '\n'
+        'v'  -> pure '\v'
+        'f'  -> pure '\f'
+        'r'  -> pure '\r'
+        's'  -> pure ' '
+        '\'' -> pure '\''
+        '"'  -> pure '"'
+        _    -> throwParseError (pure c)
 
 {- | Parse a line comment.
 
