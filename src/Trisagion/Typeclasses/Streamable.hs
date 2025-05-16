@@ -13,9 +13,6 @@ module Trisagion.Typeclasses.Streamable (
 ) where
 
 -- Imports.
--- Prelude hiding.
-import Prelude hiding (head, tail)
-
 -- Base.
 import qualified Data.Foldable as Foldable (null, toList)
 import Data.List (unfoldr, singleton)
