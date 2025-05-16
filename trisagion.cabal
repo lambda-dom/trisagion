@@ -66,5 +66,6 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
+        Trisagion.Parsers.HasOffset
         Trisagion.Parsers.Char
         Trisagion.Parsers.Word8
