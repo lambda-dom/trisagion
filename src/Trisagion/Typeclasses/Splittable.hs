@@ -62,7 +62,11 @@ class Streamable s => Splittable s where
     {- | The type of prefixes of the streamable. -}
     type PrefixOf s :: Type
 
-    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
+    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@.
+
+    The @prefix@ has size @n@, or less in case there is not enough input in the stream. In this
+    case, the @suffix@ remainder is null.
+    -}
     splitPrefix :: Word -> s -> (PrefixOf s, s)
 
     {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
