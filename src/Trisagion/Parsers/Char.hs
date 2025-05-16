@@ -55,7 +55,7 @@ import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
 import Trisagion.Parsers.Combinators (lookAhead)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.ParseError (ValidationError, validate, throwParseError, capture)
+import Trisagion.Parsers.ParseError (ValidationError, validate)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
 import Trisagion.Parsers.Splittable (takeWith1)
 
@@ -215,20 +215,18 @@ The escape sequences currently supported are:
 escape
     :: (Streamable s, ElementOf s ~ Char)
     => Parser s (ParseError s (ValidationError Char)) Char
-escape = matchElem '\\' *> q
+escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
     where
-        q = capture $ do
-            c <- first (fmap absurd) one
-            case c of
-                't'  -> pure '\t'
-                'n'  -> pure '\n'
-                'v'  -> pure '\v'
-                'f'  -> pure '\f'
-                'r'  -> pure '\r'
-                's'  -> pure ' '
-                '\'' -> pure '\''
-                '"'  -> pure '"'
-                _    -> throwParseError (pure c)
+        v c = case c of
+            't'  -> pure '\t'
+            'n'  -> pure '\n'
+            'v'  -> pure '\v'
+            'f'  -> pure '\f'
+            'r'  -> pure '\r'
+            's'  -> pure ' '
+            '\'' -> pure '\''
+            '"'  -> pure '"'
+            _    -> Left $ pure c
 
 {- | Parse a line comment.
 
