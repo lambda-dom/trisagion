@@ -44,24 +44,19 @@ __Mononaturality__: With the constraints @('MonoFunctor' ('PrefixOf' s), 'Elemen
 ~ 'ElementOf' s)@, for every @n@ and every @p@, @splitPrefix n@, @splitWith p@ and @single@ are
 mononatural.
 
-The second law says that @single@ is @singleton@ at the level of lists:
-
-__Single singleton__:
+__Single singleton__: The second law says that @single@ is @singleton@ at the level of lists:
 
 prop> singleton == toList . single
 
-For the third law, assuming @MonoFoldable ('PrefixOf' s)@ besides the @'MonoFunctor'@ constraint,
-then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
-
-__List identities__:
+__List identities__: For the third law, assuming @MonoFoldable ('PrefixOf' s)@ on top of the
+@'MonoFunctor'@ constraint, then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and
+@splitWith@ is 'Data.List.span':
 
 prop> bimap monotoList toList . splitPrefix n == splitPrefix n . toList
 prop> bimap monotoList toList . splitWith p == span p . toList
 
-The fourth and final law is a compatibility condition between
+__Compatibility__: The fourth and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
-
-__Compatibility__:
 
 prop> maybe [] (fmap (bimap singleton toList)) . uncons == bimap monotoList toList . splitPrefix 1
  -}

@@ -55,23 +55,21 @@ explicitly required:
 
 __Naturality__: The function @'uncons' :: s -> 'Maybe' ('ElementOf' s, s)@ is mononatural.
 
-In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('ElementOf' s, s)@ is:
-
-@
-monomap :: ('ElementOf' s -> 'ElementOf' s) -> 'Maybe' ('ElementOf' s, s) -> 'Maybe' ('ElementOf' s, s)
-monomap f = fmap (bimap f (monomap f))
-@
+In case it is not clear, the 'MonoFunctor' instance for @'Maybe' ('ElementOf' s, s)@ is
+@monomap f = fmap (bimap f (monomap f))@.
  
-Given @'uncons' :: s -> 'Maybe' ('ElementOf' s, s)@, define @'toList' ::s -> [ElementOf s]@ by
-@'Data.List.unfoldr' 'uncons'@.
+__Foldability__: With the definition
 
-__Foldability__:
+@
+'toList' ::s -> [ElementOf s]
+'toList' = 'Data.List.unfoldr' 'uncons'
+@
 
-prop> MonoFoldable s => monotoList == toList
+and the @'MonoFoldable' s@ constraint we have the equality:
 
-Finally, the third law says that 'uncons' really is uncons-ing at the level of lists.
+prop> monotoList == toList
 
-__Unconsing__:
+__Unconsing__: Finally, the third law says that 'uncons' really is uncons-ing at the level of lists.
 
 prop> toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
 -}
