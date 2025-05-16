@@ -19,6 +19,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
@@ -28,7 +29,7 @@ The implementation initializes the offset to the length of the streamable and on
 @offset@ takes the difference. This not only requires efficient implementation of 'monolength',
 but can force the entire input stream into memory.
 -}
-data Offset s = Offset !Word !s
+data Offset s = Offset {-# UNPACK #-} !Word !s
     deriving stock (Eq, Show)
 
 -- Instances.
@@ -43,6 +44,21 @@ instance Streamable s => Streamable (Offset s) where
     {-# INLINE uncons #-}
     uncons :: Offset s -> Maybe (ElementOf s, Offset s)
     uncons (Offset l xs) = fmap (Offset l) <$> uncons xs
+
+instance Splittable s => Splittable (Offset s) where
+    type PrefixOf (Offset s) = PrefixOf s
+
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Offset s -> (PrefixOf s, Offset s)
+    splitPrefix n (Offset l xs) = Offset l <$> splitPrefix n xs
+
+    {-# INLINE splitWith #-}
+    splitWith :: (ElementOf s -> Bool) -> Offset s -> (PrefixOf s, Offset s)
+    splitWith p (Offset l xs) = Offset l <$> splitWith p xs
+
+    {-# INLINE single #-}
+    single :: ElementOf s -> PrefixOf s
+    single = single @s
 
 instance MonoFoldable s => HasOffset (Offset s) where
     {-# INLINE offset #-}
