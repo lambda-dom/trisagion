@@ -83,7 +83,8 @@ class Streamable s => Splittable s where
     note(s):
     
       * Because of lack of injectivity, this method requires the @AllowAmbiguousTypes@ extension to
-      keep GHC happy and inference commonly requires help from the user.
+      keep GHC happy and inference commonly requires help from the user, e. g. instead of
+      @'single'@, use @'single' \@s@ with the @TypeApplications@ extension.
     -}
     single :: ElementOf s -> PrefixOf s
 
