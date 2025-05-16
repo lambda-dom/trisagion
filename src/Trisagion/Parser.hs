@@ -44,7 +44,7 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (Void, absurd)
+import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
@@ -199,7 +199,7 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError = fmap absurd . throw
+    throwError = throw
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
@@ -283,7 +283,7 @@ isolate h p = Parser $ \xs ->
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
 {-# INLINE throw #-}
-throw :: e -> Parser s e Void
+throw :: e -> Parser s e a
 throw e = Parser $ const (Error e)
 
 {- | Type-changing version of 'catchError'. -}

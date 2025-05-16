@@ -106,7 +106,7 @@ failIff p = do
     r <- first absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
-        Right _ -> absurd <$> throw mempty
+        Right _ -> throw mempty
 
 
 {- | Run the parser and discard the result. -}
