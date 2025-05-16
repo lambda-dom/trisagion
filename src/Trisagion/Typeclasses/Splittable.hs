@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 {- |
 Module: Trisagion.Typeclasses.Splittable
 
@@ -16,16 +18,16 @@ import Data.Kind (Type)
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Sequence as Seq (Seq, spanl, splitAt, empty, drop, dropWhileL)
-import qualified Data.Vector as Vector (Vector, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty, drop, dropWhile)
-import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty, drop, dropWhile)
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Sequence as Seq (Seq, spanl, splitAt, empty, drop, dropWhileL, singleton)
+import qualified Data.Vector as Vector (Vector, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty, drop, dropWhile, singleton)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -39,25 +41,27 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 Mirroring the laws for the 'Streamable' typeclass, the first law is:
 
 __Mononaturality__: With the constraints @('MonoFunctor' ('PrefixOf' s), 'ElementOf' ('PrefixOf' s)
-~ 'ElementOf' s)@, for every @n@ and every @p@, both @splitPrefix n@ and @splitWith p@ are mononatural.
+~ 'ElementOf' s)@, for every @n@ and every @p@, @splitPrefix n@, @splitWith p@ and @single@ are
+mononatural.
 
 For the second law, assuming @MonoFoldable ('PrefixOf' s)@ besides the @'MonoFunctor'@ constraint,
 then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
 __List identities__:
 
-prop> bimap monotoList toList . splitPrefix n = splitPrefix n . toList
-prop> bimap monotoList toList . splitWith p = span p . toList
+prop> singleton == toList . single
+prop> bimap monotoList toList . splitPrefix n == splitPrefix n . toList
+prop> bimap monotoList toList . splitWith p == span p . toList
 
 The third and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
 __Compatibility__:
 
-prop> maybe [] (fmap (bimap singleton toList)) . uncons = bimap monotoList toList . splitPrefix 1
+prop> maybe [] (fmap (bimap singleton toList)) . uncons == bimap monotoList toList . splitPrefix 1
  -}
 class Streamable s => Splittable s where
-    {-# MINIMAL splitPrefix , splitWith #-}
+    {-# MINIMAL splitPrefix, splitWith, single #-}
 
     {- | The type of prefixes of the streamable. -}
     type PrefixOf s :: Type
@@ -73,6 +77,15 @@ class Streamable s => Splittable s where
 
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
+
+    {- | Convert an @'ElementOf' s@ to a prefix @'PrefixOf' s@.
+
+    note(s):
+    
+      * Because of lack of injectivity, this method requires the @AllowAmbiguousTypes@ extension to
+      keep GHC happy and inference commonly requires help from the user.
+    -}
+    single :: ElementOf s -> PrefixOf s
 
     {- | Return the remainder of the stream as a prefix.
 
@@ -104,6 +117,10 @@ instance Splittable Bytes.ByteString where
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitWith = Bytes.span
 
+    {-# INLINE single #-}
+    single :: Word8 -> Bytes.ByteString
+    single = Bytes.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitRemainder s = (s, Bytes.empty)
@@ -126,6 +143,10 @@ instance Splittable LBytes.ByteString where
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitWith = LBytes.span
+
+    {-# INLINE single #-}
+    single :: Word8 -> LBytes.ByteString
+    single = LBytes.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
@@ -150,6 +171,10 @@ instance Splittable SBytes.ShortByteString where
     splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitWith = SBytes.span
 
+    {-# INLINE single #-}
+    single :: Word8 -> SBytes.ShortByteString
+    single = SBytes.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitRemainder s = (s, SBytes.empty)
@@ -172,6 +197,10 @@ instance Splittable Text.Text where
     {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
     splitWith = Text.span
+
+    {-# INLINE single #-}
+    single :: Char -> Text.Text
+    single = Text.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Text.Text -> (Text.Text, Text.Text)
@@ -196,6 +225,10 @@ instance Splittable LText.Text where
     splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
     splitWith = LText.span
 
+    {-# INLINE single #-}
+    single :: Char -> LText.Text
+    single = LText.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: LText.Text -> (LText.Text, LText.Text)
     splitRemainder s = (s, LText.empty)
@@ -218,6 +251,10 @@ instance Splittable [a] where
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> [a] -> ([a], [a])
     splitWith = span
+
+    {-# INLINE single #-}
+    single :: a -> [a]
+    single x = [x]
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: [a] -> ([a], [a])
@@ -242,6 +279,10 @@ instance Splittable (Seq.Seq a) where
     splitWith :: (a -> Bool) -> Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitWith = Seq.spanl
 
+    {-# INLINE single #-}
+    single :: a -> Seq.Seq a
+    single = Seq.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
     splitRemainder xs = (xs, Seq.empty)
@@ -264,6 +305,10 @@ instance Splittable (Vector.Vector a) where
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitWith = Vector.span
+
+    {-# INLINE single #-}
+    single :: a -> Vector.Vector a
+    single = Vector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
@@ -288,6 +333,10 @@ instance Splittable (SVector.Vector a) where
     splitWith :: (a -> Bool) -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitWith = SVector.span
 
+    {-# INLINE single #-}
+    single :: a -> SVector.Vector a
+    single = SVector.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitRemainder xs = (xs, SVector.empty)
@@ -311,6 +360,10 @@ instance UVector.Unbox a => Splittable (UVector.Vector a) where
     splitWith :: (a -> Bool) -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitWith = UVector.span
 
+    {-# INLINE single #-}
+    single :: a -> UVector.Vector a
+    single = UVector.singleton
+
     {-# INLINE splitRemainder #-}
     splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitRemainder xs = (xs, UVector.empty)
@@ -333,6 +386,10 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitWith = StVector.span
+
+    {-# INLINE single #-}
+    single :: a -> StVector.Vector a
+    single = StVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)

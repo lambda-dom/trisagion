@@ -47,7 +47,7 @@ __Definition__: Let @s@ and @t@ be two monofunctors with @a ~ 'ElementOf' s ~ 'E
 function @h :: s -> t@ is /mononatural/ if for every @f :: a -> a@ we have the equality
 
 @
-monomap f . h = h . monomap f
+monomap f . h == h . monomap f
 @
 
 Since @s@ is not polymorphic we do not have free theorems to rely on, so naturality must be
@@ -67,13 +67,13 @@ Given @'uncons' :: s -> 'Maybe' ('ElementOf' s, s)@, define @'toList' ::s -> [El
 
 __Foldability__:
 
-prop> MonoFoldable s => monotoList = toList
+prop> MonoFoldable s => monotoList == toList
 
 Finally, the third law says that 'uncons' really is uncons-ing at the level of lists.
 
 __Unconsing__:
 
-prop> toList = maybe [] (\ (x, xs) -> x : toList xs) . uncons
+prop> toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
 -}
 class MonoFunctor s => Streamable s where
     {-# MINIMAL uncons #-}
