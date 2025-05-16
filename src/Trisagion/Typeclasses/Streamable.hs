@@ -40,6 +40,7 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 {- | The @Streamable@ typeclass of monomorphic, streamable functors.
 
+We assume that all overriden instance implementations are extensionally equal to the default ones.
 To describe the laws for the 'Streamable' typeclass, we start with a definition.
 
 __Definition__: Let @s@ and @t@ be two monofunctors with @a ~ 'ElementOf' s ~ 'ElementOf' t@. A
@@ -61,8 +62,8 @@ monomap :: ('ElementOf' s -> 'ElementOf' s) -> 'Maybe' ('ElementOf' s, s) -> 'Ma
 monomap f = fmap (bimap f (monomap f))
 @
  
-Given @'uncons' :: s -> 'Maybe' ('ElementOf' s, s)@ we can define @'toList' ::s -> [ElementOf s]@
-by @'Data.List.unfoldr' 'uncons'@.
+Given @'uncons' :: s -> 'Maybe' ('ElementOf' s, s)@, define @'toList' ::s -> [ElementOf s]@ by
+@'Data.List.unfoldr' 'uncons'@.
 
 __Foldability__:
 
