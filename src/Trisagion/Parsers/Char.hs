@@ -232,7 +232,7 @@ escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
 
 {- | Parse a quoted string with escape sequences.
 
-The quote characters are the ones acceped by the 'quote' parser. The available escape sequences can
+The quote characters are the ones accepted by the 'quote' parser. The available escape sequences can
 be seen in the haddock for the 'escape' parser.
 
 note(s):
