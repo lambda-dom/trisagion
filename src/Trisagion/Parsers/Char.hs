@@ -163,8 +163,8 @@ word = takeWith1 isLetter
 
 {- | Parse an identifier.
 
-An identifier is a letter followed by any combination of letters, digits and the characters @-@
-or @_@.-}
+An identifier is a letter followed by any combination of letters, digits and the characters @\'-\'@
+or @\'_\'@.-}
 {-# INLINE identifier #-}
 identifier
     :: (Splittable s, ElementOf s ~ Char)
@@ -178,7 +178,7 @@ identifier = do
         v :: Char -> Bool
         v c = isLetter c || isDigit c || '-' == c || '_' == c
 
-{- | Parse a string quote character, either @\'@ or @\"@. -}
+{- | Parse a string quote character, either @\'\\\'\'@ or @\'\"\'@. -}
 {-# INLINE quote #-}
 quote
     :: (Streamable s, ElementOf s ~ Char)
