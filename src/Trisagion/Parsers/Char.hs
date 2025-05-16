@@ -22,6 +22,11 @@ module Trisagion.Parsers.Char (
     sign,
     integer,
 
+    -- * Alphanumeric.
+    letter,
+    word,
+    identifier,
+
     -- * Other lexemes.
     comment,
 ) where
@@ -29,10 +34,13 @@ module Trisagion.Parsers.Char (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Char (isSpace, isDigit, ord)
+import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
+
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
@@ -43,6 +51,7 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
+import Trisagion.Parsers.Combinators (lookAhead)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
@@ -101,7 +110,7 @@ digit = satisfy isDigit
 {-# INLINEABLE positive #-}
 positive
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (PrefixOf s))) Integer
+    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
 positive = do
         digits <- takeWith1 isDigit
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
@@ -127,13 +136,45 @@ sign = first (fmap (either id absurd)) $ validate v one
 {-# INLINE integer #-}
 integer
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (PrefixOf s))) Integer
+    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> Combinators.maybe sign)
     number <- positive
     case sgn of
         Positive -> pure number
         Negative -> pure (-number)
+
+
+{- | Parse a single (unicode) letter. -}
+{-# INLINE letter #-}
+letter
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+letter = satisfy isLetter
+
+{- | Parse a word. -}
+{-# INLINE word #-}
+word
+    :: (Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+word = takeWith1 isLetter
+
+{- | Parse an identifier.
+
+An identifier is a letter followed by any combination of letters, digits and the characters @-@
+or @_@.-}
+{-# INLINE identifier #-}
+identifier
+    :: (Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+identifier = do
+        x <- first absurd $ lookAhead letter
+        case x of
+            Left e  -> throwError e
+            Right _ -> first absurd $ takeWith v
+    where
+        v :: Char -> Bool
+        v c = isLetter c || isDigit c || '-' == c || '_' == c
 
 
 {- | Parse a line comment.

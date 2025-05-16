@@ -15,7 +15,7 @@ module Trisagion.Types.ParseError (
 
     -- ** Constructors.
     makeEOI,
-    makeTrace,
+    makeBacktrace,
 ) where
 
 -- Imports.
@@ -30,7 +30,11 @@ import Optics.Core (Prism', (%), prism', review)
 import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, traceItem)
 
 
-{- | The 'ParseError' type. -}
+{- | The 'ParseError' type.
+
+Functionally, a @'ParseError' s e@ is a @'ErrorItem' s e@, the top of the entire error trace, and a
+list of @forall d . 'ErrorItem' s d@ wrapped in a @'TraceItem' s@.
+-}
 data ParseError s e where
     -- | The Nil constructor.
     Nil :: ParseError s e
@@ -39,9 +43,9 @@ data ParseError s e where
     Cons :: !(ErrorItem s e) -> [TraceItem s] -> ParseError s e
 
 -- Instances.
-deriving stock instance Functor (ParseError s)
-deriving stock instance (Show s, Show e) => Show (ParseError s e)
 deriving stock instance (Eq s, Eq e) => Eq (ParseError s e)
+deriving stock instance (Show s, Show e) => Show (ParseError s e)
+deriving stock instance Functor (ParseError s)
 
 instance Bifunctor ParseError where
     {-# INLINE bimap #-}
@@ -106,12 +110,12 @@ makeEOI :: Word -> ParseError s e
 makeEOI = review (singleton % endOfInput)
 
 {- | Constructor helper to build a 'ParseError' with a backtrace. -}
-{-# INLINE makeTrace #-}
-makeTrace
+{-# INLINE makeBacktrace #-}
+makeBacktrace
     :: (Typeable d, Eq d, Show d)
     => s                                -- ^ Input stream.
     -> e                                -- ^ Error tag.
     -> ParseError s d                   -- ^ Backtrace.
     -> ParseError s e
-makeTrace xs e Nil         = review (singleton % errorItem) (xs, e)
-makeTrace xs e (Cons y ys) = Cons (review errorItem (xs, e)) (review traceItem y : ys)
+makeBacktrace xs e Nil         = review (singleton % errorItem) (xs, e)
+makeBacktrace xs e (Cons y ys) = Cons (review errorItem (xs, e)) (review traceItem y : ys)

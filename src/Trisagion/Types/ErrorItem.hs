@@ -95,7 +95,11 @@ instance Functor TraceItem where
     fmap f = applyNat (first f)
 
 
-{- | The traceItem prism for 'TraceItem'. -}
+{- | The traceItem prism for 'TraceItem'.
+
+Mainly useful for the constructor, as the matcher requires the knowledge of the type @e@ of the
+@'ErrorItem' s e@ inside @'TraceItem' s@, and a runtime check for the downcast.
+-}
 {-# INLINE traceItem #-}
 traceItem :: forall s e . (Typeable e, Eq e, Show e) => Prism' (TraceItem s) (ErrorItem s e)
 traceItem = prism' construct match

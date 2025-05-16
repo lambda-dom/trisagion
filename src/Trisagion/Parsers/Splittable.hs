@@ -30,12 +30,13 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Types.ErrorItem (endOfInput, errorItem)
+import Trisagion.Types.ErrorItem (endOfInput)
 import Trisagion.Types.ParseError (ParseError, singleton)
-import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, InputError, takePrefix, takeWith, get)
+import Trisagion.Parser (Parser, InputError, takePrefix, takeWith)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parsers.Streamable (satisfy)
+import Trisagion.Parsers.Combinators (lookAhead)
 
 
 {- | Parse an exact, fixed size prefix.
@@ -57,19 +58,14 @@ takeExact n = do
 {- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
 {-# INLINE takeWith1 #-}
 takeWith1
-    :: (Splittable s, MonoFoldable (PrefixOf s))
+    :: Splittable s
     => (ElementOf s -> Bool)            -- ^ Predicate on @'ElementOf' s@.
-    -> Parser s (ParseError s (ValidationError (PrefixOf s))) (PrefixOf s)
+    -> Parser s (ParseError s (ValidationError (ElementOf s))) (PrefixOf s)
 takeWith1 p = do
-    xs <- first absurd $ takeWith p
-    if not (mononull xs)
-        then pure xs
-        else do
-            ys <- first absurd get
-            -- Either not enough input or malformed one.
-            if Streamable.null ys
-                then throwError $ review (singleton % endOfInput) 1
-                else throwError $ review (singleton % errorItem) (ys, pure xs)
+    x <- first absurd $ lookAhead (satisfy p)
+    case x of
+        Left e  -> throwError e
+        Right _ -> first absurd $ takeWith p
 
 {- | Parse a matching prefix.
 
