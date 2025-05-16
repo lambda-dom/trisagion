@@ -62,6 +62,7 @@ library
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
         Trisagion.Streams.Counter
+        Trisagion.Streams.Offset
         Trisagion.Streams.Chunk
         Trisagion.Parser
         Trisagion.Parsers.Combinators
