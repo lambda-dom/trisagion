@@ -22,6 +22,10 @@ module Trisagion.Parsers.Char (
     sign,
     integer,
 
+    -- * Alphanumeric.
+    letter,
+    word,
+
     -- * Other lexemes.
     comment,
 ) where
@@ -29,7 +33,7 @@ module Trisagion.Parsers.Char (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Char (isSpace, isDigit, ord)
+import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
@@ -134,6 +138,21 @@ integer = do
     case sgn of
         Positive -> pure number
         Negative -> pure (-number)
+
+
+{- | Parse a single (unicode) letter. -}
+{-# INLINE letter #-}
+letter
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+letter = satisfy isLetter
+
+{- | Parse a word. -}
+{-# INLINE word #-}
+word
+    :: (Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+word = takeWith1 isLetter
 
 
 {- | Parse a line comment.
