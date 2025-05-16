@@ -7,7 +7,7 @@ The @Counter@ type wrapping a 'Streamable' with an offset tracking current posit
 -}
 
 module Trisagion.Streams.Counter (
-    -- * Types.
+    -- * Streams.
     Counter,
 
     -- ** Constructors.
