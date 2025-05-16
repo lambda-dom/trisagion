@@ -81,7 +81,10 @@ class MonoFunctor s => Streamable s where
     {- | Uncons the first element from the streamable. -}
     uncons :: s -> Maybe (ElementOf s, s)
 
-    {- | Return 'True' if there are no elements in the input stream. -}
+    {- | Return 'True' if there are no elements in the input stream.
+
+    Default implementation is @'isNothing' . uncons@.
+    -}
     {-# INLINE null #-}
     null :: s -> Bool
     null = isNothing . uncons
