@@ -84,12 +84,18 @@ class MonoFunctor s => Streamable s where
     null :: s -> Bool
     null = isNothing . uncons
 
-    {- | Return the tail of the stream. -}
-    {-# INLINE dropOne #-}
-    dropOne :: s -> Maybe s
-    dropOne = fmap snd . uncons
+    {- | Drop one element from the stream.
 
-    {- | Convert a 'Streamable' to a list. -}
+    Default implementation is @maybe s snd $ uncons s@.
+    -}
+    {-# INLINE dropOne #-}
+    dropOne :: s -> s
+    dropOne s = maybe s snd $ uncons s
+
+    {- | Convert a 'Streamable' to a list.
+
+    Default implementation is @unfoldr uncons@.
+    -}
     {-# INLINE toList #-}
     toList :: s -> [ElementOf s]
     toList = unfoldr uncons
@@ -171,9 +177,8 @@ instance Streamable (Maybe a) where
     null = isNothing
 
     {-# INLINE dropOne #-}
-    dropOne :: Maybe a -> Maybe (Maybe a)
-    dropOne Nothing  = Nothing
-    dropOne (Just _) = Just Nothing
+    dropOne :: Maybe a -> Maybe a
+    dropOne = const Nothing
 
     {-# INLINE toList #-}
     toList :: Maybe a -> [a]
@@ -189,9 +194,8 @@ instance Streamable [a] where
     null = Foldable.null
 
     {-# INLINE dropOne #-}
-    dropOne :: [a] -> Maybe [a]
-    dropOne []       = Nothing
-    dropOne (_ : xs) = Just xs
+    dropOne :: [a] -> [a]
+    dropOne = drop 1
 
     {-# INLINE toList #-}
     toList :: [a] -> [a]
