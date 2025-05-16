@@ -179,6 +179,7 @@ identifier = do
         v c = isLetter c || isDigit c || '-' == c || '_' == c
 
 {- | Parse a string quote character, either @\'@ or @\"@. -}
+{-# INLINE quote #-}
 quote
     :: (Streamable s, ElementOf s ~ Char)
     => Parser s (ParseError s (ValidationError Char)) Char
@@ -210,7 +211,6 @@ The escape sequences currently supported are:
 | @\\\\@   | 92  | character @\\@            |
 +----------+-----+---------------------------+
 -}
-
 {-# INLINE escape #-}
 escape
     :: (Streamable s, ElementOf s ~ Char)
@@ -226,7 +226,8 @@ escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
             's'  -> pure ' '
             '\'' -> pure '\''
             '"'  -> pure '"'
-            _    -> Left $ pure c
+            _    -> throwError $ pure c
+
 
 {- | Parse a line comment.
 
