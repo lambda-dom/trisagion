@@ -32,10 +32,12 @@ instance MonoFunctor (Chunk s e a) where
     type ElementOf (Chunk s e a) = a
 
     {- | Monomorphic map over a chunked stream. -}
+    {-# INLINE monomap #-}
     monomap :: (a -> a) -> Chunk s e a -> Chunk s e a
     monomap = fmap
 
 instance Streamable (Chunk s e a) where
+    {-# INLINE uncons #-}
     uncons :: Chunk s e a -> Maybe (a, Chunk s e a)
     uncons (Chunk n xs p) =
         let r = parse p xs in
@@ -44,10 +46,12 @@ instance Streamable (Chunk s e a) where
             Right (x, ys) -> Just (x, Chunk (succ n) ys p)
 
 instance HasOffset (Chunk s e a) where
+    {-# INLINE offset #-}
     offset :: Chunk s e a -> Word
     offset (Chunk n _ _) = n
 
 
 {- | Initialize a 'Chunk'-ing stream. -}
+{-# INLINE initialize #-}
 initialize :: s -> Parser s e a -> Chunk s e a
 initialize = Chunk 0
