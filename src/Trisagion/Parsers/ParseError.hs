@@ -88,7 +88,7 @@ onParseError e p = do
     xs <- first absurd get
     catch
         p
-        (fmap absurd . throw . makeBacktrace xs e)
+        (throw . makeBacktrace xs e)
 
 
 {- | Run the parser and return the result, validating it. -}
