@@ -44,7 +44,6 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -310,7 +309,7 @@ one = Parser $ \ s ->
 {- | Skip one @'ElementOf' s@ from the input stream. -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
-skipOne = Parser $ \ s -> Success () (fromMaybe s $ dropOne s)
+skipOne = Parser $ \ s -> Success () (dropOne s)
 
 {- | Parse a fixed size prefix.
 

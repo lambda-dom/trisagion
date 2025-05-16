@@ -28,9 +28,6 @@ import Data.Void (Void, absurd)
 import Optics.Optic ((%))
 import Optics.Review (review)
 
--- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-
 -- Package.
 import Trisagion.Types.ParseError (ParseError, singleton, makeTrace)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
@@ -73,7 +70,7 @@ parser = capture $ do
 capture :: Parser s (ParseError s e) a -> Parser s (ParseError s e) a
 capture p = do
     xs <- first absurd get
-    first (monomap (const xs)) p
+    first (first (const xs)) p
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
 
