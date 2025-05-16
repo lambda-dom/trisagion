@@ -101,7 +101,7 @@ digit = satisfy isDigit
 {-# INLINEABLE positive #-}
 positive
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (PrefixOf s))) Integer
+    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
 positive = do
         digits <- takeWith1 isDigit
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
@@ -127,7 +127,7 @@ sign = first (fmap (either id absurd)) $ validate v one
 {-# INLINE integer #-}
 integer
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (PrefixOf s))) Integer
+    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> Combinators.maybe sign)
     number <- positive
