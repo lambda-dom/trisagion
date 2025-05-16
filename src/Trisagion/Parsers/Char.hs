@@ -28,6 +28,7 @@ module Trisagion.Parsers.Char (
     identifier,
     quote,
     escape,
+    string,
 
     -- * Other lexemes.
     comment,
@@ -35,6 +36,7 @@ module Trisagion.Parsers.Char (
 
 -- Imports.
 -- Base.
+import Control.Applicative (Alternative ((<|>)))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (foldl')
@@ -49,11 +51,11 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
-import Trisagion.Parsers.Combinators (lookAhead)
+import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
@@ -228,6 +230,26 @@ escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
             '"'  -> pure '"'
             _    -> throwError $ pure c
 
+{- | Parse a quoted string with escape sequences.
+
+The quote characters are the ones acceped by the 'quote' parser. The available escape sequences can
+be seen in the haddock for the 'escape' parser.
+
+note(s):
+
+  * A quoted string /cannot/ span multiple lines.
+-}
+{-# INLINEABLE string #-}
+string
+    :: forall s . (Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
+    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+string = do
+        q <- quote
+        blocks <- manyTill (matchElem q) (fmap (single @s) escape <|> takeWith1 predicate)
+        pure $ foldl' (<>) mempty blocks
+    where
+        predicate :: Char -> Bool
+        predicate c = c /= '\\' && c /= '\n'
 
 {- | Parse a line comment.
 
