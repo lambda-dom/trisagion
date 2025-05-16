@@ -54,7 +54,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Parser (Parser, takeWith, one)
+import Trisagion.Parser (Parser, (:+:), takeWith, one)
 import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
@@ -219,6 +219,7 @@ escape
     => Parser s (ParseError s (ValidationError Char)) Char
 escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
     where
+        v :: Char -> ValidationError Char :+: Char
         v c = case c of
             't'  -> pure '\t'
             'n'  -> pure '\n'
@@ -232,8 +233,8 @@ escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
 
 {- | Parse a quoted string with escape sequences.
 
-The quote characters are the ones accepted by the 'quote' parser. The available escape sequences can
-be seen in the haddock for the 'escape' parser.
+The quote characters are the ones accepted by the 'quote' parser. The available escape sequences are
+the ones accepted by the 'escape' parser.
 
 note(s):
 
