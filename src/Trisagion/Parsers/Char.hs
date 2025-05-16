@@ -161,8 +161,8 @@ word = takeWith1 isLetter
 
 {- | Parse an identifier.
 
-An identifier is a letter followed by any combination of letters, digits and the characters @'-'@
-or @'_'@.-}
+An identifier is a letter followed by any combination of letters, digits and the characters @-@
+or @_@.-}
 {-# INLINE identifier #-}
 identifier
     :: (Splittable s, ElementOf s ~ Char)
