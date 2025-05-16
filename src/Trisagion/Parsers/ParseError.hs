@@ -22,14 +22,15 @@ module Trisagion.Parsers.ParseError (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity (..))
 import Data.Typeable (Typeable)
-import Data.Void (Void, absurd)
+import Data.Void (absurd)
 
 -- Libraries.
+import Control.Monad.Except (MonadError (..))
 import Optics.Optic ((%))
 import Optics.Review (review)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, makeTrace)
+import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
 
@@ -42,8 +43,8 @@ newtype ValidationError e = ValidationError e
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
-throwParseError :: e -> Parser s (ParseError s e) Void
-throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
+throwParseError :: e -> Parser s (ParseError s e) a
+throwParseError err = first absurd get >>= throwError . review (singleton % errorItem) . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 
@@ -87,7 +88,7 @@ onParseError e p = do
     xs <- first absurd get
     catch
         p
-        (fmap absurd . throw . makeTrace xs e)
+        (fmap absurd . throw . makeBacktrace xs e)
 
 
 {- | Run the parser and return the result, validating it. -}
@@ -99,5 +100,5 @@ validate
 validate v p = do
     x <- first (fmap Right) p
     case v x of
-        Left d  -> absurd <$> throwParseError (Left d)
+        Left d  -> throwParseError (Left d)
         Right y -> pure y
