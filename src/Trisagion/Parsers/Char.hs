@@ -26,6 +26,8 @@ module Trisagion.Parsers.Char (
     letter,
     word,
     identifier,
+    quote,
+    escape,
 
     -- * Other lexemes.
     comment,
@@ -161,8 +163,8 @@ word = takeWith1 isLetter
 
 {- | Parse an identifier.
 
-An identifier is a letter followed by any combination of letters, digits and the characters @-@
-or @_@.-}
+An identifier is a letter followed by any combination of letters, digits and the characters @\'-\'@
+or @\'_\'@.-}
 {-# INLINE identifier #-}
 identifier
     :: (Splittable s, ElementOf s ~ Char)
@@ -175,6 +177,56 @@ identifier = do
     where
         v :: Char -> Bool
         v c = isLetter c || isDigit c || '-' == c || '_' == c
+
+{- | Parse a string quote character, either @\'\\\'\'@ or @\'\"\'@. -}
+{-# INLINE quote #-}
+quote
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+quote = satisfy (\ c -> '\'' == c || '\"' == c)
+
+{- | Parse an escape sequence inside a quoted string.
+
+The escape sequences currently supported are:
+
++----------+-----+---------------------------+
+| Escape   | Ord | Meaning                   |
++==========+=====+===========================+
+| @\\t@    | 9   | horizontal tab            |
++----------+-----+---------------------------+
+| @\\n@    | 10  | new line                  |
++----------+-----+---------------------------+
+| @\\v@    | 11  | vertical tab              |
++----------+-----+---------------------------+
+| @\\f@    | 12  | form feed                 |
++----------+-----+---------------------------+
+| @\\r@    | 13  | carriage return           |
++----------+-----+---------------------------+
+| @\\s@    | 32  | space                     |
++----------+-----+---------------------------+
+| @\\\'@   | 39  | single quote              |
++----------+-----+---------------------------+
+| @\\\"@   | 34  | double quote              |
++----------+-----+---------------------------+
+| @\\\\@   | 92  | character @\\@            |
++----------+-----+---------------------------+
+-}
+{-# INLINE escape #-}
+escape
+    :: (Streamable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) Char
+escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
+    where
+        v c = case c of
+            't'  -> pure '\t'
+            'n'  -> pure '\n'
+            'v'  -> pure '\v'
+            'f'  -> pure '\f'
+            'r'  -> pure '\r'
+            's'  -> pure ' '
+            '\'' -> pure '\''
+            '"'  -> pure '"'
+            _    -> throwError $ pure c
 
 
 {- | Parse a line comment.
