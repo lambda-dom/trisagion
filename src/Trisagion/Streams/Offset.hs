@@ -40,6 +40,11 @@ instance MonoFunctor s => MonoFunctor (Offset s) where
     monomap :: (ElementOf s -> ElementOf s) -> Offset s -> Offset s
     monomap f (Offset l xs) = Offset l (monomap f xs)
 
+instance MonoFoldable s => MonoFoldable (Offset s) where
+    {-# INLINE monotoList #-}
+    monotoList :: Offset s -> [ElementOf s]
+    monotoList (Offset _ xs) = monotoList xs
+
 instance Streamable s => Streamable (Offset s) where
     {-# INLINE uncons #-}
     uncons :: Offset s -> Maybe (ElementOf s, Offset s)
