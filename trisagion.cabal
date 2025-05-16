@@ -58,6 +58,7 @@ library
     exposed-modules:
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
+        Trisagion.Typeclasses.HasOffset
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
         Trisagion.Parser
