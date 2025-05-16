@@ -25,6 +25,7 @@ module Trisagion.Parsers.Char (
     -- * Alphanumeric.
     letter,
     word,
+    identifier,
 
     -- * Other lexemes.
     comment,
@@ -38,6 +39,9 @@ import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
+
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
@@ -47,6 +51,7 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, takeWith, one)
+import Trisagion.Parsers.Combinators (lookAhead)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 import Trisagion.Parsers.Streamable (matchElem, satisfy)
@@ -153,6 +158,23 @@ word
     :: (Splittable s, ElementOf s ~ Char)
     => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
 word = takeWith1 isLetter
+
+{- | Parse an identifier.
+
+An identifier is a letter followed by any combination of letters, digits and the characters @'-'@
+or @'_'@.-}
+{-# INLINE identifier #-}
+identifier
+    :: (Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+identifier = do
+        x <- first absurd $ lookAhead letter
+        case x of
+            Left e  -> throwError e
+            Right _ -> first absurd $ takeWith v
+    where
+        v :: Char -> Bool
+        v c = isLetter c || isDigit c || '-' == c || '_' == c
 
 
 {- | Parse a line comment.
