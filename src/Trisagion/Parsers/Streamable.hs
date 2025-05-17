@@ -38,7 +38,7 @@ import Trisagion.Parsers.ParseError (validate)
 
 {- | Return @'True'@ if all input is consumed.
 
-=== __Examples__:
+=== __Examples:__
 
 >>> parse eoi "0123"
 Right (False,"0123")
@@ -62,7 +62,7 @@ ensureEOI err p = do
 
 {- | Extract the first @'ElementOf' s@ from the streamable but without consuming input.
 
-=== __Examples__:
+=== __Examples:__
 
 >>> parse peek "0123"
 Right (Just '0',"0123")
