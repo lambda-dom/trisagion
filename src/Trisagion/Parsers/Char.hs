@@ -56,7 +56,6 @@ import Trisagion.Parser
 import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (validate)
-import Trisagion.Parsers.Streamable (matchElem)
 import Trisagion.Parsers.Splittable (takeWith1)
 
 
