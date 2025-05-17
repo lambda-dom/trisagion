@@ -65,7 +65,7 @@ instance Splittable s => Splittable (Offset s) where
     single :: ElementOf (Offset s) -> PrefixOf (Offset s)
     single = single @s
 
-instance MonoFoldable s => HasOffset (Offset s) where
+instance (MonoFoldable s, Streamable s) => HasOffset (Offset s) where
     {-# INLINE offset #-}
     offset :: Offset s -> Word
     offset (Offset n xs) = n - monolength xs

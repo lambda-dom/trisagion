@@ -25,7 +25,6 @@ module Trisagion.Types.ErrorItem (
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
 import Data.Typeable (Typeable, type (:~:) (Refl), eqT)
 
 -- Library.
@@ -33,17 +32,10 @@ import Optics.Prism (Prism', prism')
 
 
 {- | The t'ErrorItem' error type. -}
-data ErrorItem s e
+data ErrorItem e
     = EndOfInput !Word                  -- ^ End of input error. Argument is the amount requested.
-    | ErrorItem !s !e                   -- ^ Error with input stream @s@ and error tag @e@.
+    | ErrorItem !Word !e                -- ^ Error with input stream offset and error tag @e@.
     deriving stock (Eq, Show, Functor)
-
--- Instances.
-instance Bifunctor ErrorItem where
-    {-# INLINE bimap #-}
-    bimap :: (s -> t) -> (d -> e) -> ErrorItem s d -> ErrorItem t e
-    bimap _ _ (EndOfInput n) = EndOfInput n
-    bimap f g (ErrorItem xs err) = ErrorItem (f xs) (g err)
 
 
 {- | Prism for the end of input error.
@@ -51,48 +43,43 @@ instance Bifunctor ErrorItem where
 @'Word'@ parameter is the amount of elements requested, @0@ if this cannot be determined.
 -}
 {-# INLINE endOfInput #-}
-endOfInput :: Prism' (ErrorItem s e) Word
+endOfInput :: Prism' (ErrorItem e) Word
 endOfInput = prism' construct match
     where
-        construct :: Word -> ErrorItem s e
+        construct :: Word -> ErrorItem e
         construct = EndOfInput
 
-        match :: ErrorItem s e -> Maybe Word
+        match :: ErrorItem e -> Maybe Word
         match (EndOfInput n) = Just n
         match _              = Nothing
 
 {- | Prism for an t'ErrorItem' with input stream @s@ and error tag @e@. -}
 {-# INLINE errorItem #-}
-errorItem :: Prism' (ErrorItem s e) (s, e)
+errorItem :: Prism' (ErrorItem e) (Word, e)
 errorItem = prism' construct match
     where
-        construct :: (s, e) -> ErrorItem s e
+        construct :: (Word, e) -> ErrorItem e
         construct = uncurry ErrorItem
 
-        match :: ErrorItem s e -> Maybe (s, e)
-        match (ErrorItem xs e) = Just (xs, e)
-        match _                = Nothing
+        match :: ErrorItem e -> Maybe (Word, e)
+        match (ErrorItem n e) = Just (n, e)
+        match _               = Nothing
 
 
 {- | The @TraceItem s@ type, a wrapper around @forall d . 'ErrorItem' s d@. -}
-data TraceItem s where
-    TraceItem :: (Typeable d, Eq d, Show d) => !(ErrorItem s d) -> TraceItem s
+data TraceItem where
+    TraceItem :: (Typeable d, Eq d, Show d) => !(ErrorItem d) -> TraceItem
 
 -- Instances.
-deriving stock instance (Show s) => Show (TraceItem s)
+deriving stock instance Show TraceItem
 
-instance Eq s => Eq (TraceItem s) where
+instance Eq TraceItem where
     {-# INLINEABLE (==) #-}
-    (==) :: TraceItem s -> TraceItem s -> Bool
-    (==) (TraceItem (e :: ErrorItem s d)) (TraceItem (e' :: ErrorItem s d')) =
+    (==) :: TraceItem -> TraceItem -> Bool
+    (==) (TraceItem (e :: ErrorItem d)) (TraceItem (e' :: ErrorItem d')) =
         case eqT @d @d' of
             Nothing   -> False
             Just Refl -> e == e'
-
-instance Functor TraceItem where
-    {-# INLINE fmap #-}
-    fmap :: (s -> t) -> TraceItem s -> TraceItem t
-    fmap f = applyNat (first f)
 
 
 {- | The traceItem prism for 'TraceItem'.
@@ -101,25 +88,25 @@ Mainly useful for the constructor, as the matcher requires the knowledge of the 
 @'ErrorItem' s e@ inside @'TraceItem' s@, and a runtime check for the downcast.
 -}
 {-# INLINE traceItem #-}
-traceItem :: forall s e . (Typeable e, Eq e, Show e) => Prism' (TraceItem s) (ErrorItem s e)
+traceItem :: forall e . (Typeable e, Eq e, Show e) => Prism' TraceItem (ErrorItem e)
 traceItem = prism' construct match
     where
-        construct :: ErrorItem s e -> TraceItem s
+        construct :: ErrorItem e -> TraceItem
         construct = TraceItem
 
-        match :: TraceItem s -> Maybe (ErrorItem s e)
-        match (TraceItem (err :: ErrorItem s d)) =
+        match :: TraceItem -> Maybe (ErrorItem e)
+        match (TraceItem (err :: ErrorItem d)) =
             case eqT @d @e of
                 Nothing   -> Nothing
                 Just Refl -> Just err
 
 
-{- | Apply a natural transformation @'ErrorItem' s -> 'ErrorItem' t@ to a 'TraceItem'. -}
+{- | Apply a natural transformation @'ErrorItem' -> 'ErrorItem'@ to a 'TraceItem'. -}
 {-# INLINE applyNat #-}
-applyNat :: (forall d . ErrorItem s d -> ErrorItem t d) -> TraceItem s -> TraceItem t
+applyNat :: (forall d . ErrorItem d -> ErrorItem d) -> TraceItem -> TraceItem
 applyNat f (TraceItem e) = TraceItem (f e)
 
-{- | Apply a natural transformation @'ErrorItem' s -> Const a@, or a /cone/, to a 'TraceItem'. -}
+{- | Apply a natural transformation @'ErrorItem' -> Const a@, or a /cone/, to a 'TraceItem'. -}
 {-# INLINE applyCone #-}
-applyCone :: (forall d . ErrorItem s d -> a) -> TraceItem s -> a
+applyCone :: (forall d . ErrorItem d -> a) -> TraceItem -> a
 applyCone f (TraceItem e) = f e

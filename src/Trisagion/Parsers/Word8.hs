@@ -42,12 +42,12 @@ import Trisagion.Parsers.Splittable (takeExact)
 
 {- | Parse a single 'Word8'. -}
 {-# INLINE word8 #-}
-word8 :: (Streamable s, ElementOf s ~ Word8) => Parser s (InputError s) Word8
+word8 :: (Streamable s, ElementOf s ~ Word8) => Parser s InputError Word8
 word8 = one
 
 {- | Parse a single 'Int8'. -}
 {-# INLINE int8 #-}
-int8 :: (Streamable s, ElementOf s ~ Word8) => Parser s (InputError s) Int8
+int8 :: (Streamable s, ElementOf s ~ Word8) => Parser s InputError Int8
 int8 = fromIntegral <$> one
 
 
@@ -56,7 +56,7 @@ int8 = fromIntegral <$> one
 integralLe
     :: forall s w
     .  (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
-    => Parser s (InputError s) w
+    => Parser s InputError w
 integralLe = do
         s <- takeExact $ byteCount @w 0
         pure $ pack (monotoList s)
@@ -66,7 +66,7 @@ integralLe = do
 integralBe
     :: forall s w
     .  (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, Integral w, FiniteBits w)
-    => Parser s (InputError s) w
+    => Parser s InputError w
 integralBe = do
         s <- takeExact $ byteCount @w 0
         pure $ packReverse (monotoList s)
@@ -76,40 +76,40 @@ integralBe = do
 {-# INLINE word16Le #-}
 word16Le
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word16
+    => Parser s InputError Word16
 word16Le = integralLe
 
 {- | Parse a 'Word32' in little-endian format. -}
 {-# INLINE word32Le #-}
 word32Le
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word32
+    => Parser s InputError Word32
 word32Le = integralLe
 
 {- | Parse a 'Word64' in little-endian format. -}
 {-# INLINE word64Le #-}
 word64Le
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word64
+    => Parser s InputError Word64
 word64Le = integralLe
 
 {- | Parse a 'Word16' in big-endian format. -}
 {-# INLINE word16Be #-}
 word16Be
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word16
+    => Parser s InputError Word16
 word16Be = integralBe
 
 {- | Parse a 'Word32' in big-endian format. -}
 {-# INLINE word32Be #-}
 word32Be
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word32
+    => Parser s InputError Word32
 word32Be = integralBe
 
 {- | Parse a 'Word64' in big-endian format. -}
 {-# INLINE word64Be #-}
 word64Be
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
-    => Parser s (InputError s) Word64
+    => Parser s InputError Word64
 word64Be = integralBe

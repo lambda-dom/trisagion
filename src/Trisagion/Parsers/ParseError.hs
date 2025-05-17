@@ -25,13 +25,14 @@ import Data.Typeable (Typeable)
 import Data.Void (absurd)
 
 -- Libraries.
-import Optics.Optic ((%))
-import Optics.Review (review)
+import Optics.Core ((%), set, review)
+import Data.Tuple.Optics (_1)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace)
+import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace, cons)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The t'ValidationError' error tag type thrown on failed validations. -}
@@ -42,8 +43,10 @@ newtype ValidationError e = ValidationError e
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
-throwParseError :: e -> Parser s (ParseError s e) a
-throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
+throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
+throwParseError err = do
+    xs <- first absurd get
+    throw $ review (singleton % errorItem) (offset xs, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 
@@ -67,10 +70,10 @@ parser = capture $ do
 @
 -}
 {-# INLINE capture #-}
-capture :: Parser s (ParseError s e) a -> Parser s (ParseError s e) a
+capture :: HasOffset s => Parser s (ParseError e) a -> Parser s (ParseError e) a
 capture p = do
-    xs <- first absurd get
-    first (first (const xs)) p
+    n <- first absurd (offset <$> get)
+    first (set (cons % _1 % errorItem % _1) n) p
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
 
@@ -79,10 +82,10 @@ The input stream of the thrown error is the input stream captured /before/ @p@ r
 -}
 {-# INLINE onParseError #-}
 onParseError
-    :: (Typeable d, Eq d, Show d)
+    :: (HasOffset s, Typeable d, Eq d, Show d)
     => e                                -- ^ Error tag of new error.
-    -> Parser s (ParseError s d) a      -- ^ Parser to run.
-    -> Parser s (ParseError s e) a
+    -> Parser s (ParseError d) a        -- ^ Parser to run.
+    -> Parser s (ParseError e) a
 onParseError e p = do
     xs <- first absurd get
     catch
@@ -93,9 +96,10 @@ onParseError e p = do
 {- | Run the parser and return the result, validating it. -}
 {-# INLINE validate #-}
 validate
-    :: (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s (ParseError s e) a      -- ^ Parser to run.
-    -> Parser s (ParseError s (d :+: e)) b
+    :: HasOffset s
+    => (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s (ParseError e) a        -- ^ Parser to run.
+    -> Parser s (ParseError (d :+: e)) b
 validate v p = do
     x <- first (fmap Right) p
     case v x of
