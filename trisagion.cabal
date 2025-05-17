@@ -22,9 +22,7 @@ source-repository head
     type: git
     location: https://github.com/lambda-dom/trisagion
 
-library
-    hs-source-dirs:
-        src
+common common-fields
     default-language: GHC2021
     default-extensions:
         DerivingStrategies
@@ -45,6 +43,12 @@ library
     build-depends:
         -- GHC 9.6
         base >=4.18 && <4.19,
+
+library
+    import: common-fields
+    hs-source-dirs:
+        src
+    build-depends:
         mtl >=2.3 && <2.4,
         optics-core >= 0.4.1 && <0.4.2,
         bytestring >=0.11 && <0.13,
@@ -72,3 +76,16 @@ library
         Trisagion.Parsers.Char
         Trisagion.Parsers.Word8
         Trisagion.Streams.Chunk
+
+test-suite trisagion-tests
+    import: common-fields
+    type: exitcode-stdio-1.0
+    hs-source-dirs:
+        tests
+    main-is: Spec.hs
+    build-depends:
+        hspec ^>=2.11 && <2.12,
+        trisagion,
+    build-tool-depends:
+        hspec-discover:hspec-discover
+    other-modules:
