@@ -55,7 +55,6 @@ import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Parser
 import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.ParseError (validate)
 import Trisagion.Parsers.Splittable (takeWith1)
 
 

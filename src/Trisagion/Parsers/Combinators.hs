@@ -6,9 +6,6 @@ conflict with base.
 -}
 
 module Trisagion.Parsers.Combinators (
-    -- * Validators.
-    validate,
-
     -- * Parsers without errors.
     maybe,
     lookAhead,
@@ -55,25 +52,6 @@ import Data.Void (Void, absurd)
 -- Package.
 -- Import entire module for doctests.
 import Trisagion.Parser
-
-
-{- | Run the parser and return the result, validating it.
-
-note(s):
-
-  * See 'Trisagion.Parsers.ParseError.validate' in 'Trisagion.Parsers.ParseError' for a version
-  more suited for dealing with 'Trisagion.Types.ParseError.ParseError' errors.
--}
-{-# INLINE validate #-}
-validate
-    :: (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
-validate v p = do
-    x <- first Right p
-    case v x of
-        Left d  -> throw $ Left d
-        Right y -> pure y
 
 
 {- | @'maybe' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.

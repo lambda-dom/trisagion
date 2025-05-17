@@ -36,7 +36,6 @@ import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser
-import Trisagion.Parsers.ParseError (validate)
 import Trisagion.Parsers.Combinators (lookAhead)
 
 
