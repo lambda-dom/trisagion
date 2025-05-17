@@ -58,7 +58,7 @@ consumed p = do
 
 {- | Run a parser isolated to a fixed size prefix of the stream.
 
-The prefix on which the parser runs may have a size smaller than @n@ is there is not enough input
+The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
 in the stream. Any unconsumed input in the prefix is silently discarded. If such behavior is
 undesirable, 'Control.Monad.guard' the parser to run with an appropriate check -- see
 'Trisagion.Parsers.Streamable.ensureEOI'.
@@ -91,6 +91,14 @@ isolate n p = do
 note(s):
 
     * Implementation requires computing the length of the prefix.
+
+=== __Examples:__
+
+>>> parse (takeExact 2) "0123"
+Right ("01","23")
+
+>>> parse (takeExact 10) "0123"
+Left (Cons (EndOfInput 10) [])
 -}
 {-# INLINE takeExact #-}
 takeExact
