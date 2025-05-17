@@ -61,7 +61,7 @@ library
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
-        -- Trisagion.Types.ParseError
+        Trisagion.Types.ParseError
         -- Trisagion.Streams.Counter
         -- Trisagion.Streams.Offset
         -- Trisagion.Streams.Chunk
