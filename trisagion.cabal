@@ -66,7 +66,6 @@ library
         Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
-        Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Parser
         Trisagion.Parsers.Combinators
