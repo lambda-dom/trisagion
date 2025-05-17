@@ -380,6 +380,9 @@ try p = Parser $ \ xs ->
 >>> parse (lookAhead one) "0123"
 Right (Right '0',"0123")
 
+>>> parse (lookAhead $ matchOne '1') (initialize "0123")
+Right (Left (Cons (ErrorItem 1 (ValidationError '0')) []),Counter 0 "0123")
+
 >>> parse (lookAhead one) ""
 Right (Left (Cons (EndOfInput 1) []),"")
 -}

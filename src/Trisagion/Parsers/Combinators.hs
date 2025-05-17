@@ -100,7 +100,28 @@ after
     -> Parser s e a
 after = flip (<*)
 
-{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
+{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@.
+
+=== __Examples:__
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{1}3")
+Right ('1',Counter 3 "3")
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "11}3")
+Left (Cons (ErrorItem 1 (ValidationError '1')) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{123")
+Left (Cons (ErrorItem 3 (ValidationError '2')) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{")
+Left (Cons (EndOfInput 1) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{1")
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE between #-}
 between
     :: Parser s e b                     -- ^ Opening parser.
@@ -159,6 +180,20 @@ note(s):
   * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
   does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
   variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
+
+=== __Examples:__
+
+>>> parse (many (satisfy ('{' /=))) (initialize "01{3")
+Right ("01",Counter 2 "{3")
+
+>>> parse (many (satisfy ('0' /=))) (initialize "0123")
+Right ("",Counter 0 "0123")
+
+>>> parse (many (satisfy ('0' ==))) (initialize "")
+Right ("",Counter 0 "")
+
+>>> parse (take 2 <$> many (satisfy ('0' ==))) (initialize "0000456")
+Right ("00",Counter 4 "456")
 -}
 {-# INLINEABLE many #-}
 many :: Parser s e a -> Parser s Void [a]
@@ -174,6 +209,17 @@ many p = go
 
 The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
 precise type signature.
+
+=== __Examples:__
+
+>>> parse (some (satisfy ('{' /=))) (initialize "01{3")
+Right ('0' :| "1",Counter 2 "{3")
+
+>>> parse (some (satisfy ('0' /=))) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (some (satisfy ('0' /=))) (initialize "")
+Left (Cons (EndOfInput 1) [])
 -}
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
