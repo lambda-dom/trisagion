@@ -28,6 +28,7 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Parser (Parser, (:+:), get, one, throw)
 import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
@@ -56,9 +57,9 @@ peek = either (const Nothing) Just <$> lookAhead one
 {- | Parse one @'ElementOf' s@ satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
-    :: Streamable s
+    :: HasOffset s
     => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
-    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
 satisfy p = first (fmap (either id absurd)) $ validate v one
     where
         v x = if p x then Right x else Left $ pure x
@@ -66,15 +67,15 @@ satisfy p = first (fmap (either id absurd)) $ validate v one
 {- | Parse one element matching a @'ElementOf' s@. -}
 {-# INLINE matchElem #-}
 matchElem
-    :: (Streamable s, Eq (ElementOf s))
+    :: (HasOffset s, Eq (ElementOf s))
     => ElementOf s                      -- ^ Matching @'ElementOf' s@.
-    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
 matchElem x = satisfy (== x)
 
 {- | Parse one @'ElementOf' s@ that is an element of a foldable. -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (Streamable s, Eq (ElementOf s), Foldable t)
+    :: (HasOffset s, Eq (ElementOf s), Foldable t)
     => t (ElementOf s)                  -- ^ Foldable of @'ElementOf' s@ to test inclusion.
-    -> Parser s (ParseError s (ValidationError (ElementOf s))) (ElementOf s)
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
 oneOf xs = satisfy (`elem` xs)
