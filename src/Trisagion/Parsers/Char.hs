@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Char
 
-Parsers @('Streamable' s, 'ElementOf' s ~ Char) => 'Parser' s@.
+Parsers @('HasOffset' s, 'ElementOf' s ~ Char) => 'Parser' s@.
 -}
 
 module Trisagion.Parsers.Char (
@@ -49,7 +49,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Lib.Utils (enumDown)
-import Trisagion.Typeclasses.Streamable (Streamable (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser, (:+:), takeWith, one, throw)
@@ -68,15 +68,15 @@ data Sign = Negative | Positive
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
 lf
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 lf = matchElem '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 cr = matchElem '\r'
 
 
@@ -94,15 +94,15 @@ notSpaces = takeWith (not . isSpace)
 {- | Parse a decimal digit. -}
 {-# INLINE digit #-}
 digit
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 digit = satisfy isDigit
 
 {- | Parse a positive 'Integer' in decimal format. -}
 {-# INLINEABLE positive #-}
 positive
-    :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
+    :: (HasOffset s, Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
+    => Parser s (ParseError (ValidationError (ElementOf s))) Integer
 positive = do
         digits <- takeWith1 isDigit
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
@@ -115,8 +115,8 @@ positive = do
 {- | Parse a number sign. -}
 {-# INLINE sign #-}
 sign
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Sign
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Sign
 sign = first (fmap (either id absurd)) $ validate v one
     where
         v x = case x of
@@ -127,8 +127,8 @@ sign = first (fmap (either id absurd)) $ validate v one
 {- | Parse a signed 'Integer' in decimal format. -}
 {-# INLINE integer #-}
 integer
-    :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
-    => Parser s (ParseError s (ValidationError (ElementOf s))) Integer
+    :: (HasOffset s, Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
+    => Parser s (ParseError (ValidationError (ElementOf s))) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> Combinators.maybe sign)
     number <- positive
@@ -140,15 +140,15 @@ integer = do
 {- | Parse a single (unicode) letter. -}
 {-# INLINE letter #-}
 letter
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 letter = satisfy isLetter
 
 {- | Parse a word. -}
 {-# INLINE word #-}
 word
-    :: (Splittable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) (PrefixOf s)
 word = takeWith1 isLetter
 
 {- | Parse an identifier.
@@ -157,8 +157,8 @@ An identifier is a letter followed by any combination of letters, digits and the
 or @\'_\'@.-}
 {-# INLINE identifier #-}
 identifier
-    :: (Splittable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) (PrefixOf s)
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
@@ -171,8 +171,8 @@ identifier = do
 {- | Parse a string quote character, either @\'\\\'\'@ or @\'\"\'@. -}
 {-# INLINE quote #-}
 quote
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 quote = satisfy (\ c -> '\'' == c || '\"' == c)
 
 {- | Parse an escape sequence inside a quoted string.
@@ -203,8 +203,8 @@ The escape sequences currently supported are:
 -}
 {-# INLINE escape #-}
 escape
-    :: (Streamable s, ElementOf s ~ Char)
-    => Parser s (ParseError s (ValidationError Char)) Char
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Char
 escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
     where
         v :: Char -> ValidationError Char :+: Char
@@ -230,8 +230,8 @@ note(s):
 -}
 {-# INLINEABLE string #-}
 string
-    :: forall s . (Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
-    => Parser s (ParseError s (ValidationError Char)) (PrefixOf s)
+    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
+    => Parser s (ParseError (ValidationError Char)) (PrefixOf s)
 string = do
         q <- quote
         blocks <- manyTill (matchElem q) (fmap (single @s) escape <|> takeWith1 predicate)
@@ -252,7 +252,7 @@ note(s):
     solution) or complicating the implementation.
 -}
 comment
-    :: (Splittable s, ElementOf s ~ Char)
+    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
 comment p = p *> first absurd (takeWith (/= '\n') <* Combinators.maybe cr)

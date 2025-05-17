@@ -69,6 +69,6 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
-        -- Trisagion.Parsers.Char
-        -- Trisagion.Parsers.Word8
+        Trisagion.Parsers.Char
+        Trisagion.Parsers.Word8
         Trisagion.Streams.Chunk
