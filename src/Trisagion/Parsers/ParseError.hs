@@ -29,10 +29,10 @@ import Optics.Core ((%), set, review)
 import Data.Tuple.Optics (_1)
 
 -- Package.
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace, cons)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The t'ValidationError' error tag type thrown on failed validations. -}
@@ -41,14 +41,14 @@ newtype ValidationError e = ValidationError e
     deriving (Applicative, Monad) via Identity
 
 
-{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
+{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
 throwParseError err = do
-    xs <- first absurd get
-    throw $ review (singleton % errorItem) (offset xs, err)
+    n <- first absurd (offset <$> get)
+    throw $ review (singleton % errorItem) (n, err)
 
-{- | Capture the input stream at the entry point in case of a thrown error.
+{- | Capture the offset of the input stream at the entry point in case of a thrown error.
 
 A parser,
 
@@ -63,9 +63,9 @@ can now be written as:
 
 @
 parser = capture $ do
-    -- Capture the input stream @s@ here.
+    -- Capture the offset of the input stream @n@ here.
     ...
-    x <- p -- Can throw here. If it throws, the error's input stream will be @s@.
+    x <- p -- Can throw here. If it throws, the error's offset will be @n@.
     ...
 @
 -}
@@ -77,8 +77,8 @@ capture p = do
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
 
-The input stream of the thrown error is the input stream captured /before/ @p@ runs as in the
-'capture' combinator.
+The offset of the thrown error is the offset of the input stream captured /before/ @p@ runs as in
+the 'capture' combinator.
 -}
 {-# INLINE onParseError #-}
 onParseError
