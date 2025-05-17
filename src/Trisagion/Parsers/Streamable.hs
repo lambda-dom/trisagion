@@ -28,12 +28,12 @@ import Data.Void (Void, absurd)
 import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Parser (Parser, (:+:), get, one, throw)
 import Trisagion.Parsers.Combinators (lookAhead)
-import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parsers.ParseError (validate)
 
 
 {- | Return @'True'@ if all input is consumed. -}

@@ -5,6 +5,9 @@ The @ParseError@ error type.
 -}
 
 module Trisagion.Types.ParseError (
+    -- * Error tag types.
+    ValidationError,
+
     -- * The @ParseError@ type.
     ParseError,
 
@@ -20,6 +23,7 @@ module Trisagion.Types.ParseError (
 
 -- Imports.
 -- Base.
+import Data.Functor.Identity (Identity (..))
 import Data.Typeable (Typeable)
 
 -- Libraries.
@@ -28,6 +32,12 @@ import Optics.Core (Prism', (%), prism', review)
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, traceItem)
+
+
+{- | The t'ValidationError' error tag type thrown on failed validations. -}
+newtype ValidationError e = ValidationError e
+    deriving stock (Eq, Show, Functor, Foldable, Traversable)
+    deriving (Applicative, Monad) via Identity
 
 
 {- | The 'ParseError' type.

@@ -31,11 +31,11 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (endOfInput)
-import Trisagion.Types.ParseError (ParseError, singleton)
+import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser, InputError, takePrefix, takeWith, throw, get)
-import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parsers.ParseError (validate)
 import Trisagion.Parsers.Streamable (satisfy)
 import Trisagion.Parsers.Combinators (lookAhead)
 

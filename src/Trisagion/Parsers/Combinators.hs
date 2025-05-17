@@ -53,7 +53,8 @@ import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.Void (Void, absurd)
 
 -- Package.
-import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
+-- Import entire module for doctests.
+import Trisagion.Parser
 
 
 {- | Run the parser and return the result, validating it.
@@ -84,7 +85,16 @@ more precise type signature.
 maybe :: Parser s e a -> Parser s Void (Maybe a)
 maybe p = either (const Nothing) Just <$> try p
 
-{- | Run the parser and return the result, but do not consume any input. -}
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
+
+>>> parse (lookAhead one) ""
+Right (Left (Cons (EndOfInput 1) []),"")
+-}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = eval p <$> get

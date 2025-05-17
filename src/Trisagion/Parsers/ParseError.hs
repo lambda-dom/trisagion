@@ -5,9 +5,6 @@ Parsers to handle 'Trisagion.Types.ParseError' errors.
 -}
 
 module Trisagion.Parsers.ParseError (
-    -- * Error tag types.
-    ValidationError,
-
     -- * Handling 'Trisagion.Types.ParseError' errors.
     throwParseError,
     capture,
@@ -20,7 +17,6 @@ module Trisagion.Parsers.ParseError (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Functor.Identity (Identity (..))
 import Data.Typeable (Typeable)
 import Data.Void (absurd)
 
@@ -33,12 +29,6 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace, cons)
 import Trisagion.Parser (Parser, (:+:), get, throw, catch)
 import Trisagion.Types.ErrorItem (errorItem)
-
-
-{- | The t'ValidationError' error tag type thrown on failed validations. -}
-newtype ValidationError e = ValidationError e
-    deriving stock (Eq, Show, Functor, Foldable, Traversable)
-    deriving (Applicative, Monad) via Identity
 
 
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
