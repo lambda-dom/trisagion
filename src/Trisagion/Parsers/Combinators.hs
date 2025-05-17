@@ -6,12 +6,8 @@ conflict with base.
 -}
 
 module Trisagion.Parsers.Combinators (
-    -- * Validators.
-    validate,
-
     -- * Parsers without errors.
     maybe,
-    lookAhead,
     failIff,
 
     -- * 'Applicative' parsers.
@@ -57,25 +53,6 @@ import Data.Void (Void, absurd)
 import Trisagion.Parser
 
 
-{- | Run the parser and return the result, validating it.
-
-note(s):
-
-  * See 'Trisagion.Parsers.ParseError.validate' in 'Trisagion.Parsers.ParseError' for a version
-  more suited for dealing with 'Trisagion.Types.ParseError.ParseError' errors.
--}
-{-# INLINE validate #-}
-validate
-    :: (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
-validate v p = do
-    x <- first Right p
-    case v x of
-        Left d  -> throw $ Left d
-        Right y -> pure y
-
-
 {- | @'maybe' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
@@ -84,20 +61,6 @@ more precise type signature.
 {-# INLINE maybe #-}
 maybe :: Parser s e a -> Parser s Void (Maybe a)
 maybe p = either (const Nothing) Just <$> try p
-
-{- | Run the parser and return the result, but do not consume any input.
-
-=== __Examples:__
-
->>> parse (lookAhead one) "0123"
-Right (Right '0',"0123")
-
->>> parse (lookAhead one) ""
-Right (Left (Cons (EndOfInput 1) []),"")
--}
-{-# INLINE lookAhead #-}
-lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = eval p <$> get
 
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
 
