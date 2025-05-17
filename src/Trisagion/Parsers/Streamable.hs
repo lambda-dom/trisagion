@@ -28,15 +28,24 @@ import Data.Void (Void, absurd)
 import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Parser (Parser, (:+:), get, one, throw)
+import Trisagion.Parser
 import Trisagion.Parsers.Combinators (lookAhead)
-import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parsers.ParseError (validate)
 
 
-{- | Return @'True'@ if all input is consumed. -}
+{- | Return @'True'@ if all input is consumed.
+
+=== __Examples:__
+
+>>> parse eoi "0123"
+Right (False,"0123")
+
+>>> parse eoi ""
+Right (True,"")
+-}
 {-# INLINE eoi #-}
 eoi :: Streamable s => Parser s Void Bool
 eoi = null <$> get
@@ -51,7 +60,16 @@ ensureEOI err p = do
         then pure x
         else throw $ Left err
 
-{- | Extract the first @'ElementOf' s@ from the streamable but without consuming input. -}
+{- | Extract the first @'ElementOf' s@ from the streamable but without consuming input.
+
+=== __Examples:__
+
+>>> parse peek "0123"
+Right (Just '0',"0123")
+
+>>> parse peek ""
+Right (Nothing,"")
+-}
 {-# INLINE peek #-}
 peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = either (const Nothing) Just <$> lookAhead one

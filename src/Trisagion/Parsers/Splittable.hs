@@ -12,6 +12,7 @@ memory which is probably not what is desired.
 module Trisagion.Parsers.Splittable (
     -- * Parsers with a @'Splittable' s => 'Parser' s e a@ constraint.
     consumed,
+    isolate,
     takeExact,
     takeWith1,
     match,
@@ -31,11 +32,11 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Types.ErrorItem (endOfInput)
-import Trisagion.Types.ParseError (ParseError, singleton)
+import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, InputError, takePrefix, takeWith, throw, get)
-import Trisagion.Parsers.ParseError (ValidationError, validate)
+import Trisagion.Parser
+import Trisagion.Parsers.ParseError (validate)
 import Trisagion.Parsers.Streamable (satisfy)
 import Trisagion.Parsers.Combinators (lookAhead)
 
@@ -55,11 +56,49 @@ consumed p = do
     -- Implicitly relies on the parser @p@ being normal, so that @n - offset xs@ is positive.
     pure (fst $ splitPrefix (n - offset xs) xs, x)
 
+{- | Run a parser isolated to a fixed size prefix of the stream.
+
+The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
+in the stream. Any unconsumed input in the prefix is silently discarded. If such behavior is
+undesirable, 'Control.Monad.guard' the parser to run with an appropriate check -- see
+'Trisagion.Parsers.Streamable.ensureEOI'.
+
+=== __Examples:__
+
+>>> parse (isolate 2 one) "0123"
+Right ('0',"23")
+
+>>> parse (isolate 2 one) "0"
+Right ('0',"")
+
+>>> parse (isolate 2 one) ""
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE isolate #-}
+isolate
+    :: Splittable s
+    => Word                             -- ^ Prefix size.
+    -> Parser (PrefixOf s) e a          -- ^ Parser to run.
+    -> Parser s e a
+isolate n p = do
+    prefix <- first absurd $ takePrefix n
+    case eval p prefix of
+        Left e  -> throw e
+        Right x -> pure x
+
 {- | Parse an exact, fixed size prefix.
 
 note(s):
 
     * Implementation requires computing the length of the prefix.
+
+=== __Examples:__
+
+>>> parse (takeExact 2) "0123"
+Right ("01","23")
+
+>>> parse (takeExact 10) "0123"
+Left (Cons (EndOfInput 10) [])
 -}
 {-# INLINE takeExact #-}
 takeExact

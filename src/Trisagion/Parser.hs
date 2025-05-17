@@ -22,7 +22,6 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
     try,
-    isolate,
 
     -- * Error parsers.
     throw,
@@ -253,6 +252,14 @@ get = Parser $ \ s -> Success s s
 
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
 backtracks and returns the error as a 'Left'.
+
+=== __Examples:__
+
+>>> parse (try one) "0123"
+Right (Right '0',"123")
+
+>>> parse (try one) ""
+Right (Left (Cons (EndOfInput 1) []),"")
 -}
 {-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
@@ -260,25 +267,6 @@ try p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
-
-{- | Run a parser isolated to a prefix of the stream.
-
-Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
-'Control.Monad.guard' the parser to run with an appropriate check -- see
-'Trisagion.Parsers.Streamable.ensureEOI'.
--}
-{-# INLINE isolate #-}
-isolate
-    :: (s -> d :+: (s, s))              -- ^ Stream splitter with @'Left' d@ signalling an error.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) a
-isolate h p = Parser $ \xs ->
-    case h xs of
-        Left d                 -> Error $ Left d
-        Right (prefix, suffix) ->
-            case eval p prefix of
-                Left e  -> Error $ Right e
-                Right x -> Success x suffix
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
@@ -298,7 +286,17 @@ catch p h = Parser $ \ xs ->
         Success x ys -> Success x ys
 
 
-{- | Parse one @'ElementOf' s@ from the input stream. -}
+{- | Parse one @'ElementOf' s@ from the input stream.
+
+=== __Examples:__
+
+>>> parse one "0123"
+Right ('0',"123")
+
+>>> parse one ""
+Left (Cons (EndOfInput 1) [])
+-}
+
 {-# INLINE one #-}
 one :: Streamable s => Parser s InputError (ElementOf s)
 one = Parser $ \ s ->
@@ -306,7 +304,16 @@ one = Parser $ \ s ->
         Nothing      -> Error $ review (singleton % endOfInput) 1
         Just (x, xs) -> Success x xs
 
-{- | Skip one @'ElementOf' s@ from the input stream. -}
+{- | Skip one @'ElementOf' s@ from the input stream.
+
+=== __Examples:__
+
+>>> parse skipOne "0123"
+Right ((),"123")
+
+>>> parse one ""
+Right ((),"")
+ -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
 skipOne = Parser $ \ s -> Success () (dropOne s)
@@ -314,22 +321,57 @@ skipOne = Parser $ \ s -> Success () (dropOne s)
 {- | Parse a fixed size prefix.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
+
+=== __Examples:__
+
+>>> parse (takePrefix 2) "0123"
+Right ("01","23")
+
+>>> parse (takePrefix 10) "0123"
+Right ("0123","")
 -}
 {-# INLINE takePrefix #-}
 takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
 takePrefix n = Parser $ \ xs -> uncurry Success (splitPrefix n xs)
 
-{- | Drop a fixed size prefix from the stream. -}
+{- | Drop a fixed size prefix from the stream.
+
+=== __Examples:__
+
+>>> parse (skipPrefix 2) "0123"
+Right ((),"23")
+
+>>> parse (skipPrefix 2) ""
+Right ((),"")
+-}
 {-# INLINE skipPrefix #-}
 skipPrefix :: Splittable s => Word -> Parser s Void ()
 skipPrefix n = Parser $ \ xs -> Success () (dropPrefix n xs)
 
-{- | Parse the longest prefix whose elements satisfy a predicate. -}
+{- | Parse the longest prefix whose elements satisfy a predicate.
+
+=== __Examples:__
+
+>>> parse (takeWith ('3' /=)) "0123"
+Right ("012","3")
+
+>>> parse (takeWith ('3' /=)) ""
+Right ("","")
+-}
 {-# INLINE takeWith #-}
 takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
 takeWith p = Parser $ \ xs -> uncurry Success (splitWith p xs)
 
-{- | Drop the longest prefix whose elements satisfy a predicate. -}
+{- | Drop the longest prefix whose elements satisfy a predicate.
+
+=== __Examples:__
+
+>>> parse (skipWith ('3' /=)) "0123"
+Right ((),"3")
+
+>>> parse (skipWith ('3' /=)) ""
+Right ((),"")
+-}
 {-# INLINE skipWith #-}
 skipWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
 skipWith p = Parser $ \ xs -> Success () (dropWith p xs)
