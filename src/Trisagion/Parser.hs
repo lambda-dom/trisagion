@@ -354,7 +354,16 @@ Right ("0123","")
 takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
 takePrefix n = Parser $ \ xs -> uncurry Success (splitPrefix n xs)
 
-{- | Drop a fixed size prefix from the stream. -}
+{- | Drop a fixed size prefix from the stream.
+
+=== __Examples:__
+
+>>> parse (skipPrefix 2) "0123"
+Right ((),"23")
+
+>>> parse (skipPrefix 2) ""
+Right ((),"")
+-}
 {-# INLINE skipPrefix #-}
 skipPrefix :: Splittable s => Word -> Parser s Void ()
 skipPrefix n = Parser $ \ xs -> Success () (dropPrefix n xs)
@@ -373,7 +382,16 @@ Right ("","")
 takeWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void (PrefixOf s)
 takeWith p = Parser $ \ xs -> uncurry Success (splitWith p xs)
 
-{- | Drop the longest prefix whose elements satisfy a predicate. -}
+{- | Drop the longest prefix whose elements satisfy a predicate.
+
+=== __Examples:__
+
+>>> parse (skipWith ('3' /=)) "0123"
+Right ((),"3")
+
+>>> parse (skipWith ('3' /=)) ""
+Right ((),"")
+-}
 {-# INLINE skipWith #-}
 skipWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
 skipWith p = Parser $ \ xs -> Success () (dropWith p xs)
