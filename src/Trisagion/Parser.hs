@@ -34,6 +34,7 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
+    throwParseError,
 
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     one,
@@ -51,7 +52,7 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
@@ -67,7 +68,7 @@ import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.Result (Result (..), toEither, withResult)
-import Trisagion.Types.ErrorItem (endOfInput)
+import Trisagion.Types.ErrorItem (endOfInput, errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)
 
 
@@ -370,6 +371,13 @@ catch p h = Parser $ \ xs ->
     case run p xs of
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
+
+{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
+{-# INLINE throwParseError #-}
+throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
+throwParseError err = do
+    n <- first absurd (offset <$> get)
+    throw $ review (singleton % errorItem) (n, err)
 
 
 {- | Parse one @'ElementOf' s@ from the input stream.
