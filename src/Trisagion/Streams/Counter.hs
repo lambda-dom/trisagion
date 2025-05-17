@@ -80,7 +80,7 @@ instance (Splittable s, MonoFoldable (PrefixOf s)) => Splittable (Counter s) whe
             (prefix, Counter (off + monolength prefix) rest)
 
     {-# INLINE single #-}
-    single :: ElementOf s -> PrefixOf s
+    single :: ElementOf (Counter s) -> PrefixOf (Counter s)
     single = single @s
 
     {-# INLINE splitRemainder #-}

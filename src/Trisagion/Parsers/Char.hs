@@ -43,9 +43,6 @@ import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
@@ -54,7 +51,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Parser (Parser, (:+:), takeWith, one)
+import Trisagion.Parser (Parser, (:+:), takeWith, one, throw)
 import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
@@ -174,7 +171,7 @@ identifier
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
-            Left e  -> throwError e
+            Left e  -> throw e
             Right _ -> first absurd $ takeWith v
     where
         v :: Char -> Bool
@@ -221,15 +218,15 @@ escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
     where
         v :: Char -> ValidationError Char :+: Char
         v c = case c of
-            't'  -> pure '\t'
-            'n'  -> pure '\n'
-            'v'  -> pure '\v'
-            'f'  -> pure '\f'
-            'r'  -> pure '\r'
-            's'  -> pure ' '
-            '\'' -> pure '\''
-            '"'  -> pure '"'
-            _    -> throwError $ pure c
+            't'  -> Right '\t'
+            'n'  -> Right '\n'
+            'v'  -> Right '\v'
+            'f'  -> Right '\f'
+            'r'  -> Right '\r'
+            's'  -> Right ' '
+            '\'' -> Right '\''
+            '"'  -> Right '"'
+            _    -> Left (pure c)
 
 {- | Parse a quoted string with escape sequences.
 

@@ -52,9 +52,6 @@ import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-
 -- Package.
 import Trisagion.Parser ((:+:), Parser, eval, get, try, throw)
 
@@ -74,7 +71,7 @@ validate
 validate v p = do
     x <- first Right p
     case v x of
-        Left d  -> throwError $ Left d
+        Left d  -> throw $ Left d
         Right y -> pure y
 
 

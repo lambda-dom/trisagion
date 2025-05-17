@@ -22,7 +22,6 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Void (absurd)
 
 -- Libraries.
-import Control.Monad.Except (MonadError (..))
 import Optics.Core ((%), review)
 
 -- non-Hackage libraries.
@@ -33,7 +32,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Types.ErrorItem (endOfInput)
 import Trisagion.Types.ParseError (ParseError, singleton)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, InputError, takePrefix, takeWith)
+import Trisagion.Parser (Parser, InputError, takePrefix, takeWith, throw)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 import Trisagion.Parsers.Streamable (satisfy)
 import Trisagion.Parsers.Combinators (lookAhead)
@@ -52,7 +51,7 @@ takeExact
 takeExact n = do
     prefix <- first absurd $ takePrefix n
     if monolength prefix /= n
-        then throwError $ review (singleton % endOfInput) n
+        then throw $ review (singleton % endOfInput) n
         else pure prefix
 
 {- | Parse the longest prefix with at least one element whose elements satisfy a predicate. -}
@@ -64,7 +63,7 @@ takeWith1
 takeWith1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
-        Left e  -> throwError e
+        Left e  -> throw e
         Right _ -> first absurd $ takeWith p
 
 {- | Parse a matching prefix.
