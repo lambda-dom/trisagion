@@ -32,8 +32,8 @@ import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, t
 
 {- | The 'ParseError' type.
 
-Functionally, a @'ParseError' s e@ is a @'ErrorItem' s e@, the top of the entire error trace, and a
-list of @forall d . 'ErrorItem' s d@ wrapped in a @'TraceItem' s@.
+Functionally, a @'ParseError' e@ is a @'ErrorItem' e@, the top of the entire error trace, and a
+list of @forall d . 'ErrorItem' d@ wrapped in a @'TraceItem'@.
 -}
 data ParseError e where
     -- | The Nil constructor.

@@ -16,7 +16,7 @@ module Trisagion.Streams.Counter (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (splitAt)
+import Prelude hiding (null, splitAt)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -30,8 +30,8 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 {- | Wrapper around a 'Streamable' adding an offset to track current position.
 
-The implementation initializes the counter to @0@ and then updates it on every operation by
-computing the length of the prefix.
+The implementation initializes the counter to @0@ and then updates it on every streamable operation
+by computing the length of the prefix.
 -}
 data Counter s = Counter {-# UNPACK #-} !Word !s
     deriving stock (Eq, Show)
@@ -52,6 +52,14 @@ instance Streamable s => Streamable (Counter s) where
         case uncons xs of
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Counter (succ n) ys)
+
+    {-# INLINE null #-}
+    null :: Counter s -> Bool
+    null (Counter _ xs) = null xs
+
+    {-# INLINE toList #-}
+    toList :: Counter s -> [ElementOf s]
+    toList (Counter _ xs) = toList xs
 
 instance Streamable s => HasOffset (Counter s) where
     {-# INLINE offset #-}
