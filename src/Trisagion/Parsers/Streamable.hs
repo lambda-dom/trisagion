@@ -22,16 +22,13 @@ import Prelude hiding (null)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.Parser (Parser, (:+:), get, one)
+import Trisagion.Parser (Parser, (:+:), get, one, throw)
 import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.ParseError (ValidationError, validate)
 
@@ -49,7 +46,7 @@ ensureEOI err p = do
     b <- first absurd eoi
     if b
         then pure x
-        else throwError $ Left err
+        else throw $ Left err
 
 {- | Extract the first @'ElementOf' s@ from the streamable but without consuming input. -}
 {-# INLINE peek #-}

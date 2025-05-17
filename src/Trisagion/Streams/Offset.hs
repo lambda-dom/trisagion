@@ -62,7 +62,7 @@ instance Splittable s => Splittable (Offset s) where
     splitWith p (Offset l xs) = Offset l <$> splitWith p xs
 
     {-# INLINE single #-}
-    single :: ElementOf s -> PrefixOf s
+    single :: ElementOf (Offset s) -> PrefixOf (Offset s)
     single = single @s
 
 instance MonoFoldable s => HasOffset (Offset s) where

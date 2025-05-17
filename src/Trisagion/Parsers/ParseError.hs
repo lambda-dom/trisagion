@@ -25,7 +25,6 @@ import Data.Typeable (Typeable)
 import Data.Void (absurd)
 
 -- Libraries.
-import Control.Monad.Except (MonadError (..))
 import Optics.Optic ((%))
 import Optics.Review (review)
 
@@ -44,7 +43,7 @@ newtype ValidationError e = ValidationError e
 {- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and input stream the current parser state. -}
 {-# INLINE throwParseError #-}
 throwParseError :: e -> Parser s (ParseError s e) a
-throwParseError err = first absurd get >>= throwError . review (singleton % errorItem) . (, err)
+throwParseError err = first absurd get >>= throw . review (singleton % errorItem) . (, err)
 
 {- | Capture the input stream at the entry point in case of a thrown error.
 
