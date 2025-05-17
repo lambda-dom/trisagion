@@ -9,6 +9,8 @@ module Trisagion.Parsers.Streamable (
     eoi,
     ensureEOI,
     peek,
+
+    -- * Parsers @'HasOffset' s => 'Parser' s e a@.
     satisfy,
     matchElem,
     oneOf,
@@ -53,6 +55,7 @@ ensureEOI err p = do
 {-# INLINE peek #-}
 peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = either (const Nothing) Just <$> lookAhead one
+
 
 {- | Parse one @'ElementOf' s@ satisfying a predicate. -}
 {-# INLINE satisfy #-}
