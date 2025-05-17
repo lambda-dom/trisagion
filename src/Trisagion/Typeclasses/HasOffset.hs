@@ -9,9 +9,13 @@ module Trisagion.Typeclasses.HasOffset (
     HasOffset (..),
 ) where
 
+-- Imports.
+-- Package.
+import Trisagion.Typeclasses.Streamable (Streamable)
+
 
 {- | The typeclass for input streams with a notion of current offset. -}
-class HasOffset s where
+class Streamable s => HasOffset s where
     {-# MINIMAL offset #-}
 
     {- | Getter for the current offset of the stream. -}
