@@ -22,7 +22,6 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
     try,
-    isolate,
 
     -- * Error parsers.
     throw,
@@ -268,24 +267,6 @@ try p = Parser $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
-
-{- | Run a parser isolated to a fixed size prefix of the stream.
-
-Any unconsumed input in the prefix is silently discarded. If such behavior is undesirable,
-'Control.Monad.guard' the parser to run with an appropriate check -- see
-'Trisagion.Parsers.Streamable.ensureEOI'.
--}
-{-# INLINE isolate #-}
-isolate
-    :: Splittable s
-    => Word                             -- ^ Prefix size.
-    -> Parser (PrefixOf s) e a          -- ^ Parser to run.
-    -> Parser s e a
-isolate n p = Parser $ \xs ->
-    let (prefix, suffix) = splitPrefix n xs in 
-        case eval p prefix of
-            Left e  -> Error e
-            Right x -> Success x suffix
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
