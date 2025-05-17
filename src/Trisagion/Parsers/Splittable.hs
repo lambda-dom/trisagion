@@ -52,7 +52,7 @@ consumed p = do
     xs <- first absurd get
     x  <- p
     n  <- offset <$> first absurd get
-    -- Implicitly relies on the parser @p@ being normal, so that @n - offset xs@ is positive.
+    -- Implicitly relies on the parser @p@ being normal, for positivity of @n - offset xs@.
     pure (fst $ splitPrefix (n - offset xs) xs, x)
 
 {- | Run a parser isolated to a fixed size prefix of the stream.
@@ -60,7 +60,7 @@ consumed p = do
 The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
 in the stream. Any unconsumed input in the prefix is silently discarded. If such behavior is
 undesirable, 'Control.Monad.guard' the parser to run with an appropriate check -- see
-'Trisagion.Parsers.Streamable.ensureEOI'.
+'Trisagion.Parser.ensureEOI'.
 
 === __Examples:__
 
