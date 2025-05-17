@@ -67,7 +67,7 @@ infixr 6 :+:
 
 
 {- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
-type InputError s = ParseError s Void
+type InputError = ParseError Void
 
 
 {- | The parsing monad. -}
@@ -300,7 +300,7 @@ catch p h = Parser $ \ xs ->
 
 {- | Parse one @'ElementOf' s@ from the input stream. -}
 {-# INLINE one #-}
-one :: Streamable s => Parser s (InputError s) (ElementOf s)
+one :: Streamable s => Parser s InputError (ElementOf s)
 one = Parser $ \ s ->
     case uncons s of
         Nothing      -> Error $ review (singleton % endOfInput) 1
