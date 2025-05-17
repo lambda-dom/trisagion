@@ -63,7 +63,7 @@ can now be written as:
 
 @
 parser = capture $ do
-    -- Capture the offset of the input stream @n@ here.
+    -- Capture the offset @n@ of the input stream here.
     ...
     x <- p -- Can throw here. If it throws, the error's offset will be @n@.
     ...

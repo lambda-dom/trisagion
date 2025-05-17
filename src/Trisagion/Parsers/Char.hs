@@ -226,7 +226,7 @@ the ones accepted by the 'escape' parser.
 
 note(s):
 
-  * A quoted string /cannot/ span multiple lines.
+  * A quoted string does /not/ span multiple lines.
 -}
 {-# INLINEABLE string #-}
 string

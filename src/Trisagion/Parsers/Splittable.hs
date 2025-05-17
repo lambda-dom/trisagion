@@ -52,7 +52,7 @@ consumed p = do
     xs <- first absurd get
     x  <- p
     n  <- offset <$> first absurd get
-    -- This implicitly relies on the parser @p@ being normal.
+    -- Implicitly relies on the parser @p@ being normal, so that @n - offset xs@ is positive.
     pure (fst $ splitPrefix (n - offset xs) xs, x)
 
 {- | Parse an exact, fixed size prefix.

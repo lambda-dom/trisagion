@@ -13,6 +13,9 @@ module Trisagion.Streams.Offset (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (null)
+
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
@@ -38,7 +41,7 @@ instance MonoFunctor s => MonoFunctor (Offset s) where
 
     {-# INLINE monomap #-}
     monomap :: (ElementOf s -> ElementOf s) -> Offset s -> Offset s
-    monomap f (Offset l xs) = Offset l (monomap f xs)
+    monomap f (Offset n xs) = Offset n (monomap f xs)
 
 instance MonoFoldable s => MonoFoldable (Offset s) where
     {-# INLINE monotoList #-}
@@ -48,18 +51,30 @@ instance MonoFoldable s => MonoFoldable (Offset s) where
 instance Streamable s => Streamable (Offset s) where
     {-# INLINE uncons #-}
     uncons :: Offset s -> Maybe (ElementOf s, Offset s)
-    uncons (Offset l xs) = fmap (Offset l) <$> uncons xs
+    uncons (Offset n xs) = fmap (Offset n) <$> uncons xs
+
+    {-# INLINE null #-}
+    null :: Offset s -> Bool
+    null (Offset _ xs) = null xs
+
+    {-# INLINE dropOne #-}
+    dropOne :: Offset s -> Offset s
+    dropOne (Offset n xs) = Offset n (dropOne xs)
+
+    {-# INLINE toList #-}
+    toList :: Offset s -> [ElementOf s]
+    toList (Offset _ xs) = toList xs
 
 instance Splittable s => Splittable (Offset s) where
     type PrefixOf (Offset s) = PrefixOf s
 
     {-# INLINE splitPrefix #-}
     splitPrefix :: Word -> Offset s -> (PrefixOf s, Offset s)
-    splitPrefix n (Offset l xs) = Offset l <$> splitPrefix n xs
+    splitPrefix n (Offset m xs) = Offset m <$> splitPrefix n xs
 
     {-# INLINE splitWith #-}
     splitWith :: (ElementOf s -> Bool) -> Offset s -> (PrefixOf s, Offset s)
-    splitWith p (Offset l xs) = Offset l <$> splitWith p xs
+    splitWith p (Offset m xs) = Offset m <$> splitWith p xs
 
     {-# INLINE single #-}
     single :: ElementOf (Offset s) -> PrefixOf (Offset s)

@@ -33,8 +33,8 @@ import Optics.Prism (Prism', prism')
 
 {- | The t'ErrorItem' error type. -}
 data ErrorItem e
-    = EndOfInput !Word                  -- ^ End of input error. Argument is the amount requested.
-    | ErrorItem !Word !e                -- ^ Error with input stream offset and error tag @e@.
+    = EndOfInput {-# UNPACK #-} !Word   -- ^ End of input error. Argument is the amount requested.
+    | ErrorItem {-# UNPACK #-} !Word !e -- ^ Error with input stream offset and error tag @e@.
     deriving stock (Eq, Show, Functor)
 
 
@@ -53,7 +53,7 @@ endOfInput = prism' construct match
         match (EndOfInput n) = Just n
         match _              = Nothing
 
-{- | Prism for an t'ErrorItem' with input stream @s@ and error tag @e@. -}
+{- | Prism for an t'ErrorItem' with input stream offset @n@ and error tag @e@. -}
 {-# INLINE errorItem #-}
 errorItem :: Prism' (ErrorItem e) (Word, e)
 errorItem = prism' construct match
@@ -66,7 +66,7 @@ errorItem = prism' construct match
         match _               = Nothing
 
 
-{- | The @TraceItem s@ type, a wrapper around @forall d . 'ErrorItem' s d@. -}
+{- | The @TraceItem@ type, a wrapper around @forall d . 'ErrorItem' d@. -}
 data TraceItem where
     TraceItem :: (Typeable d, Eq d, Show d) => !(ErrorItem d) -> TraceItem
 
@@ -85,7 +85,7 @@ instance Eq TraceItem where
 {- | The traceItem prism for 'TraceItem'.
 
 Mainly useful for the constructor, as the matcher requires the knowledge of the type @e@ of the
-@'ErrorItem' s e@ inside @'TraceItem' s@, and a runtime check for the downcast.
+@'ErrorItem' e@ inside @'TraceItem'@, and a runtime check for the downcast.
 -}
 {-# INLINE traceItem #-}
 traceItem :: forall e . (Typeable e, Eq e, Show e) => Prism' TraceItem (ErrorItem e)
