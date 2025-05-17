@@ -62,10 +62,10 @@ library
         Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
-        -- Trisagion.Streams.Counter
-        -- Trisagion.Streams.Offset
-        -- Trisagion.Streams.Chunk
+        Trisagion.Streams.Counter
+        Trisagion.Streams.Offset
         -- Trisagion.Parser
+        -- Trisagion.Streams.Chunk
         -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.ParseError
         -- Trisagion.Parsers.Streamable

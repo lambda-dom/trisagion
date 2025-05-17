@@ -53,7 +53,7 @@ instance Streamable s => Streamable (Counter s) where
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Counter (succ n) ys)
 
-instance HasOffset (Counter s) where
+instance Streamable s => HasOffset (Counter s) where
     {-# INLINE offset #-}
     offset :: Counter s -> Word
     offset (Counter n _) = n

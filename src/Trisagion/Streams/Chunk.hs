@@ -45,7 +45,7 @@ instance Streamable (Chunk s e a) where
             Left  _       -> Nothing
             Right (x, ys) -> Just (x, Chunk (succ n) ys p)
 
-instance HasOffset (Chunk s e a) where
+instance Streamable s => HasOffset (Chunk s e a) where
     {-# INLINE offset #-}
     offset :: Chunk s e a -> Word
     offset (Chunk n _ _) = n
