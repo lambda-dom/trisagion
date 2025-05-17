@@ -40,15 +40,20 @@ import Trisagion.Parsers.Streamable (satisfy)
 import Trisagion.Parsers.Combinators (lookAhead)
 
 
-{- | Run the parser and return its result along with the prefix of consumed input. -}
+{- | Run the parser and return its result along with the prefix of consumed input.
+
+note(s):
+
+  * Implementation implicitly relies on normality of @p@.
+-}
 {-# INLINE consumed #-}
 consumed :: (HasOffset s, Splittable s) => Parser s e a -> Parser s e (PrefixOf s, a)
 consumed p = do
     xs <- first absurd get
     x  <- p
     n  <- offset <$> first absurd get
-    let size = n - offset xs
-    pure (fst $ splitPrefix size xs, x)
+    -- This implicitly relies on the parser @p@ being normal.
+    pure (fst $ splitPrefix (n - offset xs) xs, x)
 
 {- | Parse an exact, fixed size prefix.
 
