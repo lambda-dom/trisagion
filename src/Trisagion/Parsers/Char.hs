@@ -48,6 +48,7 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
+import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError)
@@ -63,16 +64,6 @@ import Trisagion.Parsers.Splittable (takeWith1)
 data Sign = Negative | Positive
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
-
-{- | Enumerate the elements of a list downwards.
-
-The resulting list has at most @n + 1@ elements.
--}
-{-# INLINE enumDown #-}
-enumDown :: Word -> [a] -> [(Word, a)]
-enumDown n = zip ns
-    where
-        ns = if n == 0 then [0] else [n, pred n .. 0]
 
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
