@@ -53,9 +53,8 @@ import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Parser
-import Trisagion.Parsers.Combinators (lookAhead, manyTill)
+import Trisagion.Parsers.Combinators (manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.Splittable (takeWith1)
 
 
 {- | The sign of a number. -}
@@ -68,14 +67,14 @@ data Sign = Negative | Positive
 lf
     :: (HasOffset s, ElementOf s ~ Char)
     => Parser s (ParseError (ValidationError Char)) Char
-lf = matchElem '\n'
+lf = matchOne '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr
     :: (HasOffset s, ElementOf s ~ Char)
     => Parser s (ParseError (ValidationError Char)) Char
-cr = matchElem '\r'
+cr = matchOne '\r'
 
 
 {- | Parse a, possibly null, prefix of whitespace. -}
@@ -203,7 +202,7 @@ The escape sequences currently supported are:
 escape
     :: (HasOffset s, ElementOf s ~ Char)
     => Parser s (ParseError (ValidationError Char)) Char
-escape = matchElem '\\' *> first (fmap (either id absurd)) (validate v one)
+escape = matchOne '\\' *> first (fmap (either id absurd)) (validate v one)
     where
         v :: Char -> ValidationError Char :+: Char
         v c = case c of
@@ -232,7 +231,7 @@ string
     => Parser s (ParseError (ValidationError Char)) (PrefixOf s)
 string = do
         q <- quote
-        blocks <- manyTill (matchElem q) (fmap (single @s) escape <|> takeWith1 predicate)
+        blocks <- manyTill (matchOne q) (fmap (single @s) escape <|> takeWith1 predicate)
         pure $ foldl' (<>) mempty blocks
     where
         predicate :: Char -> Bool

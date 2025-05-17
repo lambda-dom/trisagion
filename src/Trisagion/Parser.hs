@@ -30,6 +30,7 @@ module Trisagion.Parser (
     -- * State parsers.
     get,
     try,
+    lookAhead,
 
     -- * Error parsers.
     throw,
@@ -46,15 +47,21 @@ module Trisagion.Parser (
     skipOne,
     peek,
     satisfy,
-    matchElem,
+    matchOne,
     oneOf,
 
     -- * Parsers @'Splittable' s => 'Parser' s e a@.
+    -- $splittable-parsers
     takePrefix,
+    takeExact,
     skipPrefix,
     takeWith,
     skipWith,
+    takeWith1,
+    matchPrefix,
     takeRemainder,
+    consumed,
+    isolate,
 ) where
 
 -- Imports.
@@ -366,6 +373,20 @@ try p = Parser $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
+
+>>> parse (lookAhead one) ""
+Right (Left (Cons (EndOfInput 1) []),"")
+-}
+{-# INLINE lookAhead #-}
+lookAhead :: Parser s e a -> Parser s Void (e :+: a)
+lookAhead p = eval p <$> get
+
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
 {-# INLINE throw #-}
@@ -462,7 +483,16 @@ Right (True,"")
 eoi :: Streamable s => Parser s Void Bool
 eoi = Streamable.null <$> get
 
-{- | Run parser @p@ and if not all input is consumed, error out. -}
+{- | Run parser @p@ and if not all input is consumed, error out.
+
+=== __Examples:__
+
+>>> parse (ensureEOI () (one *> one)) "01"
+Right ('1',"")
+
+>>> parse (ensureEOI () one) "01"
+Left (Left ())
+-}
 {-# INLINE ensureEOI #-}
 ensureEOI :: Streamable s => d -> Parser s e a -> Parser s (d :+: e) a
 ensureEOI err p = do
@@ -546,21 +576,21 @@ satisfy p = do
 
 === __Examples:__
 
->>> parse (matchElem '0') (initialize "0123")
+>>> parse (matchOne '0') (initialize "0123")
 Right ('0',Counter 1 "123")
 
->>> parse (matchElem '1') (initialize "0123")
+>>> parse (matchOne '1') (initialize "0123")
 Left (Cons (ErrorItem 1 (ValidationError '0')) [])
 
->>> parse (matchElem '0') (initialize "")
+>>> parse (matchOne '0') (initialize "")
 Left (Cons (EndOfInput 1) [])
 -}
-{-# INLINE matchElem #-}
-matchElem
+{-# INLINE matchOne #-}
+matchOne
     :: (HasOffset s, Eq (ElementOf s))
     => ElementOf s                      -- ^ Matching @'ElementOf' s@.
     -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
-matchElem x = satisfy (== x)
+matchOne x = satisfy (== x)
 
 {- | Parse one @'ElementOf' s@ that is an element of a foldable.
 
@@ -583,6 +613,13 @@ oneOf
 oneOf xs = satisfy (`elem` xs)
 
 
+{- $splittable-parsers
+Implementations requiring the computation of the length of a prefix have a @'MonoFoldable' s@
+constraint. This can be important for performance because for a `Splittable` like @Text@ this is
+@O(n)@, while for other types like lazy bytestrings, it forces the entirety of the value into
+memory which is probably not what is desired.
+-}
+
 {- | Parse a fixed size prefix.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
@@ -599,6 +636,30 @@ Right ("0123","")
 takePrefix :: Splittable s => Word -> Parser s Void (PrefixOf s)
 takePrefix n = Parser $ \ xs -> uncurry Success (splitPrefix n xs)
 
+{- | Parse an exact, fixed size prefix.
+
+note(s):
+
+    * Implementation requires computing the length of the prefix.
+
+=== __Examples:__
+
+>>> parse (takeExact 2) "0123"
+Right ("01","23")
+
+>>> parse (takeExact 10) "0123"
+Left (Cons (EndOfInput 10) [])
+-}
+{-# INLINE takeExact #-}
+takeExact
+    :: (Splittable s, MonoFoldable (PrefixOf s))
+    => Word -> Parser s InputError (PrefixOf s)
+takeExact n = do
+    prefix <- first absurd $ takePrefix n
+    if monolength prefix /= n
+        then throw $ review (singleton % endOfInput) n
+        else pure prefix
+
 {- | Drop a fixed size prefix from the stream.
 
 === __Examples:__
@@ -606,7 +667,7 @@ takePrefix n = Parser $ \ xs -> uncurry Success (splitPrefix n xs)
 >>> parse (skipPrefix 2) "0123"
 Right ((),"23")
 
->>> parse (skipPrefix 2) ""
+>>> parse (skipPrefix 10) "0123"
 Right ((),"")
 -}
 {-# INLINE skipPrefix #-}
@@ -641,7 +702,113 @@ Right ((),"")
 skipWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
 skipWith p = Parser $ \ xs -> Success () (dropWith p xs)
 
+{- | Parse the longest prefix with at least one element whose elements satisfy a predicate.
+
+=== __Examples:__
+
+>>> parse (takeWith1 ('0' ==)) (initialize "0123")
+Right ("0",Counter 1 "123")
+
+>>> parse (takeWith1 ('0' ==)) (initialize "0003")
+Right ("000",Counter 3 "3")
+
+>>> parse (takeWith1 ('1' ==)) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (takeWith1 ('0' ==)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE takeWith1 #-}
+takeWith1
+    :: (HasOffset s, Splittable s)
+    => (ElementOf s -> Bool)            -- ^ Predicate on @'ElementOf' s@.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (PrefixOf s)
+takeWith1 p = do
+    x <- first absurd $ lookAhead (satisfy p)
+    case x of
+        Left e  -> throw e
+        Right _ -> first absurd $ takeWith p
+
+{- | Parse a matching prefix.
+
+note(s):
+
+    * The implementation requires computing the length of the argument prefix.
+
+=== __Examples:__
+
+>>> parse (matchPrefix "01") (initialize "0123")
+Right ("01",Counter 2 "23")
+
+>>> parse (matchPrefix "012345") (initialize "0123")
+Left (Cons (EndOfInput 6) [])
+
+>>> parse (matchPrefix "{}") (initialize "0123")
+Left (Cons (ErrorItem 2 (ValidationError "{}")) [])
+-}
+{-# INLINE matchPrefix #-}
+matchPrefix
+    :: (HasOffset s, Splittable s, Eq (PrefixOf s), MonoFoldable (PrefixOf s))
+    => PrefixOf s                       -- ^ Matching prefix.
+    -> Parser s (ParseError (ValidationError (PrefixOf s))) (PrefixOf s)
+matchPrefix xs = do
+    prefix <- first (fmap absurd) $ takeExact (monolength xs)
+    if xs == prefix then pure xs else throwParseError (pure xs)
+
 {- | Parse the remainder of the stream as a prefix. -}
 {-# INLINE takeRemainder #-}
 takeRemainder :: Splittable s => Parser s Void (PrefixOf s)
 takeRemainder = Parser $ \ xs -> uncurry Success (splitRemainder xs)
+
+{- | Run the parser and return its result along with the prefix of consumed input.
+
+note(s):
+
+  * Implementation implicitly relies on normality of @p@.
+
+=== __Examples:__
+
+>>> parse (consumed one) (initialize "0123")
+Right (("0",'0'),Counter 1 "123")
+
+>>> parse (consumed one) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE consumed #-}
+consumed :: (HasOffset s, Splittable s) => Parser s e a -> Parser s e (PrefixOf s, a)
+consumed p = do
+    xs <- first absurd get
+    x  <- p
+    n  <- offset <$> first absurd get
+    -- Implicitly relies on the parser @p@ being normal, for positivity of @n - offset xs@.
+    pure (fst $ splitPrefix (n - offset xs) xs, x)
+
+{- | Run a parser isolated to a fixed size prefix of the stream.
+
+The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
+in the stream. Any unconsumed input in the prefix is silently discarded. If such behavior is
+undesirable, 'Control.Monad.guard' the parser to run with an appropriate check -- see
+'Trisagion.Parser.ensureEOI'.
+
+=== __Examples:__
+
+>>> parse (isolate 2 one) "0123"
+Right ('0',"23")
+
+>>> parse (isolate 2 one) "0"
+Right ('0',"")
+
+>>> parse (isolate 2 one) ""
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE isolate #-}
+isolate
+    :: Splittable s
+    => Word                             -- ^ Prefix size.
+    -> Parser (PrefixOf s) e a          -- ^ Parser to run.
+    -> Parser s e a
+isolate n p = do
+    prefix <- first absurd $ takePrefix n
+    case eval p prefix of
+        Left e  -> throw e
+        Right x -> pure x

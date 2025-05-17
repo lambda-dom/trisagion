@@ -36,8 +36,7 @@ import Mono.Types.ByteArray (byteCount, pack, packReverse)
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, InputError, one)
-import Trisagion.Parsers.Splittable (takeExact)
+import Trisagion.Parser
 
 
 {- | Parse a single 'Word8'. -}

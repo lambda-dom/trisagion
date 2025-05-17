@@ -8,7 +8,6 @@ conflict with base.
 module Trisagion.Parsers.Combinators (
     -- * Parsers without errors.
     maybe,
-    lookAhead,
     failIff,
 
     -- * 'Applicative' parsers.
@@ -62,20 +61,6 @@ more precise type signature.
 {-# INLINE maybe #-}
 maybe :: Parser s e a -> Parser s Void (Maybe a)
 maybe p = either (const Nothing) Just <$> try p
-
-{- | Run the parser and return the result, but do not consume any input.
-
-=== __Examples:__
-
->>> parse (lookAhead one) "0123"
-Right (Right '0',"0123")
-
->>> parse (lookAhead one) ""
-Right (Left (Cons (EndOfInput 1) []),"")
--}
-{-# INLINE lookAhead #-}
-lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = eval p <$> get
 
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
 
