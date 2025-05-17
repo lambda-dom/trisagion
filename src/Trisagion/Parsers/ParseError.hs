@@ -6,7 +6,6 @@ Parsers to handle 'Trisagion.Types.ParseError' errors.
 
 module Trisagion.Parsers.ParseError (
     -- * Handling 'Trisagion.Types.ParseError' errors.
-    throwParseError,
     capture,
     onParseError,
 
@@ -21,22 +20,15 @@ import Data.Typeable (Typeable)
 import Data.Void (absurd)
 
 -- Libraries.
-import Optics.Core ((%), set, review)
+import Optics.Core ((%), set)
 import Data.Tuple.Optics (_1)
 
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.Types.ParseError (ParseError, singleton, makeBacktrace, cons)
-import Trisagion.Parser (Parser, (:+:), get, throw, catch)
+import Trisagion.Types.ParseError (ParseError, makeBacktrace, cons)
+import Trisagion.Parser (Parser, (:+:), get, throw, catch, throwParseError)
 import Trisagion.Types.ErrorItem (errorItem)
 
-
-{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
-{-# INLINE throwParseError #-}
-throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
-throwParseError err = do
-    n <- first absurd (offset <$> get)
-    throw $ review (singleton % errorItem) (n, err)
 
 {- | Capture the offset of the input stream at the entry point in case of a thrown error.
 

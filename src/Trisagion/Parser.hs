@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 {- |
 Module: Trisagion.Parser
 
@@ -7,6 +9,12 @@ The @Parser@ monad.
 module Trisagion.Parser (
     -- * Type operators.
     (:+:),
+
+    -- * Streams.
+    Counter,
+
+    -- ** Constructors.
+    initialize,
 
     -- * Type aliases.
     InputError,
@@ -26,12 +34,19 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
+    throwParseError,
 
-    -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
+    -- * Parsers @'Streamable' s => 'Parser' s e a@.
+    eoi,
+    ensureEOI,
     one,
     skipOne,
+    peek,
+    satisfy,
+    matchElem,
+    oneOf,
 
-    -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
+    -- * Parsers @'Splittable' s => 'Parser' s e a@.
     takePrefix,
     skipPrefix,
     takeWith,
@@ -43,21 +58,24 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Optics.Core ((%), review)
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (ElementOf)
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
+import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.Result (Result (..), toEither, withResult)
-import Trisagion.Types.ParseError (ParseError, singleton)
-import Trisagion.Types.ErrorItem (endOfInput)
+import Trisagion.Types.ErrorItem (endOfInput, errorItem)
+import Trisagion.Types.ParseError (ParseError, singleton, ValidationError)
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -67,6 +85,81 @@ infixr 6 :+:
 
 {- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
 type InputError = ParseError Void
+
+
+{- | Wrapper around a 'Streamable' adding an offset to track current position.
+
+The implementation initializes the counter to @0@ and then updates it on every streamable operation
+by computing the length of the prefix.
+-}
+data Counter s = Counter {-# UNPACK #-} !Word !s
+    deriving stock (Eq, Show)
+
+-- Instances.
+instance MonoFunctor s => MonoFunctor (Counter s) where
+    type ElementOf (Counter s) = ElementOf s
+
+    {-# INLINE monomap #-}
+    monomap :: (ElementOf s -> ElementOf s) -> Counter s -> Counter s
+    monomap f (Counter n xs) = Counter n (monomap f xs)
+
+instance Streamable s => Streamable (Counter s) where
+    {-# INLINE uncons #-}
+    uncons :: Counter s -> Maybe (ElementOf s, Counter s)
+    uncons (Counter n xs) =
+        case uncons xs of
+            Nothing -> Nothing
+            Just (y, ys) -> Just (y, Counter (succ n) ys)
+
+    {-# INLINE null #-}
+    null :: Counter s -> Bool
+    null (Counter _ xs) = Streamable.null xs
+
+    {-# INLINE toList #-}
+    toList :: Counter s -> [ElementOf s]
+    toList (Counter _ xs) = toList xs
+
+instance Streamable s => HasOffset (Counter s) where
+    {-# INLINE offset #-}
+    offset :: Counter s -> Word
+    offset (Counter n _) = n
+
+{- | 'Splittable' instance.
+
+The instance requires computing the length of the prefix, which is @O(n)@ for some types like
+@Text@. This in its turn, requires a @'MonoFoldable' ('PrefixOf' s)@ constraint and the
+@UndecidableInstances@ extension to shut up GHC.
+-}
+instance (Splittable s, MonoFoldable (PrefixOf s)) => Splittable (Counter s) where
+    type PrefixOf (Counter s) = PrefixOf s
+ 
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Counter s -> (PrefixOf s, Counter s)
+    splitPrefix n (Counter off xs) =
+        let (prefix, rest) = splitPrefix n xs in
+            (prefix, Counter (off + monolength prefix) rest)
+
+    {-# INLINE splitWith #-}
+    splitWith :: (ElementOf s -> Bool) -> Counter s -> (PrefixOf s, Counter s)
+    splitWith p (Counter off xs) =
+        let (prefix, rest) = splitWith p xs in
+            (prefix, Counter (off + monolength prefix) rest)
+
+    {-# INLINE single #-}
+    single :: ElementOf (Counter s) -> PrefixOf (Counter s)
+    single = single @s
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Counter s -> (PrefixOf s, Counter s)
+    splitRemainder (Counter off xs) =
+        let (prefix, rest) = splitRemainder xs in
+            (prefix, Counter (off + monolength prefix) rest)
+
+
+{- | Construct a t'Counter' from a 'Streamable'. -}
+{-# INLINE initialize #-}
+initialize :: s -> Counter s
+initialize = Counter 0
 
 
 {- | The parsing monad. -}
@@ -285,6 +378,37 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
+{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
+{-# INLINE throwParseError #-}
+throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
+throwParseError err = do
+    n <- first absurd (offset <$> get)
+    throw $ review (singleton % errorItem) (n, err)
+
+
+{- | Return @'True'@ if all input is consumed.
+
+=== __Examples:__
+
+>>> parse eoi "0123"
+Right (False,"0123")
+
+>>> parse eoi ""
+Right (True,"")
+-}
+{-# INLINE eoi #-}
+eoi :: Streamable s => Parser s Void Bool
+eoi = Streamable.null <$> get
+
+{- | Run parser @p@ and if not all input is consumed, error out. -}
+{-# INLINE ensureEOI #-}
+ensureEOI :: Streamable s => d -> Parser s e a -> Parser s (d :+: e) a
+ensureEOI err p = do
+    x <- first Right p
+    b <- first absurd eoi
+    if b
+        then pure x
+        else throw $ Left err
 
 {- | Parse one @'ElementOf' s@ from the input stream.
 
@@ -317,6 +441,85 @@ Right ((),"")
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
 skipOne = Parser $ \ s -> Success () (dropOne s)
+
+{- | Extract the first @'ElementOf' s@ from the streamable but without consuming input.
+
+=== __Examples:__
+
+>>> parse peek "0123"
+Right (Just '0',"0123")
+
+>>> parse peek ""
+Right (Nothing,"")
+-}
+{-# INLINE peek #-}
+peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
+peek = do
+    c <- uncons <$> get
+    pure $ fmap fst c
+
+{- | Parse one @'ElementOf' s@ satisfying a predicate.
+
+=== __Examples:__
+
+>>> parse (satisfy ('1' /=)) (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (satisfy ('0' /=)) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (satisfy ('1' /=)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE satisfy #-}
+satisfy
+    :: HasOffset s
+    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+satisfy p = do
+    c <- first (fmap absurd) one
+    if p c then pure c else throwParseError (pure c)
+
+{- | Parse one element matching a @'ElementOf' s@.
+
+=== __Examples:__
+
+>>> parse (matchElem '0') (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (matchElem '1') (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (matchElem '0') (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE matchElem #-}
+matchElem
+    :: (HasOffset s, Eq (ElementOf s))
+    => ElementOf s                      -- ^ Matching @'ElementOf' s@.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+matchElem x = satisfy (== x)
+
+{- | Parse one @'ElementOf' s@ that is an element of a foldable.
+
+=== __Examples:__
+
+>>> parse (oneOf "01") (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (oneOf "12") (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (oneOf "12") (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE oneOf #-}
+oneOf
+    :: (HasOffset s, Eq (ElementOf s), Foldable t)
+    => t (ElementOf s)                  -- ^ Foldable of @'ElementOf' s@ to test inclusion.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+oneOf xs = satisfy (`elem` xs)
+
 
 {- | Parse a fixed size prefix.
 

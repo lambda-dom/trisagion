@@ -52,11 +52,10 @@ import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError, ValidationError)
-import Trisagion.Parser (Parser, (:+:), takeWith, one, throw)
+import Trisagion.Parser
 import Trisagion.Parsers.Combinators (lookAhead, manyTill)
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.ParseError (validate)
-import Trisagion.Parsers.Streamable (matchElem, satisfy)
 import Trisagion.Parsers.Splittable (takeWith1)
 
 
