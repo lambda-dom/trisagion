@@ -39,6 +39,7 @@ module Trisagion.Parser (
     -- * Primitive parsers @'Streamable' s => 'Parser' s e a@.
     one,
     skipOne,
+    satisfy,
 
     -- * Primitive parsers @'Splittable' s => 'Parser' s e a@.
     takePrefix,
@@ -69,7 +70,7 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.Result (Result (..), toEither, withResult)
 import Trisagion.Types.ErrorItem (endOfInput, errorItem)
-import Trisagion.Types.ParseError (ParseError, singleton)
+import Trisagion.Types.ParseError (ParseError, singleton, ValidationError)
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -411,6 +412,17 @@ Right ((),"")
 {-# INLINE skipOne #-}
 skipOne :: Streamable s => Parser s Void ()
 skipOne = Parser $ \ s -> Success () (dropOne s)
+
+{- | Parse one @'ElementOf' s@ satisfying a predicate. -}
+{-# INLINE satisfy #-}
+satisfy
+    :: HasOffset s
+    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+satisfy p = do
+    c <- first (fmap absurd) one
+    if p c then pure c else throwParseError (pure c)
+
 
 {- | Parse a fixed size prefix.
 

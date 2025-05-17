@@ -11,7 +11,6 @@ module Trisagion.Parsers.Streamable (
     peek,
 
     -- * Parsers @'HasOffset' s => 'Parser' s e a@.
-    satisfy,
     matchElem,
     oneOf,
 ) where
@@ -33,7 +32,6 @@ import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Parser
 import Trisagion.Parsers.Combinators (lookAhead)
-import Trisagion.Parsers.ParseError (validate)
 
 
 {- | Return @'True'@ if all input is consumed.
@@ -74,16 +72,6 @@ Right (Nothing,"")
 peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = either (const Nothing) Just <$> lookAhead one
 
-
-{- | Parse one @'ElementOf' s@ satisfying a predicate. -}
-{-# INLINE satisfy #-}
-satisfy
-    :: HasOffset s
-    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
-    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
-satisfy p = first (fmap (either id absurd)) $ validate v one
-    where
-        v x = if p x then Right x else Left $ pure x
 
 {- | Parse one element matching a @'ElementOf' s@. -}
 {-# INLINE matchElem #-}

@@ -37,7 +37,6 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser
 import Trisagion.Parsers.ParseError (validate)
-import Trisagion.Parsers.Streamable (satisfy)
 import Trisagion.Parsers.Combinators (lookAhead)
 
 
