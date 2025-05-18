@@ -250,6 +250,17 @@ skipSome p = p *> first absurd (skipMany p)
 note(s):
 
   * The difference with 'manyTillEnd' is that the @end@ parser will not consume any input.
+
+=== __Examples:__
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
+Right ("01",Counter 2 "}3")
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "}123")
+Right ("",Counter 0 "}123")
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "")
+Right ("",Counter 0 "")
 -}
 {-# INLINE untilEnd #-}
 untilEnd
