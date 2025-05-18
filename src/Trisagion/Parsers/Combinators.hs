@@ -27,8 +27,8 @@ module Trisagion.Parsers.Combinators (
     skipSome,
     choose,
     pick,
-    until,
     untilEnd,
+    manyTillEnd,
     manyTill,
 
     -- * List parsers.
@@ -38,7 +38,7 @@ module Trisagion.Parsers.Combinators (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (maybe, repeat, sequence, until, zip, zipWith)
+import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
 
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
@@ -263,30 +263,30 @@ skipMany p = go
 skipSome :: Parser s e a -> Parser s e ()
 skipSome p = p *> first absurd (skipMany p)
 
-{- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds.
+{- | The parser @'untilEnd' end p@ runs @p@ zero or more times until @end@ succeeds.
 
 note(s):
 
-  * The difference with 'manyTill' is that the @end@ parser will not consume any input.
+  * The difference with 'manyTillEnd' is that the @end@ parser will not consume any input.
 -}
-{-# INLINE until #-}
-until
+{-# INLINE untilEnd #-}
+untilEnd
     :: Monoid e
     => Parser s e b                   -- ^ Closing parser.
     -> Parser s e a                   -- ^ Parser to run.
     -> Parser s Void [a]
-until end p = many $ failIff end *> p
+untilEnd end p = many $ failIff end *> p
 
-{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@.
+{- | @'manyTillEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@.
 
 === __Examples:__
 
->>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
+>>> parse (manyTillEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
 Right ('0' :| "1}",Counter 3 "3")
 -}
-{-# INLINEABLE untilEnd #-}
-untilEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
-untilEnd end p = go
+{-# INLINEABLE manyTillEnd #-}
+manyTillEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
+manyTillEnd end p = go
     where
         go = do
             r <- choose end p
@@ -314,7 +314,19 @@ sepBy sep p = do
         Left _  -> pure []
         Right y -> (y :) <$> many (before sep p)
 
-{- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+{- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@.
+
+=== __Examples:__
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0,1,2,345")
+Right ('0' :| ",",Counter 2 "1,2,345")
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0123")
+Right ('0' :| "1",Counter 2 "23")
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+ -}
 {-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
 sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)
