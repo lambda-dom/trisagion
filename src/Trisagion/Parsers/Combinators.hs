@@ -168,6 +168,17 @@ sequence = sequenceA
 {- | Choose between two parsers.
 
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
+
+=== __Examples:__
+
+>>> parse (choose one one) (initialize "0123")
+Right (Left '0',Counter 1 "123")
+
+>>> parse (choose (matchOne '1') (first (fmap absurd) one)) (initialize "0123")
+Right (Right '0',Counter 1 "123")
+
+>>> parse (choose (matchOne '1') (matchOne '2')) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
 -}
 {-# INLINE choose #-}
 choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
