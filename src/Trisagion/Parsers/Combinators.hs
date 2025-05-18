@@ -12,8 +12,6 @@ module Trisagion.Parsers.Combinators (
 
     -- * 'Applicative' parsers.
     skip,
-    before,
-    after,
     between,
     zip,
     zipWith,
@@ -95,22 +93,6 @@ failIff p = do
 skip :: Parser s e a -> Parser s e ()
 skip = ($> ())
 
-{- | The parser @'before' b p@ runs @b@ and @p@ in succession, returning the result of @p@. -}
-{-# INLINE before #-}
-before
-    :: Parser s e b                     -- ^ Opening parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-before = (*>)
-
-{- | The parser @'after' a p@ runs @p@ and @a@ in succession, returning the result of @p@. -}
-{-# INLINE after #-}
-after
-    :: Parser s e b                     -- ^ Closing parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-after = flip (<*)
-
 {- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@.
 
 === __Examples:__
@@ -139,7 +121,7 @@ between
     -> Parser s e c                     -- ^ Closing parser.
     -> Parser s e a                     -- ^ Parser to run in-between.
     -> Parser s e a
-between open close = before open . after close
+between open close p = open *> p <* close
 
 {- | Sequence two parsers and zip the results in a pair. -}
 {-# INLINE zip #-}
@@ -312,21 +294,21 @@ sepBy sep p = do
     x <- try p
     case x of
         Left _  -> pure []
-        Right y -> (y :) <$> many (before sep p)
+        Right y -> (y :) <$> many (sep *> p)
 
 {- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@.
 
 === __Examples:__
 
 >>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0,1,2,345")
-Right ('0' :| ",",Counter 2 "1,2,345")
+Right ('0' :| "123",Counter 7 "45")
 
 >>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0123")
-Right ('0' :| "1",Counter 2 "23")
+Right ('0' :| "",Counter 1 "123")
 
 >>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "")
 Left (Cons (EndOfInput 1) [])
  -}
 {-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
-sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)
+sepBy1 sep p = liftA2 (:|) p (first absurd $ many (sep *> p))
