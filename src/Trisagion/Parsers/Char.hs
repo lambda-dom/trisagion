@@ -57,8 +57,7 @@ import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Parser
-import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
-import Trisagion.Parsers.Combinators (manyTill)
+import Trisagion.Parsers.Combinators (manyTill, optional)
 
 
 {- | The 'QuoteError' error tag type thrown on quoting errors. -}
@@ -217,7 +216,7 @@ integer
     :: (HasOffset s, Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
     => Parser s (ParseError (ValidationError (ElementOf s))) Integer
 integer = do
-    sgn <- first absurd (fromMaybe Positive <$> Combinators.maybe sign)
+    sgn <- first absurd (fromMaybe Positive <$> optional sign)
     number <- positive
     case sgn of
         Positive -> pure number
@@ -418,4 +417,4 @@ comment
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
-comment p = p *> first absurd (takeWith (/= '\n') <* Combinators.maybe cr)
+comment p = p *> first absurd (takeWith (/= '\n') <* optional cr)
