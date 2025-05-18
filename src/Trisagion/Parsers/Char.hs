@@ -61,7 +61,7 @@ import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.Combinators (manyTill)
 
 
-{- | The 'QuoteError' error tag type thrown quoting errors. -}
+{- | The 'QuoteError' error tag type thrown on quoting errors. -}
 data QuoteError
     -- | Opening quote error.
     = StartQuoteError {-# UNPACK #-} !Char
