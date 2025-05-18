@@ -73,7 +73,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Optics.Core ((%), review, set)
+import Optics.Core ((%), review, set, view)
 import Data.Tuple.Optics (_1)
 
 -- non-Hackage libraries.
@@ -85,7 +85,7 @@ import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.Result (Result (..), toEither, withResult)
+import Trisagion.Types.Result (Result (..), withResult, result)
 import Trisagion.Types.ErrorItem (endOfInput, errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton, ValidationError, cons, makeBacktrace)
 
@@ -323,7 +323,7 @@ run (Parser p) = p
 {- | Parse the input and return the results. -}
 {-# INLINE parse #-}
 parse :: Parser s e a -> s -> e :+: (a, s)
-parse p = toEither . run p
+parse p = view result . run p
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
 {-# INLINE eval #-}
