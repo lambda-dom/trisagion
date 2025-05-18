@@ -12,8 +12,6 @@ module Trisagion.Parsers.Combinators (
 
     -- * 'Applicative' parsers.
     skip,
-    before,
-    after,
     between,
     zip,
     zipWith,
@@ -27,8 +25,8 @@ module Trisagion.Parsers.Combinators (
     skipSome,
     choose,
     pick,
-    until,
     untilEnd,
+    manyTillEnd,
     manyTill,
 
     -- * List parsers.
@@ -38,7 +36,7 @@ module Trisagion.Parsers.Combinators (
 
 -- Imports.
 -- Prelude hiding.
-import Prelude hiding (maybe, repeat, sequence, until, zip, zipWith)
+import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
 
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
@@ -69,6 +67,17 @@ The parser does not consume input and throws the monoid unit for @e@ if @p@ succ
 note(s):
 
   * This parser can be used to implement the longest match rule -- see 'until'.
+
+=== __Examples:__
+
+>>> parse (failIff (matchOne '1')) (initialize "0123")
+Right ((),Counter 0 "0123")
+
+>>> parse (failIff (matchOne '0')) (initialize "0123")
+Left Nil
+
+>>> parse (failIff (matchOne '0')) (initialize "")
+Right ((),Counter 0 "")
 -}
 {-# INLINE failIff #-}
 failIff :: Monoid e => Parser s e a -> Parser s e ()
@@ -84,30 +93,35 @@ failIff p = do
 skip :: Parser s e a -> Parser s e ()
 skip = ($> ())
 
-{- | The parser @'before' b p@ runs @b@ and @p@ in succession, returning the result of @p@. -}
-{-# INLINE before #-}
-before
-    :: Parser s e b                     -- ^ Opening parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-before = (*>)
+{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@.
 
-{- | The parser @'after' a p@ runs @p@ and @a@ in succession, returning the result of @p@. -}
-{-# INLINE after #-}
-after
-    :: Parser s e b                     -- ^ Closing parser.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s e a
-after = flip (<*)
+=== __Examples:__
 
-{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{1}3")
+Right ('1',Counter 3 "3")
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "11}3")
+Left (Cons (ErrorItem 1 (ValidationError '1')) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{123")
+Left (Cons (ErrorItem 3 (ValidationError '2')) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{")
+Left (Cons (EndOfInput 1) [])
+
+>>> parse (between (matchOne '{') (matchOne '}') (first (fmap absurd) one)) (initialize "{1")
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE between #-}
 between
     :: Parser s e b                     -- ^ Opening parser.
     -> Parser s e c                     -- ^ Closing parser.
     -> Parser s e a                     -- ^ Parser to run in-between.
     -> Parser s e a
-between open close = before open . after close
+between open close p = open *> p <* close
 
 {- | Sequence two parsers and zip the results in a pair. -}
 {-# INLINE zip #-}
@@ -136,6 +150,17 @@ sequence = sequenceA
 {- | Choose between two parsers.
 
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
+
+=== __Examples:__
+
+>>> parse (choose one one) (initialize "0123")
+Right (Left '0',Counter 1 "123")
+
+>>> parse (choose (matchOne '1') (first (fmap absurd) one)) (initialize "0123")
+Right (Right '0',Counter 1 "123")
+
+>>> parse (choose (matchOne '1') (matchOne '2')) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
 -}
 {-# INLINE choose #-}
 choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
@@ -159,6 +184,20 @@ note(s):
   * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
   does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
   variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
+
+=== __Examples:__
+
+>>> parse (many (satisfy ('{' /=))) (initialize "01{3")
+Right ("01",Counter 2 "{3")
+
+>>> parse (many (satisfy ('0' /=))) (initialize "0123")
+Right ("",Counter 0 "0123")
+
+>>> parse (many (satisfy ('0' ==))) (initialize "")
+Right ("",Counter 0 "")
+
+>>> parse (take 2 <$> many (satisfy ('0' ==))) (initialize "0000456")
+Right ("00",Counter 4 "456")
 -}
 {-# INLINEABLE many #-}
 many :: Parser s e a -> Parser s Void [a]
@@ -174,6 +213,17 @@ many p = go
 
 The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
 precise type signature.
+
+=== __Examples:__
+
+>>> parse (some (satisfy ('{' /=))) (initialize "01{3")
+Right ('0' :| "1",Counter 2 "{3")
+
+>>> parse (some (satisfy ('0' /=))) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (some (satisfy ('0' /=))) (initialize "")
+Left (Cons (EndOfInput 1) [])
 -}
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
@@ -195,24 +245,41 @@ skipMany p = go
 skipSome :: Parser s e a -> Parser s e ()
 skipSome p = p *> first absurd (skipMany p)
 
-{- | The parser @'until' end p@ runs @p@ zero or more times until @end@ succeeds.
+{- | The parser @'untilEnd' end p@ runs @p@ zero or more times until @end@ succeeds.
 
 note(s):
 
-  * The difference with 'manyTill' is that the @end@ parser will not consume any input.
+  * The difference with 'manyTillEnd' is that the @end@ parser will not consume any input.
+
+=== __Examples:__
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
+Right ("01",Counter 2 "}3")
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "}123")
+Right ("",Counter 0 "}123")
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "")
+Right ("",Counter 0 "")
 -}
-{-# INLINE until #-}
-until
+{-# INLINE untilEnd #-}
+untilEnd
     :: Monoid e
     => Parser s e b                   -- ^ Closing parser.
     -> Parser s e a                   -- ^ Parser to run.
     -> Parser s Void [a]
-until end p = many $ failIff end *> p
+untilEnd end p = many $ failIff end *> p
 
-{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
-{-# INLINEABLE untilEnd #-}
-untilEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
-untilEnd end p = go
+{- | @'manyTillEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@.
+
+=== __Examples:__
+
+>>> parse (manyTillEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
+Right ('0' :| "1}",Counter 3 "3")
+-}
+{-# INLINEABLE manyTillEnd #-}
+manyTillEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
+manyTillEnd end p = go
     where
         go = do
             r <- choose end p
@@ -238,9 +305,21 @@ sepBy sep p = do
     x <- try p
     case x of
         Left _  -> pure []
-        Right y -> (y :) <$> many (before sep p)
+        Right y -> (y :) <$> many (sep *> p)
 
-{- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
+{- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@.
+
+=== __Examples:__
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0,1,2,345")
+Right ('0' :| "123",Counter 7 "45")
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "0123")
+Right ('0' :| "",Counter 1 "123")
+
+>>> parse (sepBy1 (matchOne ',') (first (fmap absurd) one)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+ -}
 {-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)
-sepBy1 sep p = liftA2 (:|) p (first absurd $ sepBy sep p)
+sepBy1 sep p = liftA2 (:|) p (first absurd $ many (sep *> p))

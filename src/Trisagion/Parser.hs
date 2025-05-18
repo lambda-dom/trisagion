@@ -267,7 +267,8 @@ prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 
 note(s):
 
-  * Right distributivity is violated even with an idempotent monoid. See the tests for an example.
+  * Right distributivity is violated even with an idempotent monoid. See the
+  [Parser tests module](../../tests/Tests/ParserSpec.hs) for an example.
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
@@ -380,6 +381,9 @@ try p = Parser $ \ xs ->
 >>> parse (lookAhead one) "0123"
 Right (Right '0',"0123")
 
+>>> parse (lookAhead $ matchOne '1') (initialize "0123")
+Right (Left (Cons (ErrorItem 1 (ValidationError '0')) []),Counter 0 "0123")
+
 >>> parse (lookAhead one) ""
 Right (Left (Cons (EndOfInput 1) []),"")
 -}
@@ -455,7 +459,19 @@ onParseError e p = do
         p
         (throw . makeBacktrace xs e)
 
-{- | Run the parser and return the result, validating it. -}
+{- | Run the parser and return the result, validating it.
+
+=== __Examples:__
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "123")
+Left (Cons (ErrorItem 1 (Left ())) [])
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE validate #-}
 validate
     :: HasOffset s
