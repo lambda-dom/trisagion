@@ -267,7 +267,8 @@ prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 
 note(s):
 
-  * Right distributivity is violated even with an idempotent monoid. See the tests for an example.
+  * Right distributivity is violated even with an idempotent monoid. See the
+  [Combinator tests module](../../tests/Tests/ParserSpec.hs) for an example.
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}

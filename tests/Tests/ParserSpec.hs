@@ -8,7 +8,7 @@ module Tests.ParserSpec (
 import Test.Hspec (Spec, describe, it)
 
 -- Testing helpers.
-import Lib.Helpers (testError, testFail)
+import Lib.Helpers
 
 -- Module to test.
 import Trisagion.Parser
@@ -20,7 +20,7 @@ import Data.Void (Void)
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError)
-import Trisagion.Parsers.ParseError (throwParseError)
+import Data.Bifunctor (Bifunctor(..))
 
 
 -- Main module test driver.
@@ -44,3 +44,20 @@ spec_alternative = describe "Alternative tests" $ do
             ""
             ()
             0
+
+    let f = bimap (const unitError) (const id) $ matchOne '0'
+    let g = first (const unitError) (matchOne '0')
+          *> bimap (const unitError) (const id) (matchOne '1')
+    let x = first (const unitError) (matchOne '2')
+
+    it "Failure of right distributivity I: (f <|> g) <*> x fails." $ do
+        testFail
+            ((f <|> g) <*> x)
+            "0123"
+
+    it "Failure of right distributivity II: (f <*> x) <|> (g <*> x) succeeds." $ do
+        testSuccess
+            ((f <*> x) <|> (g <*> x))
+            "0123"
+            '2'
+            3
