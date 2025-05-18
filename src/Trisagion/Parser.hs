@@ -459,7 +459,19 @@ onParseError e p = do
         p
         (throw . makeBacktrace xs e)
 
-{- | Run the parser and return the result, validating it. -}
+{- | Run the parser and return the result, validating it.
+
+=== __Examples:__
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "123")
+Left (Cons (ErrorItem 1 (Left ())) [])
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE validate #-}
 validate
     :: HasOffset s
