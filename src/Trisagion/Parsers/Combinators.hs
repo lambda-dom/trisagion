@@ -277,7 +277,13 @@ until
     -> Parser s Void [a]
 until end p = many $ failIff end *> p
 
-{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
+{- | @'untilEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@.
+
+=== __Examples:__
+
+>>> parse (untilEnd (matchOne '}') (first (fmap absurd) one)) (initialize "01}3")
+Right ('0' :| "1}",Counter 3 "3")
+-}
 {-# INLINEABLE untilEnd #-}
 untilEnd :: Monoid e => Parser s e a -> Parser s e a -> Parser s e (NonEmpty a)
 untilEnd end p = go
