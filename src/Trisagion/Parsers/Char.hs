@@ -55,7 +55,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError, withValidationError)
+import Trisagion.Types.ParseError (ParseError, ValidationError)
 import Trisagion.Parser
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.Combinators (manyTill)
@@ -369,8 +369,8 @@ note(s):
 
 The examples are run in ghci so the escape character @\'\\\'@ must itself be escaped.
 
->>> parse string (initialize "'quoted string'")
-Right ("quoted string",Counter 15 "")
+>>> parse string (initialize "'Quoted string.'")
+Right ("Quoted string.",Counter 16 "")
 
 >>> parse string (initialize "'Quoted string with many \\s\\s\\s spaces.'")
 Right ("Quoted string with many     spaces.",Counter 40 "")
@@ -393,7 +393,9 @@ string = do
             if '\'' == c || '\"' == c then pure c else throwParseError (StartQuoteError c)
 
         endQuote :: Char -> Parser s (ParseError QuoteError) Char
-        endQuote c = first (fmap (withValidationError EndQuoteError)) (matchOne c)
+        endQuote q = do
+            c <- first (fmap absurd) one
+            if q == c || q == c then pure c else throwParseError (EndQuoteError c)
 
         esc :: Parser s (ParseError StringError) (PrefixOf s)
         esc = onParseError StringError escape
