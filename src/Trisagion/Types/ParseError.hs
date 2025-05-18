@@ -8,6 +8,9 @@ module Trisagion.Types.ParseError (
     -- * Error tag types.
     ValidationError,
 
+    -- ** Isomorphisms.
+    validationError,
+
     -- * The @ParseError@ type.
     ParseError,
 
@@ -27,7 +30,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.Typeable (Typeable)
 
 -- Libraries.
-import Optics.Core (Prism', (%), prism', review)
+import Optics.Core (Prism', Iso', (%), prism', review, iso)
 
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
@@ -38,6 +41,18 @@ import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, t
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
     deriving (Applicative, Monad) via Identity
+
+
+{- | The isomorphism @ValidationError e -> e@. -}
+{-# INLINE validationError #-}
+validationError :: Iso' (ValidationError e) e
+validationError = iso to from
+    where
+        to :: ValidationError e -> e
+        to (ValidationError e) = e
+
+        from :: e -> ValidationError e
+        from = ValidationError
 
 
 {- | The 'ParseError' type.

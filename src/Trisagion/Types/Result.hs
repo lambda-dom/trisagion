@@ -8,17 +8,17 @@ module Trisagion.Types.Result (
     -- * Types.
     Result (..),
 
+    -- ** Isomorphisms.
+    result,
+
     -- ** Elimination functions.
     withResult,
-
-    -- ** Isomorphisms.
-    toEither,
-    fromEither,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
+import Optics.Core (Iso', iso)
 
 
 {- | The 'Result' type of a parsing function, isomorphic to @'Either' e (a, s)@. -}
@@ -34,18 +34,22 @@ instance Bifunctor (Result s) where
     bimap g f = withResult (Error . g) (Success . f)
 
 
+{- | Isomorphism @Result s e a -> Either e (a, s)@. -}
+{-# INLINE result #-}
+result :: Iso' (Result s e a) (Either e (a, s))
+result = iso to from
+    where
+        to :: Result s e a -> Either e (a, s)
+        to (Error e)      = Left e
+        to (Success x ys) = Right (x, ys)
+
+        from :: Either e (a, s) -> Result s e a
+        from (Left e)        = Error e
+        from (Right (x, ys)) = Success x ys
+
+
 {- | Case analysis elimination function for the 'Result' type. -}
 {-# INLINE withResult #-}
 withResult :: (e -> b) -> (a -> s -> b) -> Result s e a -> b
 withResult _ f (Success x s) = f x s
 withResult g _ (Error e)     = g e
-
-{- | Forward isomorphism @'Result' s e a -> 'Either' e (a, s)@. -}
-{-# INLINE toEither #-}
-toEither :: Result s e a -> Either e (a, s)
-toEither = withResult Left (curry Right)
-
-{- | Inverse isomorphism of 'toEither'. -}
-{-# INLINE fromEither #-}
-fromEither :: Either e (a, s) -> Result s e a
-fromEither = either Error (uncurry Success)
