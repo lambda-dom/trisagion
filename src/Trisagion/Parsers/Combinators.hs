@@ -69,6 +69,17 @@ The parser does not consume input and throws the monoid unit for @e@ if @p@ succ
 note(s):
 
   * This parser can be used to implement the longest match rule -- see 'until'.
+
+=== __Examples:__
+
+>>> parse (failIff (matchOne '1')) (initialize "0123")
+Right ((),Counter 0 "0123")
+
+>>> parse (failIff (matchOne '0')) (initialize "0123")
+Left Nil
+
+>>> parse (failIff (matchOne '0')) (initialize "")
+Right ((),Counter 0 "")
 -}
 {-# INLINE failIff #-}
 failIff :: Monoid e => Parser s e a -> Parser s e ()
