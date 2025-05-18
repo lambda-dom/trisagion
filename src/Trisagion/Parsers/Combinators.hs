@@ -1,22 +1,22 @@
 {- |
 Module: Trisagion.Parsers.Combinators
 
-Various parser combinators. The module should be imported qualified because some of the exported
-conflict with base.
+Various parser combinators. The module should be imported qualified as some of the exported names
+conflict with base, specifically, methods of 'Control.Applicative.Alternative'.
 -}
 
 module Trisagion.Parsers.Combinators (
     -- * Parsers without errors.
-    maybe,
+    optional,
     failIff,
 
     -- * 'Applicative' parsers.
     skip,
     between,
-    zip,
-    zipWith,
-    repeat,
-    sequence,
+    pair,
+    pairWith,
+    count,
+    chain,
 
     -- * 'Alternative' parsers.
     many,
@@ -35,9 +35,6 @@ module Trisagion.Parsers.Combinators (
 ) where
 
 -- Imports.
--- Prelude hiding.
-import Prelude hiding (maybe, repeat, sequence, zip, zipWith)
-
 -- Base.
 import Control.Applicative (Alternative ((<|>)))
 import Data.Bifunctor (Bifunctor (..))
@@ -55,10 +52,21 @@ import Trisagion.Parser
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
 more precise type signature.
+
+=== __Examples:__
+
+>>> parse (optional (matchOne '0')) (initialize "0123")
+Right (Just '0',Counter 1 "123")
+
+>>> parse (optional (matchOne '1')) (initialize "0123")
+Right (Nothing,Counter 0 "0123")
+
+>>> parse (optional (matchOne '1')) (initialize "")
+Right (Nothing,Counter 0 "")
 -}
-{-# INLINE maybe #-}
-maybe :: Parser s e a -> Parser s Void (Maybe a)
-maybe p = either (const Nothing) Just <$> try p
+{-# INLINE optional #-}
+optional :: Parser s e a -> Parser s Void (Maybe a)
+optional p = either (const Nothing) Just <$> try p
 
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
 
@@ -123,28 +131,52 @@ between
     -> Parser s e a
 between open close p = open *> p <* close
 
-{- | Sequence two parsers and zip the results in a pair. -}
-{-# INLINE zip #-}
-zip :: Parser s e a -> Parser s e b -> Parser s e (a, b)
-zip = liftA2 (,)
+{- | Sequence two parsers and pair up the results.
 
-{- | Sequence two parsers and zip the results with a binary function. -}
-{-# INLINE zipWith #-}
-zipWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
-zipWith = liftA2
+=== __Examples:__
 
-{- | Run the parser @n@ times and return the list of results. -}
-{-# INLINEABLE repeat #-}
-repeat :: Word -> Parser s e a -> Parser s e [a]
-repeat n p = go n
+>>> parse (pair one one) "0123"
+Right (('0','1'),"23")
+
+>>> parse (pair (matchOne '1') (matchOne '1')) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (pair (matchOne '0') (matchOne '0')) (initialize "0123")
+Left (Cons (ErrorItem 2 (ValidationError '1')) [])
+-}
+{-# INLINE pair #-}
+pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
+pair = liftA2 (,)
+
+{- | Sequence two parsers and pair the results with a binary function. -}
+{-# INLINE pairWith #-}
+pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
+pairWith = liftA2
+
+{- | Run the parser @n@ times and return the list of results.
+
+=== __Examples:__
+
+>>> parse (count 2 one) "0123"
+Right ("01","23")
+
+>>> parse (count 10 one) "0123"
+Left (Cons (EndOfInput 1) [])
+
+>>> parse (count 2 (matchOne '0')) (initialize "0123")
+Left (Cons (ErrorItem 2 (ValidationError '1')) [])
+-}
+{-# INLINEABLE count #-}
+count :: Word -> Parser s e a -> Parser s e [a]
+count n p = go n
     where
         go 0 = pure []
         go m = (:) <$> p <*> go (pred m)
 
-{- | Sequence a traversable of parsers and return the traversable of results. -}
-{-# INLINE sequence #-}
-sequence :: Traversable t => t (Parser s e a) -> Parser s e (t a)
-sequence = sequenceA
+{- | Chain together a traversable of parsers and return the traversable of results. -}
+{-# INLINE chain #-}
+chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
+chain = sequenceA
 
 
 {- | Choose between two parsers.
