@@ -369,8 +369,8 @@ note(s):
 
 The examples are run in ghci so the escape character @\'\\\'@ must itself be escaped.
 
->>> parse string (initialize "'quoted string'")
-Right ("quoted string",Counter 15 "")
+>>> parse string (initialize "'Quoted string.'")
+Right ("Quoted string.",Counter 16 "")
 
 >>> parse string (initialize "'Quoted string with many \\s\\s\\s spaces.'")
 Right ("Quoted string with many     spaces.",Counter 40 "")

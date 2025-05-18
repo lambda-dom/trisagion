@@ -39,12 +39,33 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser
 
 
-{- | Parse a single 'Word8'. -}
+{- | Parse a single 'Word8'.
+
+=== __Examples:__
+
+>>> parse word8 [0xff, 0, 0, 0]
+Right (255,[0,0,0])
+
+>>> parse word8 [1, 0, 0, 0]
+Right (1,[0,0,0])
+
+>>> parse word8 []
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE word8 #-}
 word8 :: (Streamable s, ElementOf s ~ Word8) => Parser s InputError Word8
 word8 = one
 
-{- | Parse a single 'Int8'. -}
+{- | Parse a single 'Int8'.
+
+=== __Examples:__
+
+>>> parse int8 [1, 0, 0, 0]
+Right (1,[0,0,0])
+
+>>> parse int8 [fromIntegral (-1 :: Int), 0, 0, 0]
+Right (-1,[0,0,0])
+-}
 {-# INLINE int8 #-}
 int8 :: (Streamable s, ElementOf s ~ Word8) => Parser s InputError Int8
 int8 = fromIntegral <$> one
@@ -78,7 +99,22 @@ word16Le
     => Parser s InputError Word16
 word16Le = integralLe
 
-{- | Parse a 'Word32' in little-endian format. -}
+{- | Parse a 'Word32' in little-endian format.
+
+=== __Examples:__
+
+>>> parse word32Le [1, 0, 0, 0, 0, 0, 0, 0]
+Right (1,[0,0,0,0])
+
+>>> parse word32Le [0, 1, 0, 0, 0, 0, 0, 0]
+Right (256,[0,0,0,0])
+
+>>> parse word32Le [0, 0, 1, 0, 0, 0, 0, 0]
+Right (65536,[0,0,0,0])
+
+>>> parse word32Le [0, 0, 0, 1, 0, 0, 0, 0]
+Right (16777216,[0,0,0,0])
+-}
 {-# INLINE word32Le #-}
 word32Le
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
@@ -99,7 +135,22 @@ word16Be
     => Parser s InputError Word16
 word16Be = integralBe
 
-{- | Parse a 'Word32' in big-endian format. -}
+{- | Parse a 'Word32' in big-endian format.
+
+=== __Examples:__
+
+>>> parse word32Be [0, 0, 0, 1, 0, 0, 0, 0]
+Right (1,[0,0,0,0])
+
+>>> parse word32Be [0, 0, 1, 0, 0, 0, 0, 0]
+Right (256,[0,0,0,0])
+
+>>> parse word32Be [0, 1, 0, 0, 0, 0, 0, 0]
+Right (65536,[0,0,0,0])
+
+>>> parse word32Be [1, 0, 0, 0, 0, 0, 0, 0]
+Right (16777216,[0,0,0,0])
+-}
 {-# INLINE word32Be #-}
 word32Be
     :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8)
