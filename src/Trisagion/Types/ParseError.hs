@@ -8,6 +8,9 @@ module Trisagion.Types.ParseError (
     -- * Error tag types.
     ValidationError,
 
+    -- ** Elimination functions.
+    withValidationError,
+
     -- * The @ParseError@ type.
     ParseError,
 
@@ -38,6 +41,11 @@ import Trisagion.Types.ErrorItem (ErrorItem, TraceItem, endOfInput, errorItem, t
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
     deriving (Applicative, Monad) via Identity
+
+
+{- | Elimination function for 'ValidationError'. -}
+withValidationError :: (e -> a) -> ValidationError e -> a
+withValidationError f (ValidationError e) = f e
 
 
 {- | The 'ParseError' type.

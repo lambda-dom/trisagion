@@ -31,7 +31,6 @@ module Trisagion.Parsers.Char (
     letter,
     word,
     identifier,
-    quote,
     escape,
     string,
 
@@ -56,22 +55,27 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError)
+import Trisagion.Types.ParseError (ParseError, ValidationError, withValidationError)
 import Trisagion.Parser
 import qualified Trisagion.Parsers.Combinators as Combinators (maybe)
 import Trisagion.Parsers.Combinators (manyTill)
 
 
-{- | The 'QuoteError' error tag type thrown by the 'quote' parser. -}
-newtype QuoteError = QuoteError Char
-    deriving stock (Eq, Ord, Bounded, Show)
-    deriving newtype Enum
+{- | The 'QuoteError' error tag type thrown quoting errors. -}
+data QuoteError
+    -- | Opening quote error.
+    = StartQuoteError {-# UNPACK #-} !Char
+    -- | Ending quote error.
+    | EndQuoteError {-# UNPACK #-} !Char
+    deriving stock (Eq, Ord, Show)
 
 
 {- | The 'EscapeError' error tag type thrown by the 'escape' parser. -}
 data EscapeError
-    = EscapeCharError Char              -- ^ Error thrown on incorrect escape character.
-    | EscapeSequenceError Char          -- ^ Error thrown on incorrect escape sequence.
+    -- | Error thrown on incorrect escape character.
+    = EscapeCharError {-# UNPACK #-} !Char
+    -- | Error thrown on incorrect escape sequence.
+    | EscapeSequenceError {-# UNPACK #-} !Char
     deriving stock (Eq, Ord, Show)
 
 
@@ -281,30 +285,6 @@ identifier = do
         v :: Char -> Bool
         v c = isLetter c || isDigit c || '-' == c || '_' == c
 
-{- | Parse a string quote character, either @\'\\\'\'@ or @\'\"\'@.
-
-=== __Examples:__
-
->>> parse quote (initialize "\'123")
-Right ('\'',Counter 1 "123")
-
->>> parse quote (initialize "\"123")
-Right ('"',Counter 1 "123")
-
->>> parse quote (initialize "0123")
-Left (Cons (ErrorItem 1 (QuoteError '0')) [])
-
->>> parse quote (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE quote #-}
-quote
-    :: (HasOffset s, ElementOf s ~ Char)
-    => Parser s (ParseError QuoteError) Char
-quote = do
-    c <- first (fmap absurd) one
-    if c == '\'' || c == '\"' then pure c else throwParseError (QuoteError c)
-
 {- | Parse an escape sequence.
 
 The escape sequences currently supported are:
@@ -378,27 +358,48 @@ escape = do
 
 {- | Parse a quoted string with escape sequences.
 
-The quote characters are the ones accepted by the 'quote' parser. The available escape sequences are
-the ones accepted by the 'escape' parser.
+The quote characters are @\'\\\'\'@ and @\'\"\'@. The available escape sequences are the ones
+accepted by the 'escape' parser.
 
 note(s):
 
   * A quoted string does /not/ span multiple lines.
+
+=== __Examples:__
+
+The examples are run in ghci so the escape character @\'\\\'@ must itself be escaped.
+
+>>> parse string (initialize "'quoted string'")
+Right ("quoted string",Counter 15 "")
+
+>>> parse string (initialize "'Quoted string with many \\s\\s\\s spaces.'")
+Right ("Quoted string with many     spaces.",Counter 40 "")
+
+>>> parse string (initialize "'Quoted string with many\\s\\s\\sspaces and one \\\'\\\\\\\' escape character.'")
+Right ("Quoted string with many   spaces and one '\\' escape character.",Counter 70 "")
 -}
 {-# INLINEABLE string #-}
 string
     :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
     => Parser s (ParseError StringError) (PrefixOf s)
 string = do
-        _ <- onParseError StringError quote
-        blocks <- manyTill (onParseError StringError quote) (esc <|> block)
+        c <- onParseError StringError startQuote
+        blocks <- manyTill (onParseError StringError (endQuote c)) (esc <|> block c)
         pure $ foldl' (<>) mempty blocks
     where
+        startQuote :: Parser s (ParseError QuoteError) Char
+        startQuote = do
+            c <- first (fmap absurd) one
+            if '\'' == c || '\"' == c then pure c else throwParseError (StartQuoteError c)
+
+        endQuote :: Char -> Parser s (ParseError QuoteError) Char
+        endQuote c = first (fmap (withValidationError EndQuoteError)) (matchOne c)
+
         esc :: Parser s (ParseError StringError) (PrefixOf s)
         esc = onParseError StringError escape
 
-        block :: Parser s (ParseError StringError) (PrefixOf s)
-        block = onParseError StringError $ takeWith1 (\ c -> '\\' /= c && '\n' /= c)
+        block :: Char -> Parser s (ParseError StringError) (PrefixOf s)
+        block q = onParseError StringError $ takeWith1 (\ c -> '\\' /= c && '\n' /= c && c /= q)
 
 {- | Parse a line comment.
 
