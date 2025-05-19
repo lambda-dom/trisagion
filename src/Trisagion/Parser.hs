@@ -85,9 +85,9 @@ import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.Result (Result (..), withResult, result)
+import Trisagion.Types.Result (Result (..), result)
 import Trisagion.Types.ErrorItem (endOfInput, errorItem)
-import Trisagion.Types.ParseError (ParseError, singleton, ValidationError, cons, makeBacktrace)
+import Trisagion.Types.ParseError (ParseError, ValidationError, singleton, cons, makeBacktrace)
 
 
 {- | Right-associative type operator version of the 'Either' type constructor. -}
@@ -328,12 +328,12 @@ parse p = view result . run p
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
 {-# INLINE eval #-}
 eval :: Parser s e a -> s -> e :+: a
-eval p = withResult Left (\ x _ -> Right x) . run p
+eval p = fmap fst . view result . run p
 
 {- | Run the parser on the input and return the remainder, discarding the parsed value. -}
 {-# INLINE remainder #-}
 remainder :: Parser s e a -> s -> e :+: s
-remainder p =  withResult Left (\ _ xs -> Right xs) . run p
+remainder p =  fmap snd . view result . run p
 
 
 {- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
