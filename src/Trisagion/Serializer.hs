@@ -46,7 +46,13 @@ embed :: (a -> m) -> Serializer m a
 embed = Serializer
 
 
-{- | Monoid action for serializers. -}
+{- | Monoid action for serializers.
+
+The binary operator @(|*>)@ satisfies the (left) /monoid action/ laws:
+
+prop> mempty |*> p == p
+prop> m |*> (n |*> p) == (m <> n) |*> p
+-}
 {-# INLINE (|*>) #-}
 (|*>) :: Monoid m => m -> Serializer m a -> Serializer m a
 (|*>) m s = embed $ \ x -> m <> run s x
