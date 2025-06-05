@@ -190,7 +190,7 @@ the 'Monad' structure,
 
 prop> (first f p) >>= (first f .  h) == first f (p >>= h)
 
-and the 'Alternative' structure,
+and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
 
 prop> first f empty == empty
 prop> (first f p) <|> (first f q) == first f (p <|> q)
@@ -261,7 +261,7 @@ prop> empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' structure also satisfies /left distributivity/:
+'Alternative' instance also satisfies /left distributivity/:
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 
