@@ -96,12 +96,18 @@ class Streamable s => Splittable s where
     splitRemainder :: s -> (PrefixOf s, s)
     splitRemainder = splitWith (const True)
 
-    {- | Drop a fixed-size prefix from the stream. -}
+    {- | Drop a fixed-size prefix from the stream.
+
+    Default implementation is @'snd' . 'splitPrefix' n@.
+    -}
     {-# INLINE dropPrefix #-}
     dropPrefix :: Word -> s -> s
     dropPrefix n = snd . splitPrefix n
 
-    {- | Drop the longest prefix satisfying a predicate from the stream. -}
+    {- | Drop the longest prefix satisfying a predicate from the stream.
+
+    Default implementation is @'snd' . 'splitWith' p@.
+    -}
     {-# INLINE dropWith #-}
     dropWith :: (ElementOf s -> Bool) -> s -> s
     dropWith p = snd . splitWith p

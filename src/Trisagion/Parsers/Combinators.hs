@@ -1,8 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Combinators
 
-Various parser combinators. The module should be imported qualified as some of the exported names
-conflict with base, specifically, methods of 'Control.Applicative.Alternative'.
+Various parser combinators.
 -}
 
 module Trisagion.Parsers.Combinators (
@@ -48,7 +47,7 @@ import Data.Void (Void, absurd)
 import Trisagion.Parser
 
 
-{- | @'maybe' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
+{- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
 more precise type signature.
