@@ -190,7 +190,7 @@ the 'Monad' structure,
 
 prop> (first f p) >>= (first f .  h) == first f (p >>= h)
 
-and the 'Alternative' structure,
+and, assuming @f@ is a monoid morphism, the 'Alternative' structure,
 
 prop> first f empty == empty
 prop> (first f p) <|> (first f q) == first f (p <|> q)
