@@ -1,3 +1,3 @@
 # Trisagion.
 
-A monadic parsing library.
+A monadic parsing and serializing library.
