@@ -69,6 +69,8 @@ import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 -- $setup
 -- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Combinators
+-- >>> import Trisagion.Parsers.Streamable
 
 
 {- | The 'QuoteError' error tag type thrown on quoting errors. -}
@@ -438,6 +440,11 @@ note(s):
     * If the streamable contains Windows end of lines, then the comment text will contain an ending
     @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
     solution) or complicating the implementation.
+
+=== __Examples:__
+
+>>> parse (comment (skip $ matchOne '#')) (initialize "#a line comment\r\n code starts here")
+Right ("a line comment\r",Counter 17 " code starts here")
 -}
 comment
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
