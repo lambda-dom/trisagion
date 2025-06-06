@@ -14,6 +14,9 @@ module Trisagion.Parsers.Streamable (
     one,
     skipOne,
     peek,
+    satisfy,
+    matchOne,
+    oneOf,
 ) where
 
 -- Imports.
@@ -32,9 +35,11 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
+import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Types.ErrorItem (endOfInput)
-import Trisagion.Types.ParseError (ParseError, singleton)
+import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
 import Trisagion.Parser (Parser, (:+:), throw)
+import Trisagion.Parsers.ParseError (throwParseError)
 
 
 {- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
@@ -121,3 +126,65 @@ peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = do
     c <- gets uncons
     pure $ fmap fst c
+
+{- | Parse one @'ElementOf' s@ satisfying a predicate.
+
+=== __Examples:__
+
+>>> parse (satisfy ('1' /=)) (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (satisfy ('0' /=)) (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (satisfy ('1' /=)) (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE satisfy #-}
+satisfy
+    :: HasOffset s
+    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+satisfy p = do
+    c <- first (fmap absurd) one
+    if p c then pure c else throwParseError (pure c)
+
+{- | Parse one element matching a @'ElementOf' s@.
+
+=== __Examples:__
+
+>>> parse (matchOne '0') (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (matchOne '1') (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (matchOne '0') (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE matchOne #-}
+matchOne
+    :: (HasOffset s, Eq (ElementOf s))
+    => ElementOf s                      -- ^ Matching @'ElementOf' s@.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+matchOne x = satisfy (== x)
+
+{- | Parse one @'ElementOf' s@ that is an element of a foldable.
+
+=== __Examples:__
+
+>>> parse (oneOf "01") (initialize "0123")
+Right ('0',Counter 1 "123")
+
+>>> parse (oneOf "12") (initialize "0123")
+Left (Cons (ErrorItem 1 (ValidationError '0')) [])
+
+>>> parse (oneOf "12") (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINE oneOf #-}
+oneOf
+    :: (HasOffset s, Eq (ElementOf s), Foldable t)
+    => t (ElementOf s)                  -- ^ Foldable of @'ElementOf' s@ to test inclusion.
+    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
+oneOf xs = satisfy (`elem` xs)
