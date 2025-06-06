@@ -26,10 +26,6 @@ module Trisagion.Parser (
     -- * Error parsers.
     throw,
     catch,
-    throwParseError,
-    capture,
-    onParseError,
-    validate,
 
     -- * Parsers @'Streamable' s => 'Parser' s e a@.
     eoi,
@@ -37,9 +33,6 @@ module Trisagion.Parser (
     one,
     skipOne,
     peek,
-    satisfy,
-    matchOne,
-    oneOf,
 
     -- * Parsers @'Splittable' s => 'Parser' s e a@.
     -- $splittable-parsers
@@ -48,8 +41,6 @@ module Trisagion.Parser (
     skipPrefix,
     takeWith,
     skipWith,
-    takeWith1,
-    matchPrefix,
     takeRemainder,
     consumed,
     isolate,
@@ -60,14 +51,12 @@ module Trisagion.Parser (
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
-import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets)
-import Optics.Core ((%), review, set, view)
-import Data.Tuple.Optics (_1)
+import Optics.Core ((%), review, view)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -79,8 +68,8 @@ import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.Result (Result (..), result)
-import Trisagion.Types.ErrorItem (endOfInput, errorItem)
-import Trisagion.Types.ParseError (ParseError, ValidationError, singleton, cons, makeBacktrace)
+import Trisagion.Types.ErrorItem (endOfInput)
+import Trisagion.Types.ParseError (ParseError, singleton)
 
 
 -- $setup
@@ -338,83 +327,6 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
-{- | Throw @'Trisagion.Types.ParseError'@ with error tag @e@ and offset the current stream offset. -}
-{-# INLINE throwParseError #-}
-throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
-throwParseError err = do
-    n <- gets offset
-    throw $ review (singleton % errorItem) (n, err)
-
-{- | Capture the offset of the input stream at the entry point in case of an error.
-
-A parser,
-
-@
-parser = do
-    ...
-    x <- p -- Can throw here.
-    ...
-@
-
-can now be written as:
-
-@
-parser = capture $ do
-    -- Capture the offset @n@ of the input stream here.
-    ...
-    x <- p -- Can throw here. If it throws, the error's offset will be @n@.
-    ...
-@
--}
-{-# INLINE capture #-}
-capture :: HasOffset s => Parser s (ParseError e) a -> Parser s (ParseError e) a
-capture p = do
-    n <- gets offset
-    first (set (cons % _1 % errorItem % _1) n) p
-
-{- | Parser that swallows any thrown error as a backtrace for a new error.
-
-The offset of the thrown error is the offset of the input stream captured /before/ @p@ runs as in
-the 'capture' combinator.
--}
-{-# INLINE onParseError #-}
-onParseError
-    :: (HasOffset s, Typeable d, Eq d, Show d)
-    => e                                -- ^ Error tag of new error.
-    -> Parser s (ParseError d) a        -- ^ Parser to run.
-    -> Parser s (ParseError e) a
-onParseError e p = do
-    xs <- get
-    catch
-        p
-        (throw . makeBacktrace xs e)
-
-{- | Run the parser and return the result, validating it.
-
-=== __Examples:__
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "0123")
-Right ('0',Counter 1 "123")
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "123")
-Left (Cons (ErrorItem 1 (Left ())) [])
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE validate #-}
-validate
-    :: HasOffset s
-    => (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s (ParseError e) a        -- ^ Parser to run.
-    -> Parser s (ParseError (d :+: e)) b
-validate v p = do
-    x <- first (fmap Right) p
-    case v x of
-        Left d  -> throwParseError (Left d)
-        Right y -> pure y
-
-
 {- | Return @'True'@ if all input is consumed.
 
 === __Examples:__
@@ -495,68 +407,6 @@ peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = do
     c <- gets uncons
     pure $ fmap fst c
-
-{- | Parse one @'ElementOf' s@ satisfying a predicate.
-
-=== __Examples:__
-
->>> parse (satisfy ('1' /=)) (initialize "0123")
-Right ('0',Counter 1 "123")
-
->>> parse (satisfy ('0' /=)) (initialize "0123")
-Left (Cons (ErrorItem 1 (ValidationError '0')) [])
-
->>> parse (satisfy ('1' /=)) (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE satisfy #-}
-satisfy
-    :: HasOffset s
-    => (ElementOf s -> Bool)            -- ^ @'ElementOf' s@ predicate.
-    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
-satisfy p = do
-    c <- first (fmap absurd) one
-    if p c then pure c else throwParseError (pure c)
-
-{- | Parse one element matching a @'ElementOf' s@.
-
-=== __Examples:__
-
->>> parse (matchOne '0') (initialize "0123")
-Right ('0',Counter 1 "123")
-
->>> parse (matchOne '1') (initialize "0123")
-Left (Cons (ErrorItem 1 (ValidationError '0')) [])
-
->>> parse (matchOne '0') (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE matchOne #-}
-matchOne
-    :: (HasOffset s, Eq (ElementOf s))
-    => ElementOf s                      -- ^ Matching @'ElementOf' s@.
-    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
-matchOne x = satisfy (== x)
-
-{- | Parse one @'ElementOf' s@ that is an element of a foldable.
-
-=== __Examples:__
-
->>> parse (oneOf "01") (initialize "0123")
-Right ('0',Counter 1 "123")
-
->>> parse (oneOf "12") (initialize "0123")
-Left (Cons (ErrorItem 1 (ValidationError '0')) [])
-
->>> parse (oneOf "12") (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE oneOf #-}
-oneOf
-    :: (HasOffset s, Eq (ElementOf s), Foldable t)
-    => t (ElementOf s)                  -- ^ Foldable of @'ElementOf' s@ to test inclusion.
-    -> Parser s (ParseError (ValidationError (ElementOf s))) (ElementOf s)
-oneOf xs = satisfy (`elem` xs)
 
 
 {- $splittable-parsers
@@ -647,59 +497,6 @@ Right ((),"")
 {-# INLINE skipWith #-}
 skipWith :: Splittable s => (ElementOf s -> Bool) -> Parser s Void ()
 skipWith p = Parser $ \ xs -> Success () (dropWith p xs)
-
-{- | Parse the longest prefix with at least one element whose elements satisfy a predicate.
-
-=== __Examples:__
-
->>> parse (takeWith1 ('0' ==)) (initialize "0123")
-Right ("0",Counter 1 "123")
-
->>> parse (takeWith1 ('0' ==)) (initialize "0003")
-Right ("000",Counter 3 "3")
-
->>> parse (takeWith1 ('1' ==)) (initialize "0123")
-Left (Cons (ErrorItem 1 (ValidationError '0')) [])
-
->>> parse (takeWith1 ('0' ==)) (initialize "")
-Left (Cons (EndOfInput 1) [])
--}
-{-# INLINE takeWith1 #-}
-takeWith1
-    :: (HasOffset s, Splittable s)
-    => (ElementOf s -> Bool)            -- ^ Predicate on @'ElementOf' s@.
-    -> Parser s (ParseError (ValidationError (ElementOf s))) (PrefixOf s)
-takeWith1 p = do
-    x <- first absurd $ lookAhead (satisfy p)
-    case x of
-        Left e  -> throw e
-        Right _ -> first absurd $ takeWith p
-
-{- | Parse a matching prefix.
-
-note(s):
-
-    * The implementation requires computing the length of the argument prefix.
-
-=== __Examples:__
-
->>> parse (matchPrefix "01") (initialize "0123")
-Right ("01",Counter 2 "23")
-
->>> parse (matchPrefix "012345") (initialize "0123")
-Left (Cons (EndOfInput 6) [])
-
->>> parse (matchPrefix "{}") (initialize "0123")
-Left (Cons (ErrorItem 2 (ValidationError "{}")) [])
--}
-{-# INLINE matchPrefix #-}
-matchPrefix
-    :: (HasOffset s, Splittable s, Eq (PrefixOf s), MonoFoldable (PrefixOf s))
-    => PrefixOf s                       -- ^ Matching prefix.
-    -> Parser s (ParseError (ValidationError (PrefixOf s))) (PrefixOf s)
-matchPrefix xs = do
-    prefix <- first (fmap absurd) $ takeExact (monolength xs)
-    if xs == prefix then pure xs else throwParseError (pure xs)
 
 {- | Parse the remainder of the stream as a prefix. -}
 {-# INLINE takeRemainder #-}

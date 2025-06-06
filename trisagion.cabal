@@ -69,6 +69,7 @@ library
         Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Parser
+        Trisagion.Parsers.ParseError
         -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.Char
         -- Trisagion.Parsers.Word8
