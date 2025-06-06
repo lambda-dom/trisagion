@@ -47,11 +47,12 @@ import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.Void (Void, absurd)
 
 -- Libraries.
+import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets)
 
 -- Package.
 -- Import entire module for doctests.
-import Trisagion.Parser (Parser, (:+:), parse, eval, throw)
+import Trisagion.Parser (Parser, (:+:), parse, eval)
 
 
 -- $setup
@@ -146,7 +147,7 @@ failIff p = do
     r <- first absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
-        Right _ -> throw mempty
+        Right _ -> throwError mempty
 
 
 {- | Run the parser and discard the result. -}

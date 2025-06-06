@@ -17,7 +17,6 @@ module Trisagion.Parser (
     remainder,
 
     -- * Error parsers.
-    throw,
     catch,
 ) where
 
@@ -206,7 +205,7 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError = throw
+    throwError e = Parser $ const (Error e)
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
@@ -237,11 +236,6 @@ eval p = fmap fst . view result . run p
 remainder :: Parser s e a -> s -> e :+: s
 remainder p =  fmap snd . view result . run p
 
-
-{- | The parser @'throw' e@ unconditionally errors with @e@. -}
-{-# INLINE throw #-}
-throw :: e -> Parser s e a
-throw e = Parser $ const (Error e)
 
 {- | Type-changing version of 'catchError'. -}
 {-# INLINE catch #-}

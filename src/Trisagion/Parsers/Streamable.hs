@@ -26,6 +26,7 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
+import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets, modify)
 import Optics.Core ((%), review)
 
@@ -38,7 +39,7 @@ import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Types.ErrorItem (endOfInput)
 import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
-import Trisagion.Parser (Parser, (:+:), throw)
+import Trisagion.Parser (Parser, (:+:))
 import Trisagion.Parsers.ParseError (throwParseError)
 
 
@@ -82,7 +83,7 @@ ensureEOI err p = do
     b <- first absurd eoi
     if b
         then pure x
-        else throw $ Left err
+        else throwError $ Left err
 
 {- | Parse one @'ElementOf' s@ from the input stream.
 
@@ -99,7 +100,7 @@ one :: Streamable s => Parser s InputError (ElementOf s)
 one = do
     xs <- get
     case uncons xs of
-        Nothing -> throw $ review (singleton % endOfInput) 1
+        Nothing -> throwError $ review (singleton % endOfInput) 1
         Just (x, ys) -> put ys $> x
 
 {- | Skip one @'ElementOf' s@ from the input stream.

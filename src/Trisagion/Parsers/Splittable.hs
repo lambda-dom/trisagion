@@ -30,6 +30,7 @@ import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
+import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets, modify)
 import Optics.Core ((%), review)
 
@@ -42,7 +43,7 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ErrorItem (endOfInput)
 import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
-import Trisagion.Parser (Parser, eval, throw)
+import Trisagion.Parser (Parser, eval)
 import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.ParseError (throwParseError)
 import Trisagion.Parsers.Streamable (InputError, satisfy)
@@ -107,7 +108,7 @@ takeExact
 takeExact n = do
     prefix <- first absurd $ takePrefix n
     if monolength prefix /= n
-        then throw $ review (singleton % endOfInput) n
+        then throwError $ review (singleton % endOfInput) n
         else pure prefix
 
 {- | Parse a matching prefix.
@@ -176,7 +177,7 @@ takeWith1
 takeWith1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
-        Left e  -> throw e
+        Left e  -> throwError e
         Right _ -> first absurd $ takeWith p
 
 {- | Drop the longest prefix whose elements satisfy a predicate.
@@ -227,7 +228,7 @@ isolate
 isolate n p = do
     prefix <- first absurd $ takePrefix n
     case eval p prefix of
-        Left e  -> throw e
+        Left e  -> throwError e
         Right x -> pure x
 
 {- | Run the parser and return its result along with the prefix of consumed input.
