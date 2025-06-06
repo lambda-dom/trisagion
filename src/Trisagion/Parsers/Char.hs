@@ -440,4 +440,4 @@ comment
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
-comment p = p *> first absurd (takeWith (/= '\n') <* optional cr)
+comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)
