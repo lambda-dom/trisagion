@@ -38,9 +38,10 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ErrorItem (endOfInput)
 import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
-import Trisagion.Parser (Parser, eval, throw, lookAhead)
-import Trisagion.Parsers.Streamable (InputError, satisfy)
+import Trisagion.Parser (Parser, eval, throw)
+import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.ParseError (throwParseError)
+import Trisagion.Parsers.Streamable (InputError, satisfy)
 
 
 {- $splittable-parsers

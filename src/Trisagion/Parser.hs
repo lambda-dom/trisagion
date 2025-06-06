@@ -16,10 +16,6 @@ module Trisagion.Parser (
     eval,
     remainder,
 
-    -- * State parsers.
-    try,
-    lookAhead,
-
     -- * Error parsers.
     throw,
     catch,
@@ -29,12 +25,10 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
-import Data.Functor (($>))
-import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (MonadState (..), gets)
+import Control.Monad.State (MonadState (..))
 import Optics.Core (view)
 
 -- Package.
@@ -235,45 +229,6 @@ eval p = fmap fst . view result . run p
 {-# INLINE remainder #-}
 remainder :: Parser s e a -> s -> e :+: s
 remainder p =  fmap snd . view result . run p
-
-
-{- | Parser implementing backtracking.
-
-The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
-backtracks and returns the error as a 'Left'.
-
-=== __Examples:__
-
->>> parse (try one) "0123"
-Right (Right '0',"123")
-
->>> parse (try one) ""
-Right (Left (Cons (EndOfInput 1) []),"")
--}
-{-# INLINE try #-}
-try :: Parser s e a -> Parser s Void (e :+: a)
-try p = do
-    r <- gets (parse p)
-    case r of
-        Left e        -> pure (Left e)
-        Right (x, xs) -> put xs $> pure x
-
-{- | Run the parser and return the result, but do not consume any input.
-
-=== __Examples:__
-
->>> parse (lookAhead one) "0123"
-Right (Right '0',"0123")
-
->>> parse (lookAhead $ matchOne '1') (initialize "0123")
-Right (Left (Cons (ErrorItem 1 (ValidationError '0')) []),Counter 0 "0123")
-
->>> parse (lookAhead one) ""
-Right (Left (Cons (EndOfInput 1) []),"")
--}
-{-# INLINE lookAhead #-}
-lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = gets (eval p)
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}

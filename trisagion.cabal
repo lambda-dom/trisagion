@@ -69,10 +69,10 @@ library
         Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Parser
+        Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
-        -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.Char
         -- Trisagion.Parsers.Word8
         -- Trisagion.Streams.Chunk

@@ -5,6 +5,10 @@ Various parser combinators.
 -}
 
 module Trisagion.Parsers.Combinators (
+    -- * State parsers.
+    try,
+    lookAhead,
+
     -- * Parsers without errors.
     optional,
     failIff,
@@ -42,6 +46,9 @@ import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty ((:|)), (<|))
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Control.Monad.State (MonadState (..), gets)
+
 -- Package.
 -- Import entire module for doctests.
 import Trisagion.Parser
@@ -51,6 +58,46 @@ import Trisagion.Parser
 -- >>> import Data.Bifunctor
 -- >>> import Data.Void
 -- >>> import Trisagion.Parser
+
+
+{- | Parser implementing backtracking.
+
+The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
+backtracks and returns the error as a 'Left'.
+
+=== __Examples:__
+
+>>> parse (try one) "0123"
+Right (Right '0',"123")
+
+>>> parse (try one) ""
+Right (Left (Cons (EndOfInput 1) []),"")
+-}
+{-# INLINE try #-}
+try :: Parser s e a -> Parser s Void (e :+: a)
+try p = do
+    r <- gets (parse p)
+    case r of
+        Left e        -> pure (Left e)
+        Right (x, xs) -> put xs $> Right x
+
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
+
+>>> parse (lookAhead $ matchOne '1') (initialize "0123")
+Right (Left (Cons (ErrorItem 1 (ValidationError '0')) []),Counter 0 "0123")
+
+>>> parse (lookAhead one) ""
+Right (Left (Cons (EndOfInput 1) []),"")
+-}
+{-# INLINE lookAhead #-}
+lookAhead :: Parser s e a -> Parser s Void (e :+: a)
+lookAhead p = gets (eval p)
+
 
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
