@@ -36,7 +36,9 @@ import Mono.Types.ByteArray (byteCount, pack, packReverse)
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser
+import Trisagion.Parser (Parser)
+import Trisagion.Parsers.Streamable (InputError, one)
+import Trisagion.Parsers.Splittable (takeExact)
 
 
 -- $setup
