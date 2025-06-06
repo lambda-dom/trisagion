@@ -47,6 +47,9 @@ import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
+
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
@@ -56,7 +59,7 @@ import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError, ValidationError)
-import Trisagion.Parser (Parser, (:+:), throw)
+import Trisagion.Parser (Parser, (:+:))
 import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
 import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
 import Trisagion.Parsers.Streamable (matchOne, satisfy, one)
@@ -301,7 +304,7 @@ identifier
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
-            Left e  -> throw e
+            Left e  -> throwError e
             Right _ -> first absurd $ takeWith v
     where
         v :: Char -> Bool
