@@ -65,7 +65,7 @@ Right (True,"")
 eoi :: Streamable s => Parser s Void Bool
 eoi = gets Streamable.null
 
-{- | Run parser @p@ and if not all input is consumed, error out.
+{- | Run parser @p@ and if not all input is consumed, throw error @d@.
 
 === __Examples:__
 
