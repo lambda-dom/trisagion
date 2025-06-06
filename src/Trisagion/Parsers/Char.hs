@@ -60,6 +60,10 @@ import Trisagion.Parser
 import Trisagion.Parsers.Combinators (manyTill, optional)
 
 
+-- $setup
+-- >>> import Trisagion.Parser
+
+
 {- | The 'QuoteError' error tag type thrown on quoting errors. -}
 data QuoteError
     -- | Opening quote error.

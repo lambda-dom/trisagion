@@ -39,6 +39,10 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser
 
 
+-- $setup
+-- >>> import Trisagion.Parser
+
+
 {- | Parse a single 'Word8'.
 
 === __Examples:__
