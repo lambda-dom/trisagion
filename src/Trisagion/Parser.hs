@@ -408,14 +408,14 @@ catch p h = Parser $ \ xs ->
         Error e      -> run (h e) xs
         Success x ys -> Success x ys
 
-{- | Throw @'Trisagion.Types.ParseError'@ with error @e@ and offset the current stream offset. -}
+{- | Throw @'Trisagion.Types.ParseError'@ with error tag @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
 throwParseError err = do
     n <- first absurd (offset <$> get)
     throw $ review (singleton % errorItem) (n, err)
 
-{- | Capture the offset of the input stream at the entry point in case of a thrown error.
+{- | Capture the offset of the input stream at the entry point in case of an error.
 
 A parser,
 
