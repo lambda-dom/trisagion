@@ -47,6 +47,11 @@ import Data.Void (Void, absurd)
 import Trisagion.Parser
 
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Data.Void
+-- >>> import Trisagion.Parser
+
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the

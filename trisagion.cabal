@@ -68,7 +68,7 @@ library
         Trisagion.Types.ParseError
         Trisagion.Streams.Offset
         Trisagion.Parser
-        -- Trisagion.Parsers.Combinators
+        Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.Char
         -- Trisagion.Parsers.Word8
         -- Trisagion.Streams.Chunk
