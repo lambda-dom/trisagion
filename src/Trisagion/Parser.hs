@@ -222,11 +222,13 @@ The 'put' parser allows changing the t'Parser' state and is the way, the /only/ 
 /non-normal/ parsers.
 -}
 instance MonadState s (Parser s e) where
+    {-# INLINE get #-}
     get :: Parser s e s
     get = Parser $ \ s -> Success s s
 
+    {-# INLINE put #-}
     put :: s -> Parser s e ()
-    put xs = Parser $ \ _ -> Success () xs
+    put s = Parser $ \ _ -> Success () s
 
 
 {- | The 'MonadError' instance.
@@ -380,7 +382,7 @@ onParseError
     -> Parser s (ParseError d) a        -- ^ Parser to run.
     -> Parser s (ParseError e) a
 onParseError e p = do
-    xs <- first absurd get
+    xs <- get
     catch
         p
         (throw . makeBacktrace xs e)
@@ -719,9 +721,9 @@ Left (Cons (EndOfInput 1) [])
 {-# INLINE consumed #-}
 consumed :: (HasOffset s, Splittable s) => Parser s e a -> Parser s e (PrefixOf s, a)
 consumed p = do
-    xs <- first absurd get
+    xs <- get
     x  <- p
-    n  <- offset <$> first absurd get
+    n  <- gets offset
     -- Implicitly relies on the parser @p@ being normal, for positivity of @n - offset xs@.
     pure (fst $ splitPrefix (n - offset xs) xs, x)
 
