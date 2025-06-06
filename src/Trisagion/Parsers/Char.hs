@@ -218,7 +218,22 @@ sign = first (fmap (either id absurd)) $ validate v one
             y | y == '+' -> Right Positive
             _            -> Left $ pure x
 
-{- | Parse a signed 'Integer' in decimal format. -}
+{- | Parse a signed 'Integer' in decimal format.
+
+=== __Examples:__
+
+>>> parse integer (initialize "123")
+Right (123,Counter 3 "")
+
+>>> parse integer (initialize "00123")
+Right (123,Counter 5 "")
+
+>>> parse integer (initialize "+123")
+Right (123,Counter 4 "")
+
+>>> parse integer (initialize "-123")
+Right (-123,Counter 4 "")
+-}
 {-# INLINE integer #-}
 integer
     :: (HasOffset s, Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
