@@ -2,11 +2,15 @@
 Module: Trisagion.Parsers.Splittable
 
 Parsers wth @'Splittable' s@ constraints.
+
+Implementations requiring the computation of the length of a prefix have a
+@'Mono.Typeclasses.MonoFoldable.MonoFoldable' s@ constraint. This can be important for performance
+because for a `Splittable` like @Text@ this is @O(n)@, while for other types like lazy bytestrings,
+it forces the entirety of the value into memory which is probably not what is desired.
 -}
 
 module Trisagion.Parsers.Splittable (
     -- * Parsers @'Splittable' s => 'Parser' s e a@.
-    -- $splittable-parsers
     takePrefix,
     skipPrefix,
     takeExact,
@@ -49,13 +53,6 @@ import Trisagion.Parsers.Streamable (InputError, satisfy)
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
 
-
-{- $splittable-parsers
-Implementations requiring the computation of the length of a prefix have a
-@'Mono.Typeclasses.MonoFoldable.MonoFoldable' s@ constraint. This can be important for performance
-because for a `Splittable` like @Text@ this is @O(n)@, while for other types like lazy bytestrings,
-it forces the entirety of the value into memory which is probably not what is desired.
--}
 
 {- | Parse a fixed size prefix.
 
@@ -117,7 +114,7 @@ takeExact n = do
 
 note(s):
 
-    * The implementation requires computing the length of the argument prefix.
+    * Implementation requires computing the length of the argument prefix.
 
 === __Examples:__
 
