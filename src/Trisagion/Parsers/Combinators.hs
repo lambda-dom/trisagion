@@ -51,7 +51,7 @@ import Control.Monad.State (MonadState (..), gets)
 
 -- Package.
 -- Import entire module for doctests.
-import Trisagion.Parser
+import Trisagion.Parser (Parser, (:+:), parse, eval, throw)
 
 
 -- $setup
