@@ -28,6 +28,12 @@ import Trisagion.Types.ParseError (ParseError, singleton, cons, makeBacktrace)
 import Trisagion.Parser (Parser, (:+:), throw, catch)
 
 
+-- $setup
+-- >>> import Trisagion.Streams.Counter
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | Throw @'Trisagion.Types.ParseError'@ with error tag @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a

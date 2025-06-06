@@ -75,7 +75,7 @@ library
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Char
         Trisagion.Parsers.Word8
-        -- Trisagion.Streams.Chunk
+        Trisagion.Streams.Chunk
 
 test-suite trisagion-tests
     import: common-fields

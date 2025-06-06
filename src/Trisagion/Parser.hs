@@ -35,10 +35,6 @@ import Optics.Core (view)
 import Trisagion.Types.Result (Result (..), result)
 
 
--- $setup
--- >>> import Trisagion.Streams.Counter
-
-
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:

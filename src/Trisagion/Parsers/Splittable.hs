@@ -44,6 +44,12 @@ import Trisagion.Parsers.ParseError (throwParseError)
 import Trisagion.Parsers.Streamable (InputError, satisfy)
 
 
+-- $setup
+-- >>> import Trisagion.Streams.Counter
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- $splittable-parsers
 Implementations requiring the computation of the length of a prefix have a
 @'Mono.Typeclasses.MonoFoldable.MonoFoldable' s@ constraint. This can be important for performance

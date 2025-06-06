@@ -42,6 +42,11 @@ import Trisagion.Parser (Parser, (:+:), throw)
 import Trisagion.Parsers.ParseError (throwParseError)
 
 
+-- $setup
+-- >>> import Trisagion.Streams.Counter
+-- >>> import Trisagion.Parser
+
+
 {- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
 type InputError = ParseError Void
 

@@ -57,7 +57,9 @@ import Trisagion.Parser (Parser, (:+:), parse, eval, throw)
 -- $setup
 -- >>> import Data.Bifunctor
 -- >>> import Data.Void
+-- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
 
 
 {- | Parser implementing backtracking.
