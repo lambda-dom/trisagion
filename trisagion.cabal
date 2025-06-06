@@ -71,6 +71,7 @@ library
         Trisagion.Parser
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
+        Trisagion.Parsers.Splittable
         -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.Char
         -- Trisagion.Parsers.Word8
