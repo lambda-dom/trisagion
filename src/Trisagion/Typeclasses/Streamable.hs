@@ -81,7 +81,7 @@ class MonoFunctor s => Streamable s where
 
     {- | Return 'True' if there are no elements in the input stream.
 
-    Default implementation is @'isNothing' . uncons@.
+    Default implementation is @isNothing . uncons@.
     -}
     {-# INLINE null #-}
     null :: s -> Bool
