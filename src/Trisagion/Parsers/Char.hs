@@ -56,11 +56,15 @@ import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Types.ParseError (ParseError, ValidationError)
-import Trisagion.Parser
-import Trisagion.Parsers.Combinators (manyTill, optional)
+import Trisagion.Parser (Parser, (:+:), throw)
+import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
+import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
+import Trisagion.Parsers.Streamable (matchOne, satisfy, one)
+import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 
 
 -- $setup
+-- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
 
 
@@ -214,7 +218,22 @@ sign = first (fmap (either id absurd)) $ validate v one
             y | y == '+' -> Right Positive
             _            -> Left $ pure x
 
-{- | Parse a signed 'Integer' in decimal format. -}
+{- | Parse a signed 'Integer' in decimal format.
+
+=== __Examples:__
+
+>>> parse integer (initialize "123")
+Right (123,Counter 3 "")
+
+>>> parse integer (initialize "00123")
+Right (123,Counter 5 "")
+
+>>> parse integer (initialize "+123")
+Right (123,Counter 4 "")
+
+>>> parse integer (initialize "-123")
+Right (-123,Counter 4 "")
+-}
 {-# INLINE integer #-}
 integer
     :: (HasOffset s, Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Char, ElementOf (PrefixOf s) ~ Char)
@@ -421,4 +440,4 @@ comment
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e (PrefixOf s)
-comment p = p *> first absurd (takeWith (/= '\n') <* optional cr)
+comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)

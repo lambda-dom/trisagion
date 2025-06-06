@@ -6,7 +6,7 @@ The @ErrorItem@ type.
 
 module Trisagion.Types.ErrorItem (
     -- * The @ErrorItem@ type.
-    ErrorItem (..),
+    ErrorItem,
 
     -- ** Prisms.
     endOfInput,

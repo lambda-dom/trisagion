@@ -29,7 +29,7 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 {- | Wrapper around a 'Streamable' adding an offset to track current position.
 
 The implementation initializes the offset to the length of the streamable and on each call to
-@offset@ takes the difference. This not only requires efficient implementation of 'monolength',
+'offset' takes the difference. This not only requires efficient implementation of 'monolength',
 but can force the entire input stream into memory.
 -}
 data Offset s = Offset {-# UNPACK #-} !Word !s

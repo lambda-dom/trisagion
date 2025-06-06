@@ -48,9 +48,10 @@ __Single singleton__: The second law says that @single@ is @singleton@ at the le
 
 prop> singleton == toList . single
 
-__List identities__: For the third law, assuming @MonoFoldable ('PrefixOf' s)@ on top of the
-@'MonoFunctor'@ constraint, then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and
-@splitWith@ is 'Data.List.span':
+__List identities__: For the third law, assuming
+@'Mono.Typeclasses.MonoFoldable.MonoFoldable' ('PrefixOf' s)@ on top of the @'MonoFunctor'@
+constraint, then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is
+'Data.List.span':
 
 prop> bimap monotoList toList . splitPrefix n == splitPrefix n . toList
 prop> bimap monotoList toList . splitWith p == span p . toList
