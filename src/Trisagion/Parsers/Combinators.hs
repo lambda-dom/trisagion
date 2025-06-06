@@ -201,7 +201,13 @@ Left (Cons (ErrorItem 2 (ValidationError '1')) [])
 pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
 pair = liftA2 (,)
 
-{- | Sequence two parsers and pair the results with a binary function. -}
+{- | Sequence two parsers and pair the results with a binary function.
+
+=== __Examples:__
+
+>>> parse (pairWith max one one) (initialize "0123")
+Right ('1',Counter 2 "23")
+ -}
 {-# INLINE pairWith #-}
 pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
 pairWith = liftA2
@@ -226,7 +232,13 @@ count n p = go n
         go 0 = pure []
         go m = (:) <$> p <*> go (pred m)
 
-{- | Chain together a traversable of parsers and return the traversable of results. -}
+{- | Chain together a traversable of parsers and return the traversable of results.
+
+=== __Examples:__
+
+>>> parse (chain [matchOne '{', first (fmap absurd) one, matchOne '}']) (initialize "{1}3")
+Right ("{1}",Counter 3 "3")
+-}
 {-# INLINE chain #-}
 chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 chain = sequenceA
