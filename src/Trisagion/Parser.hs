@@ -163,8 +163,19 @@ The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 The 'get' parser does not throw an error or consume input.
 
-The 'put' parser allows changing the t'Parser' state and is the way, the /only/ way to construct
-/non-normal/ parsers.
+The 'put' parser allows changing the t'Parser' state.
+
+__Definition__: a parser @p@ is /normal/ if for every input @xs@, on success, the 'remainder' is a,
+possibly improper, suffix of @xs@.
+
+All the parsers in the library are provably normal, and all parser combinators return normal
+parsers on the assumption that the arguments are normal, but the 'MonadState' typeclass,
+specifically the 'put' method, allows to construct non-normal parsers.
+
+note(s):
+
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffixOf'.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}
