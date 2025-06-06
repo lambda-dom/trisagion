@@ -68,10 +68,10 @@ library
         Trisagion.Types.ParseError
         Trisagion.Streams.Offset
         Trisagion.Parser
-        Trisagion.Parsers.Combinators
-        Trisagion.Parsers.Char
-        Trisagion.Parsers.Word8
-        Trisagion.Streams.Chunk
+        -- Trisagion.Parsers.Combinators
+        -- Trisagion.Parsers.Char
+        -- Trisagion.Parsers.Word8
+        -- Trisagion.Streams.Chunk
 
 test-suite trisagion-tests
     import: common-fields

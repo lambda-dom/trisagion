@@ -543,7 +543,7 @@ one = Parser $ \ s ->
 >>> parse skipOne "0123"
 Right ((),"123")
 
->>> parse one ""
+>>> parse skipOne ""
 Right ((),"")
  -}
 {-# INLINE skipOne #-}
