@@ -66,12 +66,13 @@ library
         Trisagion.Typeclasses.Splittable
         Trisagion.Types.ErrorItem
         Trisagion.Types.ParseError
+        Trisagion.Streams.Counter
         Trisagion.Streams.Offset
         Trisagion.Parser
-        Trisagion.Parsers.Combinators
-        Trisagion.Parsers.Char
-        Trisagion.Parsers.Word8
-        Trisagion.Streams.Chunk
+        -- Trisagion.Parsers.Combinators
+        -- Trisagion.Parsers.Char
+        -- Trisagion.Parsers.Word8
+        -- Trisagion.Streams.Chunk
 
 test-suite trisagion-tests
     import: common-fields

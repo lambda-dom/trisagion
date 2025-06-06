@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 {- |
 Module: Trisagion.Parser
 
@@ -9,12 +7,6 @@ The @Parser@ monad.
 module Trisagion.Parser (
     -- * Type operators.
     (:+:),
-
-    -- * Streams.
-    Counter,
-
-    -- ** Constructors.
-    initialize,
 
     -- * Type aliases.
     InputError,
@@ -28,7 +20,6 @@ module Trisagion.Parser (
     remainder,
 
     -- * State parsers.
-    get,
     try,
     lookAhead,
 
@@ -73,6 +64,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (MonadState (..), gets)
 import Optics.Core ((%), review, set, view)
 import Data.Tuple.Optics (_1)
 
@@ -90,6 +82,10 @@ import Trisagion.Types.ErrorItem (endOfInput, errorItem)
 import Trisagion.Types.ParseError (ParseError, ValidationError, singleton, cons, makeBacktrace)
 
 
+-- $setup
+-- >>> import Trisagion.Streams.Counter
+
+
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:
@@ -97,81 +93,6 @@ infixr 6 :+:
 
 {- | Type alias to make signatures of parsers that only fail on insufficient input clearer. -}
 type InputError = ParseError Void
-
-
-{- | Wrapper around a 'Streamable' adding an offset to track current position.
-
-The implementation initializes the counter to @0@ and then updates it on every streamable operation
-by computing the length of the prefix.
--}
-data Counter s = Counter {-# UNPACK #-} !Word !s
-    deriving stock (Eq, Show)
-
--- Instances.
-instance MonoFunctor s => MonoFunctor (Counter s) where
-    type ElementOf (Counter s) = ElementOf s
-
-    {-# INLINE monomap #-}
-    monomap :: (ElementOf s -> ElementOf s) -> Counter s -> Counter s
-    monomap f (Counter n xs) = Counter n (monomap f xs)
-
-instance Streamable s => Streamable (Counter s) where
-    {-# INLINE uncons #-}
-    uncons :: Counter s -> Maybe (ElementOf s, Counter s)
-    uncons (Counter n xs) =
-        case uncons xs of
-            Nothing -> Nothing
-            Just (y, ys) -> Just (y, Counter (succ n) ys)
-
-    {-# INLINE null #-}
-    null :: Counter s -> Bool
-    null (Counter _ xs) = Streamable.null xs
-
-    {-# INLINE toList #-}
-    toList :: Counter s -> [ElementOf s]
-    toList (Counter _ xs) = toList xs
-
-instance Streamable s => HasOffset (Counter s) where
-    {-# INLINE offset #-}
-    offset :: Counter s -> Word
-    offset (Counter n _) = n
-
-{- | 'Splittable' instance.
-
-The instance requires computing the length of the prefix, which is @O(n)@ for some types like
-@Text@. This in its turn, requires a @'MonoFoldable' ('PrefixOf' s)@ constraint and the
-@UndecidableInstances@ extension to shut up GHC.
--}
-instance (Splittable s, MonoFoldable (PrefixOf s)) => Splittable (Counter s) where
-    type PrefixOf (Counter s) = PrefixOf s
- 
-    {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Counter s -> (PrefixOf s, Counter s)
-    splitPrefix n (Counter off xs) =
-        let (prefix, rest) = splitPrefix n xs in
-            (prefix, Counter (off + monolength prefix) rest)
-
-    {-# INLINE splitWith #-}
-    splitWith :: (ElementOf s -> Bool) -> Counter s -> (PrefixOf s, Counter s)
-    splitWith p (Counter off xs) =
-        let (prefix, rest) = splitWith p xs in
-            (prefix, Counter (off + monolength prefix) rest)
-
-    {-# INLINE single #-}
-    single :: ElementOf (Counter s) -> PrefixOf (Counter s)
-    single = single @s
-
-    {-# INLINE splitRemainder #-}
-    splitRemainder :: Counter s -> (PrefixOf s, Counter s)
-    splitRemainder (Counter off xs) =
-        let (prefix, rest) = splitRemainder xs in
-            (prefix, Counter (off + monolength prefix) rest)
-
-
-{- | Construct a t'Counter' from a 'Streamable'. -}
-{-# INLINE initialize #-}
-initialize :: s -> Counter s
-initialize = Counter 0
 
 
 {- | The parsing monad. -}
@@ -285,6 +206,29 @@ instance Monoid e => Alternative (Parser s e) where
                     r'@(Success _ _) -> r'
                     Error e'         -> Error $ e <> e'
 
+{- | The 'MonadState' instance.
+
+The @'get'@ parser allows probing the t'Parser' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The 'get' parser does not throw an error or consume input.
+
+The 'put' parser allows changing the t'Parser' state and is the way, the /only/ way to construct
+/non-normal/ parsers.
+-}
+instance MonadState s (Parser s e) where
+    get :: Parser s e s
+    get = Parser $ \ s -> Success s s
+
+    put :: s -> Parser s e ()
+    put xs = Parser $ \ _ -> Success () xs
+
+
 {- | The 'MonadError' instance.
 
 The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
@@ -336,24 +280,6 @@ remainder :: Parser s e a -> s -> e :+: s
 remainder p =  fmap snd . view result . run p
 
 
-{- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
-
-@
-    do
-        s <- get
-        -- Do something with @s@.
-@
-
-The 'get' parser satisfies the get-get law of lenses in the form:
-
-prop> get *> get == get
-
-The parser does not throw an error or consume input.
--}
-{-# INLINE get #-}
-get :: Parser s Void s
-get = Parser $ \ s -> Success s s
-
 {- | Parser implementing backtracking.
 
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
@@ -389,7 +315,7 @@ Right (Left (Cons (EndOfInput 1) []),"")
 -}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = eval p <$> get
+lookAhead p = gets (eval p)
 
 
 {- | The parser @'throw' e@ unconditionally errors with @e@. -}
@@ -412,7 +338,7 @@ catch p h = Parser $ \ xs ->
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
 throwParseError err = do
-    n <- first absurd (offset <$> get)
+    n <- gets offset
     throw $ review (singleton % errorItem) (n, err)
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
@@ -439,7 +365,7 @@ parser = capture $ do
 {-# INLINE capture #-}
 capture :: HasOffset s => Parser s (ParseError e) a -> Parser s (ParseError e) a
 capture p = do
-    n <- first absurd (offset <$> get)
+    n <- gets offset
     first (set (cons % _1 % errorItem % _1) n) p
 
 {- | Parser that swallows any thrown error as a backtrace for a new error.
@@ -497,7 +423,7 @@ Right (True,"")
 -}
 {-# INLINE eoi #-}
 eoi :: Streamable s => Parser s Void Bool
-eoi = Streamable.null <$> get
+eoi = gets Streamable.null
 
 {- | Run parser @p@ and if not all input is consumed, error out.
 
@@ -563,7 +489,7 @@ Right (Nothing,"")
 {-# INLINE peek #-}
 peek :: Streamable s => Parser s Void (Maybe (ElementOf s))
 peek = do
-    c <- uncons <$> get
+    c <- gets uncons
     pure $ fmap fst c
 
 {- | Parse one @'ElementOf' s@ satisfying a predicate.
