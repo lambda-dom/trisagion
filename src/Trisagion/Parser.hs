@@ -59,6 +59,7 @@ module Trisagion.Parser (
 -- Base.
 import Control.Applicative (Alternative (empty, (<|>)))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Functor (($>))
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 
@@ -297,10 +298,11 @@ Right (Left (Cons (EndOfInput 1) []),"")
 -}
 {-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
-try p = Parser $ \ xs ->
-    case run p xs of
-        Error e      -> Success (Left e) xs
-        Success x ys -> Success (Right x) ys
+try p = do
+    r <- gets (parse p)
+    case r of
+        Left e        -> pure (Left e)
+        Right (x, xs) -> put xs $> pure x
 
 {- | Run the parser and return the result, but do not consume any input.
 
