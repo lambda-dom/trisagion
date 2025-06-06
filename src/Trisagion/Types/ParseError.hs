@@ -72,6 +72,11 @@ deriving stock instance Eq e => Eq (ParseError e)
 deriving stock instance Show e => Show (ParseError e)
 deriving stock instance Functor ParseError
 
+{- | The Semigroup instance of t'ParseError'.
+
+The 'Semigroup' instance implements short-circuiting by returning the left, or first, (non-identity)
+element. This instance is trivially idempotent.
+-}
 instance Semigroup (ParseError e) where
     {-# INLINE (<>) #-}
     (<>) :: ParseError e -> ParseError e -> ParseError e
