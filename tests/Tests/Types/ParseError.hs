@@ -10,45 +10,16 @@ module Tests.Types.ParseError (
 
 -- Imports.
 -- Testing.
-import Hedgehog (Property, Gen, Group (..), (===), property, forAll, checkParallel)
-import qualified Hedgehog.Gen as Gen
-import qualified Hedgehog.Range as Range
+import Hedgehog (Property, Group (..), (===), property, forAll, checkParallel)
 
 -- Base.
 import Data.Word (Word32)
 
--- Libraries.
-import Optics.Core ((%), review)
-
 -- Package.
-import Trisagion.Types.ErrorItem (errorItem)
-import Trisagion.Types.ParseError (ParseError, singleton)
-import Data.Maybe (fromMaybe)
+import Trisagion.Types.ParseError (ParseError)
 
-
-
--- Function types.
-newtype Shift a = Shift a
-    deriving stock (Eq, Show, Functor)
-
--- Basic functions.
-functionalize :: Num a => Shift a -> a -> a
-functionalize (Shift x) = (x +)
-
-
--- Error constructors.
-makeError
-    :: Word                             -- ^ Offset.
-    -> Word32                           -- ^ Error tag.
-    -> ParseError Word32
-makeError offset tag = review (singleton % errorItem) (offset, tag)
-
--- Generators.
-genParseError :: Gen (ParseError Word32)
-genParseError = makeError <$> Gen.word Range.linearBounded <*> Gen.word32 Range.linearBounded
-
-genParseErrorUnit :: Gen (ParseError Word32)
-genParseErrorUnit = fromMaybe mempty <$> Gen.maybe genParseError
+-- Package testing helpers.
+import Lib.Generators (genParseErrorUnit, genShift, apply)
 
 
 -- Main module test driver.
@@ -89,12 +60,12 @@ prop_Idempotency = property $ do
 prop_monoidMorphism_Unit :: Property
 prop_monoidMorphism_Unit = property $ do
     let unit = mempty :: ParseError Word32
-    n <- forAll $ Shift <$> Gen.word32 Range.linearBounded
-    fmap (functionalize n) unit === unit
+    n <- forAll genShift
+    fmap (apply n) unit === unit
 
 prop_monoidMorphism_Mult :: Property
 prop_monoidMorphism_Mult = property $ do
-    n <- forAll $ Shift <$> Gen.word32 Range.linearBounded
+    n <- forAll genShift
     e1 <- forAll genParseErrorUnit
     e2 <- forAll genParseErrorUnit
-    fmap (functionalize n) (e1 <> e2) === fmap (functionalize n) e1 <> fmap (functionalize n) e2
+    fmap (apply n :: Word32 -> Word32) (e1 <> e2) === fmap (apply n) e1 <> fmap (apply n) e2
