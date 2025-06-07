@@ -74,8 +74,9 @@ deriving stock instance Functor ParseError
 
 {- | The Semigroup instance of t'ParseError'.
 
-The 'Semigroup' instance implements short-circuiting by returning the left, or first, (non-identity)
-element. This instance is trivially idempotent.
+The 'Semigroup' instance implements short-circuiting by returning the left, or first, non-identity
+element. The instance is idempotent and for every @f :: d -> e@,
+@'fmap' f :: t'ParseError' d -> t'ParseError' e@ is a monoid morphism.
 -}
 instance Semigroup (ParseError e) where
     {-# INLINE (<>) #-}
