@@ -3,7 +3,6 @@ module Lib.Helpers (
     testSuccess,
     testError,
     testFail,
-    unitError,
 ) where
 
 -- Imports.
@@ -17,7 +16,8 @@ import Optics.Core ((%), preview)
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Types.ParseError ( ParseError, singleton, nil )
-import Trisagion.Parser (Parser, Counter, (:+:), parse, initialize)
+import Trisagion.Streams.Counter (Counter, initialize)
+import Trisagion.Parser (Parser, (:+:), parse)
 import Trisagion.Types.ErrorItem (errorItem)
 
 
@@ -73,7 +73,3 @@ testFail
 testFail p input = getFail result `shouldBe` Just ()
     where
         result = parse p (initialize input)
-
-{- | The unit error. -}
-unitError :: ParseError ()
-unitError = mempty
