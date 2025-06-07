@@ -22,18 +22,6 @@ import Trisagion.Types.ParseError (ParseError)
 import Lib.Generators (genParseErrorUnit, genShift, apply)
 
 
--- Main module test driver.
-tests :: IO Bool
-tests = checkParallel $ Group "Tests.ParseError" [
-    ("prop_leftIdentity", prop_leftIdentity),
-    ("prop_rightIdentity", prop_rightIdentity),
-    ("prop_Associativity", prop_Associativity),
-    ("prop_Idempotency", prop_Idempotency),
-    ("prop_monoidMorphism_Unit", prop_monoidMorphism_Unit),
-    ("prop_monoidMorphism_Mult", prop_monoidMorphism_Mult)
-    ]
-
-
 -- Properties.
 prop_leftIdentity :: Property
 prop_leftIdentity = property $ do
@@ -69,3 +57,15 @@ prop_monoidMorphism_Mult = property $ do
     e1 <- forAll genParseErrorUnit
     e2 <- forAll genParseErrorUnit
     fmap (apply n :: Word32 -> Word32) (e1 <> e2) === fmap (apply n) e1 <> fmap (apply n) e2
+
+
+-- Main module test driver.
+tests :: IO Bool
+tests = checkParallel $ Group "Tests.ParseError" [
+    ("prop_leftIdentity", prop_leftIdentity),
+    ("prop_rightIdentity", prop_rightIdentity),
+    ("prop_Associativity", prop_Associativity),
+    ("prop_Idempotency", prop_Idempotency),
+    ("prop_monoidMorphism_Unit", prop_monoidMorphism_Unit),
+    ("prop_monoidMorphism_Mult", prop_monoidMorphism_Mult)
+    ]
