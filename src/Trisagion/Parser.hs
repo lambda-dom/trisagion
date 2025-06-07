@@ -34,6 +34,15 @@ import Optics.Core (view)
 import Trisagion.Types.Result (Result (..), result)
 
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Control.Applicative ((<|>))
+-- >>> import Trisagion.Types.ParseError
+-- >>> import Trisagion.Streams.Counter
+-- >>> import Trisagion.Parsers.Combinators
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | Right-associative type operator version of the 'Either' type constructor. -}
 type (:+:) = Either
 infixr 6 :+:
@@ -130,10 +139,18 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 
-note(s):
+=== __Examples:__
 
-  * Right distributivity is violated even with an idempotent monoid. See the
-  [Parser tests module](../../tests/Tests/ParserSpec.hs) for an example.
+The next example shows that right distributivity is violated even with an idempotent monoid.
+
+>>> let unitError = mempty :: ParseError ()
+>>> let f = bimap (const unitError) (const id) $ matchOne '0'
+>>> let g = first (const unitError) (matchOne '0') *> bimap (const unitError) (const id) (matchOne '1')
+>>> let x = first (const unitError) (matchOne '2')
+>>> parse ((f <|> g) <*> x) (initialize "0123")
+Left Nil
+>>> parse ((f <*> x) <|> (g <*> x)) (initialize "0123")
+Right ('2',Counter 3 "3")
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
