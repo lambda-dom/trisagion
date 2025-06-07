@@ -59,7 +59,7 @@ prop> bimap monotoList toList . splitWith p == span p . toList
 __Compatibility__: The fourth and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
-prop> maybe [] (fmap (bimap singleton toList)) . uncons == bimap monotoList toList . splitPrefix 1
+prop> maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
  -}
 class Streamable s => Splittable s where
     {-# MINIMAL splitPrefix, splitWith, single #-}
