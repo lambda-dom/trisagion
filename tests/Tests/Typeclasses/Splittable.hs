@@ -35,14 +35,14 @@ import Lib.Generators (genCounter, genOffset)
 
 -- Properties.
 prop_single
-    :: forall s . (Splittable s, ElementOf s ~ Word8, ElementOf (PrefixOf s) ~ Word8, MonoFoldable (PrefixOf s))
+    :: forall s . (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ Word8, ElementOf (PrefixOf s) ~ Word8)
     => Property
 prop_single = property $ do
     xs <- forAll $ Gen.word8 Range.linearBounded
     [xs] === (monotoList . single @s) xs
 
 prop_splitPrefix
-    :: (Splittable s, MonoFoldable (PrefixOf s), ElementOf s ~ ElementOf (PrefixOf s), Show s, Eq (ElementOf s), Show (ElementOf s))
+    :: (Splittable s, Show s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, ElementOf s ~ Word8)
     => Gen s -> Property
 prop_splitPrefix gen = property $ do
     xs <- forAll gen
@@ -51,7 +51,7 @@ prop_splitPrefix gen = property $ do
     (bimap monotoList toList . splitPrefix size) xs === (splitPrefix size . toList) xs
 
 prop_compatibility
-    :: (Splittable s, Show s, MonoFoldable (PrefixOf s), ElementOf s ~ ElementOf (PrefixOf s), Eq (ElementOf s), Show (ElementOf (PrefixOf s)))
+    :: (Splittable s, Show s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ Word8, ElementOf s ~ Word8)
     => Gen s -> Property
 prop_compatibility gen = property $ do
     xs <- forAll gen
