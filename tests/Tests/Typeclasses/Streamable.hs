@@ -19,7 +19,6 @@ import Trisagion.Typeclasses.Streamable (Streamable (..))
 import Lib.Generators (genCounter, genOffset)
 
 
--- Generators.
 -- Properties.
 prop_uncons :: (Streamable s, Eq (ElementOf s), Show s, Show (ElementOf s)) => Gen s -> Property
 prop_uncons gen = property $ do
@@ -29,7 +28,7 @@ prop_uncons gen = property $ do
 
 -- Main test driver.
 tests :: IO Bool
-tests = checkParallel $ Group "Tests.ParseError" [
+tests = checkParallel $ Group "Tests.Typeclasses.Streamable" [
     ("prop_uncons_counter", prop_uncons genCounter),
     ("prop_uncons_offset", prop_uncons genOffset)
     ]

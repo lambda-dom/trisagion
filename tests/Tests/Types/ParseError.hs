@@ -61,7 +61,7 @@ prop_monoidMorphism_Mult = property $ do
 
 -- Main module test driver.
 tests :: IO Bool
-tests = checkParallel $ Group "Tests.ParseError" [
+tests = checkParallel $ Group "Tests.Types.ParseError" [
     ("prop_leftIdentity", prop_leftIdentity),
     ("prop_rightIdentity", prop_rightIdentity),
     ("prop_Associativity", prop_Associativity),
