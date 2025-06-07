@@ -44,6 +44,7 @@ spec = describe "Trisagion.Types.ParseError tests" $ do
     spec_rightIdentity
     spec_Associativity
     spec_Idempotency
+    spec_monoidMorphism
 
 
 -- Spec properties.
@@ -53,7 +54,7 @@ spec_leftIdentity = describe "Left identity" $ do
         let unit = mempty :: ParseError Word32
         unit <> unit `shouldBe` unit
 
-    it "Testing against ParseError with no backtrace." $ hedgehog $ do
+    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
         e <- forAll genParseError
         mempty <> e === e
 
@@ -63,13 +64,13 @@ spec_rightIdentity = describe "Right identity" $ do
         let unit = mempty :: ParseError Word32
         unit <> unit `shouldBe` unit
 
-    it "Testing against ParseError with no backtrace." $ hedgehog $ do
+    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
         e <- forAll genParseError
         e <> mempty === e
 
 spec_Associativity :: Spec
 spec_Associativity = describe "Associativity" $ do
-    it "Testing against ParseError with no backtrace." $ hedgehog $ do
+    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
         e1 <- forAll genParseError
         e2 <- forAll genParseError
         e3 <- forAll genParseError
@@ -77,6 +78,19 @@ spec_Associativity = describe "Associativity" $ do
 
 spec_Idempotency :: Spec
 spec_Idempotency = describe "Idempotency" $ do
-    it "Testing against ParseError with no backtrace." $ hedgehog $ do
+    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
         err <- forAll genParseError
         err <> err === err
+
+spec_monoidMorphism :: Spec
+spec_monoidMorphism = describe "Monoid morphism property" $ do
+    it "Testing against addition functions on the identity." $ hedgehog $ do
+        let unit = mempty :: ParseError Word32
+        n <- forAll $ Gen.word32 Range.linearBounded
+        fmap (n +) unit === unit
+
+    it "Testing against addition functions and ParseError's with no backtrace." $ hedgehog $ do
+        n <- forAll $ Gen.word32 Range.linearBounded
+        e1 <- forAll genParseError
+        e2 <- forAll genParseError
+        fmap (n +) (e1 <> e2) === fmap (n +) e1 <> fmap (n +) e2
