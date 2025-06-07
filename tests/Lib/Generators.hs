@@ -9,6 +9,8 @@ module Lib.Generators (
     genParseError,
     genParseErrorUnit,
     genShift,
+    genCounter,
+    genOffset,
 ) where
 
 -- Imports.
@@ -18,15 +20,20 @@ import Data.Word (Word32)
 
 -- Testing.
 import Hedgehog (Gen)
-import qualified Hedgehog.Gen as Gen (word, word32, maybe)
-import qualified Hedgehog.Range as Range (linearBounded)
+import qualified Hedgehog.Gen as Gen (word, word32, maybe, bytes)
+import qualified Hedgehog.Range as Range (linearBounded, linear)
 
 -- Libraries.
+import Data.ByteString (ByteString)
 import Optics.Core ((%), review)
 
 -- Package.
 import Trisagion.Types.ErrorItem (errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)
+import Trisagion.Streams.Counter (Counter)
+import Trisagion.Streams.Offset (Offset)
+import qualified Trisagion.Streams.Counter as Counter (initialize)
+import qualified Trisagion.Streams.Offset as Offset (initialize)
 
 
 {- | Typeclass for cuntionalization. -}
@@ -57,3 +64,9 @@ genParseErrorUnit = fromMaybe mempty <$> Gen.maybe genParseError
 
 genShift :: Gen (Shift Word32)
 genShift = Shift <$> Gen.word32 Range.linearBounded
+
+genCounter :: Gen (Counter ByteString)
+genCounter = Counter.initialize <$> Gen.bytes (Range.linear 0 10)
+
+genOffset :: Gen (Offset ByteString)
+genOffset = Offset.initialize <$> Gen.bytes (Range.linear 0 10)
