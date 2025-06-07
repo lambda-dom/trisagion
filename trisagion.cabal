@@ -87,4 +87,5 @@ test-suite trisagion-tests
         hedgehog ^>=1.4 && <1.5,
         trisagion,
     other-modules:
+        Lib.Generators
         Tests.Types.ParseError
