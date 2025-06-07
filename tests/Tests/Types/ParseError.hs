@@ -1,18 +1,18 @@
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Monoid law, left identity" #-}
 {-# HLINT ignore "Monoid law, right identity" #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Tests.Types.ParseError (
     -- * Tests.
-    spec,
+    tests,
 ) where
 
 -- Imports.
 -- Testing.
+import Hedgehog (Property, Gen, Group (..), (===), property, forAll, checkParallel)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Test.Hspec (Spec, describe, it, shouldBe)
-import Test.Hspec.Hedgehog (Gen, hedgehog, forAll, (===))
 
 -- Base.
 import Data.Word (Word32)
@@ -23,9 +23,20 @@ import Optics.Core ((%), review)
 -- Package.
 import Trisagion.Types.ErrorItem (errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)
+import Data.Maybe (fromMaybe)
 
 
--- Constructors.
+
+-- Function types.
+newtype Shift a = Shift a
+    deriving stock (Eq, Show, Functor)
+
+-- Basic functions.
+functionalize :: Num a => Shift a -> a -> a
+functionalize (Shift x) = (x +)
+
+
+-- Error constructors.
 makeError
     :: Word                             -- ^ Offset.
     -> Word32                           -- ^ Error tag.
@@ -36,61 +47,54 @@ makeError offset tag = review (singleton % errorItem) (offset, tag)
 genParseError :: Gen (ParseError Word32)
 genParseError = makeError <$> Gen.word Range.linearBounded <*> Gen.word32 Range.linearBounded
 
+genParseErrorUnit :: Gen (ParseError Word32)
+genParseErrorUnit = fromMaybe mempty <$> Gen.maybe genParseError
+
 
 -- Main module test driver.
-spec :: Spec
-spec = describe "Trisagion.Types.ParseError tests" $ do
-    spec_leftIdentity
-    spec_rightIdentity
-    spec_Associativity
-    spec_Idempotency
-    spec_monoidMorphism
+tests :: IO Bool
+tests = checkParallel $ Group "Tests.ParseError" [
+    ("prop_leftIdentity", prop_leftIdentity),
+    ("prop_rightIdentity", prop_rightIdentity),
+    ("prop_Associativity", prop_Associativity),
+    ("prop_Idempotency", prop_Idempotency),
+    ("prop_monoidMorphism_Unit", prop_monoidMorphism_Unit),
+    ("prop_monoidMorphism_Mult", prop_monoidMorphism_Mult)
+    ]
 
 
--- Spec properties.
-spec_leftIdentity :: Spec
-spec_leftIdentity = describe "Left identity" $ do
-    it "Testing on identity" $ do
-        let unit = mempty :: ParseError Word32
-        unit <> unit `shouldBe` unit
+-- Properties.
+prop_leftIdentity :: Property
+prop_leftIdentity = property $ do
+    e <- forAll genParseErrorUnit
+    mempty <> e === e
 
-    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
-        e <- forAll genParseError
-        mempty <> e === e
+prop_rightIdentity :: Property
+prop_rightIdentity = property $ do
+    e <- forAll genParseErrorUnit
+    e <> mempty === e
 
-spec_rightIdentity :: Spec
-spec_rightIdentity = describe "Right identity" $ do
-    it "Testing on identity" $ do
-        let unit = mempty :: ParseError Word32
-        unit <> unit `shouldBe` unit
+prop_Associativity :: Property
+prop_Associativity = property $ do
+    e1 <- forAll genParseErrorUnit
+    e2 <- forAll genParseErrorUnit
+    e3 <- forAll genParseErrorUnit
+    (e1 <> e2) <> e3 === e1 <> (e2 <> e3)
 
-    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
-        e <- forAll genParseError
-        e <> mempty === e
+prop_Idempotency :: Property
+prop_Idempotency = property $ do
+    err <- forAll genParseErrorUnit
+    err <> err === err
 
-spec_Associativity :: Spec
-spec_Associativity = describe "Associativity" $ do
-    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
-        e1 <- forAll genParseError
-        e2 <- forAll genParseError
-        e3 <- forAll genParseError
-        (e1 <> e2) <> e3 === e1 <> (e2 <> e3)
+prop_monoidMorphism_Unit :: Property
+prop_monoidMorphism_Unit = property $ do
+    let unit = mempty :: ParseError Word32
+    n <- forAll $ Shift <$> Gen.word32 Range.linearBounded
+    fmap (functionalize n) unit === unit
 
-spec_Idempotency :: Spec
-spec_Idempotency = describe "Idempotency" $ do
-    it "Testing against ParseError's with no backtrace." $ hedgehog $ do
-        err <- forAll genParseError
-        err <> err === err
-
-spec_monoidMorphism :: Spec
-spec_monoidMorphism = describe "Monoid morphism property" $ do
-    it "Testing against addition functions on the identity." $ hedgehog $ do
-        let unit = mempty :: ParseError Word32
-        n <- forAll $ Gen.word32 Range.linearBounded
-        fmap (n +) unit === unit
-
-    it "Testing against addition functions and ParseError's with no backtrace." $ hedgehog $ do
-        n <- forAll $ Gen.word32 Range.linearBounded
-        e1 <- forAll genParseError
-        e2 <- forAll genParseError
-        fmap (n +) (e1 <> e2) === fmap (n +) e1 <> fmap (n +) e2
+prop_monoidMorphism_Mult :: Property
+prop_monoidMorphism_Mult = property $ do
+    n <- forAll $ Shift <$> Gen.word32 Range.linearBounded
+    e1 <- forAll genParseErrorUnit
+    e2 <- forAll genParseErrorUnit
+    fmap (functionalize n) (e1 <> e2) === fmap (functionalize n) e1 <> fmap (functionalize n) e2
