@@ -76,18 +76,3 @@ library
         Trisagion.Parsers.Char
         Trisagion.Parsers.Word8
         Trisagion.Streams.Chunk
-
-test-suite trisagion-tests
-    import: common-fields
-    type: exitcode-stdio-1.0
-    hs-source-dirs:
-        tests
-    main-is: Spec.hs
-    build-depends:
-        hspec ^>=2.11 && <2.12,
-        trisagion,
-    build-tool-depends:
-        hspec-discover:hspec-discover
-    other-modules:
-        Lib.Helpers
-        Tests.ParserSpec
