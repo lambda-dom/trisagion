@@ -28,7 +28,6 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets, modify)
-import Optics.Core ((%), review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -37,8 +36,7 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Types.ErrorItem (endOfInput)
-import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
+import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI)
 import Trisagion.Parser (Parser, (:+:))
 import Trisagion.Parsers.ParseError (throwParseError)
 
@@ -100,7 +98,7 @@ one :: Streamable s => Parser s InputError (ElementOf s)
 one = do
     xs <- get
     case uncons xs of
-        Nothing -> throwError $ review (singleton % endOfInput) 1
+        Nothing -> throwError $ makeEOI 1
         Just (x, ys) -> put ys $> x
 
 {- | Skip one @'ElementOf' s@ from the input stream.

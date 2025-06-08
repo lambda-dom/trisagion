@@ -20,12 +20,12 @@ import Data.Typeable (Typeable)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets)
-import Optics.Core ((%), review, set, _1)
+import Optics.Core ((%), set, _1)
 
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Types.ErrorItem (errorItem)
-import Trisagion.Types.ParseError (ParseError, singleton, cons, makeBacktrace)
+import Trisagion.Types.ParseError (ParseError, cons, makeBacktrace, makeParseError)
 import Trisagion.Parser (Parser, (:+:), catch)
 
 
@@ -39,8 +39,8 @@ import Trisagion.Parser (Parser, (:+:), catch)
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
 throwParseError err = do
-    n <- gets offset
-    throwError $ review (singleton % errorItem) (n, err)
+    xs <- get
+    throwError $ makeParseError xs err
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
 

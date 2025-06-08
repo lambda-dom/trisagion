@@ -88,6 +88,8 @@ test-suite trisagion-tests
         trisagion,
     other-modules:
         Lib.Generators
+        Lib.FunctionExp
+        Lib.ParserExp
         Tests.Typeclasses.Streamable
         Tests.Typeclasses.Splittable
         Tests.Types.ParseError
