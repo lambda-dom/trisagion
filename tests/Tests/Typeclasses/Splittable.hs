@@ -28,9 +28,11 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Typeclasses.Streamable (Streamable(..))
 import Trisagion.Streams.Counter (Counter)
 import Trisagion.Streams.Offset (Offset)
+import qualified Trisagion.Streams.Counter as Counter (initialize)
+import qualified Trisagion.Streams.Offset as Offset (initialize)
 
 -- Testing helpers.
-import Lib.Generators (genCounter, genOffset)
+import Lib.Generators (genStream)
 
 
 -- Properties.
@@ -63,8 +65,8 @@ tests :: IO Bool
 tests = checkParallel $ Group "Tests.Typeclasses.Splittable" [
     ("prop_single_counter", prop_single @(Counter ByteString)),
     ("prop_single_offset", prop_single @(Offset ByteString)),
-    ("prop_splitPrefix_counter", prop_splitPrefix genCounter),
-    ("prop_splitPrefix_offset", prop_splitPrefix genOffset),
-    ("prop_compatibility_counter", prop_compatibility genCounter),
-    ("prop_compatibility_offset", prop_compatibility genOffset)
+    ("prop_splitPrefix_counter", prop_splitPrefix (genStream Counter.initialize)),
+    ("prop_splitPrefix_offset", prop_splitPrefix (genStream Offset.initialize)),
+    ("prop_compatibility_counter", prop_compatibility (genStream Counter.initialize)),
+    ("prop_compatibility_offset", prop_compatibility (genStream Offset.initialize))
     ]
