@@ -18,8 +18,6 @@ import qualified Hedgehog.Range as Range (linear)
 import Data.ByteString (ByteString)
 import Optics.Core ((%), review)
 
--- non-Hackage libraries.
-
 -- Package.
 import Trisagion.Types.ErrorItem (errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)

@@ -92,5 +92,5 @@ test-suite trisagion-tests
         Lib.ParserExp
         Tests.Typeclasses.Streamable
         Tests.Typeclasses.Splittable
-        -- Tests.Types.ParseError
-        -- Tests.Parser
+        Tests.Types.ParseError
+        Tests.Parser
