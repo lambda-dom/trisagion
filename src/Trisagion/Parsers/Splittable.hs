@@ -32,7 +32,6 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..), gets, modify)
-import Optics.Core ((%), review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
@@ -41,8 +40,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ErrorItem (endOfInput)
-import Trisagion.Types.ParseError (ParseError, ValidationError, singleton)
+import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI)
 import Trisagion.Parser (Parser, eval)
 import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.ParseError (throwParseError)
@@ -108,7 +106,7 @@ takeExact
 takeExact n = do
     prefix <- first absurd $ takePrefix n
     if monolength prefix /= n
-        then throwError $ review (singleton % endOfInput) n
+        then throwError $ makeEOI n
         else pure prefix
 
 {- | Parse a matching prefix.

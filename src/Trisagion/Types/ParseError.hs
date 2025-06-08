@@ -19,8 +19,9 @@ module Trisagion.Types.ParseError (
     singleton,
     cons,
 
-    -- ** Constructors.
+    -- ** Constructors helpers.
     makeEOI,
+    makeParseError,
     makeBacktrace,
 ) where
 
@@ -133,6 +134,15 @@ cons = prism' construct match
 {-# INLINE makeEOI #-}
 makeEOI :: Word -> ParseError e
 makeEOI = review (singleton % endOfInput)
+
+{- | Constructor helper to build a 'ParseError' with no backtrace. -}
+{-# INLINE makeParseError #-}
+makeParseError
+    :: HasOffset s
+    => s                                -- ^ Input stream.
+    -> e                                -- ^ Error tag.
+    -> ParseError e
+makeParseError xs e = review (singleton % errorItem) (offset xs, e)
 
 {- | Constructor helper to build a 'ParseError' with a backtrace. -}
 {-# INLINE makeBacktrace #-}
