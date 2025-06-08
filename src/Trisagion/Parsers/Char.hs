@@ -50,6 +50,7 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (gets)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
@@ -58,12 +59,13 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
+import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError)
+import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI)
 import Trisagion.Parser (Parser, (:+:))
 import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
 import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
-import Trisagion.Parsers.Streamable (matchOne, satisfy, one)
+import Trisagion.Parsers.Streamable (InputError, matchOne, satisfy, one)
 import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 
 
@@ -131,7 +133,7 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
-{- | Parse a, possibly empty, line out of the input stream.
+{- | Parse a line out of the input stream. The line does not contain the ending @'\n'@ and can be null.
 
 note(s):
 
@@ -142,8 +144,12 @@ note(s):
 {-# INLINE line #-}
 line
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
-    => Parser s Void (PrefixOf s)
-line = takeWith (/= '\n') <* optional lf
+    => Parser s InputError (PrefixOf s)
+line = do
+    b <- gets Streamable.null
+    if b
+        then throwError (makeEOI 0)
+        else first absurd $ takeWith (/= '\n') <* optional lf
 
 {- | Parse a, possibly null, prefix of whitespace.
 
