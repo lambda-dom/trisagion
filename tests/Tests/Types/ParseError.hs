@@ -19,7 +19,7 @@ import Data.Word (Word32)
 import Trisagion.Types.ParseError (ParseError)
 
 -- Package testing helpers.
-import Lib.Generators (genParseErrorUnit, genShift, apply)
+import Lib.Generators (genParseErrorUnit, genShift, makeFunction)
 
 
 -- Properties.
@@ -49,14 +49,14 @@ prop_monoidMorphism_Unit :: Property
 prop_monoidMorphism_Unit = property $ do
     let unit = mempty :: ParseError Word32
     n <- forAll genShift
-    fmap (apply n) unit === unit
+    fmap (makeFunction n) unit === unit
 
 prop_monoidMorphism_Mult :: Property
 prop_monoidMorphism_Mult = property $ do
     n <- forAll genShift
     e1 <- forAll genParseErrorUnit
     e2 <- forAll genParseErrorUnit
-    fmap (apply n :: Word32 -> Word32) (e1 <> e2) === fmap (apply n) e1 <> fmap (apply n) e2
+    fmap (makeFunction n :: Word32 -> Word32) (e1 <> e2) === fmap (makeFunction n) e1 <> fmap (makeFunction n) e2
 
 
 -- Main module test driver.

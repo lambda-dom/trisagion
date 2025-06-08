@@ -91,3 +91,4 @@ test-suite trisagion-tests
         Tests.Typeclasses.Streamable
         Tests.Typeclasses.Splittable
         Tests.Types.ParseError
+        Tests.Parser
