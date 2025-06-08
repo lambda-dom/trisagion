@@ -16,6 +16,7 @@ module Trisagion.Parsers.Char (
     -- * Newline parsers.
     lf,
     cr,
+    line,
 
     -- * Whitespace parsers.
     spaces,
@@ -130,6 +131,19 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
+{- | Parse a, possibly empty, line out of the input stream.
+
+note(s):
+
+    * If the input stream contains Windows end of lines, then the line text will contain an ending
+    @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
+    solution) or complicating the implementation.
+-}
+{-# INLINE line #-}
+line
+    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
+    => Parser s Void (PrefixOf s)
+line = takeWith (/= '\n') <* optional lf
 
 {- | Parse a, possibly null, prefix of whitespace.
 
