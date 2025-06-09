@@ -78,6 +78,7 @@ library
         Trisagion.Parsers.Word8
         Trisagion.Streams.Chunk
         Trisagion.Typeclasses.Builder
+        Trisagion.Typeclasses.Binary
         Trisagion.Serializer
 
 test-suite trisagion-tests
