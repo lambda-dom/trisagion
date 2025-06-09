@@ -81,7 +81,9 @@ class MonoFunctor s => Streamable s where
 
     {- | Return 'True' if there are no elements in the input stream.
 
-    Default implementation is @isNothing . uncons@.
+    Default implementation is:
+
+    @null = isNothing . uncons@
     -}
     {-# INLINE null #-}
     null :: s -> Bool
@@ -89,7 +91,9 @@ class MonoFunctor s => Streamable s where
 
     {- | Drop one element from the stream.
 
-    Default implementation is @maybe s snd $ uncons s@.
+    Default implementation is:
+
+    @dropOne = maybe s snd $ uncons s@
     -}
     {-# INLINE dropOne #-}
     dropOne :: s -> s
@@ -97,7 +101,9 @@ class MonoFunctor s => Streamable s where
 
     {- | Convert a 'Streamable' to a list.
 
-    Default implementation is @unfoldr uncons@.
+    Default implementation is:
+
+    @toList = unfoldr uncons@.
     -}
     {-# INLINE toList #-}
     toList :: s -> [ElementOf s]
