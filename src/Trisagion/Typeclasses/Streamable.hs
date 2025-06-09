@@ -85,7 +85,6 @@ class MonoFunctor s => Streamable s where
 
     @null = isNothing . uncons@
     -}
-    {-# INLINE null #-}
     null :: s -> Bool
     null = isNothing . uncons
 
@@ -95,7 +94,6 @@ class MonoFunctor s => Streamable s where
 
     @dropOne = maybe s snd $ uncons s@
     -}
-    {-# INLINE dropOne #-}
     dropOne :: s -> s
     dropOne s = maybe s snd $ uncons s
 
@@ -105,7 +103,6 @@ class MonoFunctor s => Streamable s where
 
     @toList = unfoldr uncons@.
     -}
-    {-# INLINE toList #-}
     toList :: s -> [ElementOf s]
     toList = unfoldr uncons
 

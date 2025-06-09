@@ -107,7 +107,6 @@ class Streamable s => Splittable s where
 
     @dropPrefix n = snd . splitPrefix n@.
     -}
-    {-# INLINE dropPrefix #-}
     dropPrefix :: Word -> s -> s
     dropPrefix n = snd . splitPrefix n
 
@@ -117,7 +116,6 @@ class Streamable s => Splittable s where
 
     @dropWith = snd . splitWith p@.
     -}
-    {-# INLINE dropWith #-}
     dropWith :: (ElementOf s -> Bool) -> s -> s
     dropWith p = snd . splitWith p
 
