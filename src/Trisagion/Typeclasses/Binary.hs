@@ -14,6 +14,10 @@ module Trisagion.Typeclasses.Binary (
 import Data.Bits (FiniteBits)
 import Data.Word (Word8, Word16, Word32, Word64)
 
+-- Libraries.
+import qualified Data.ByteString.Builder as Bytes (Builder)
+import Data.ByteString.Builder (word16LE, word32LE, word64LE, word16BE, word32BE, word64BE)
+
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Mono.Types.ByteArray (bytes, bytesReverse)
@@ -28,6 +32,21 @@ This class is used for optimization purposes only, as it does not add any new op
 cannot be done with the parent superclass.
 -}
 class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
+    {- | Serialize an integral number in little-endian format. -}
+    wordLe :: (Integral a, FiniteBits a) => a -> m
+    wordLe = many . bytes
+
+    {- | Specialization of 'wordLe' to 'Word16', -}
+    word16Le :: Word16 -> m
+    word16Le = wordLe
+
+    {- | Specialization of 'wordLe' to 'Word32', -}
+    word32Le :: Word32 -> m
+    word32Le = wordLe
+
+    {- | Specialization of 'wordLe' to 'Word64', -}
+    word64Le :: Word64 -> m
+    word64Le = wordLe
 
     {- | Serialize an integral number in big-endian format. -}
     wordBe :: (Integral a, FiniteBits a) => a -> m
@@ -45,21 +64,12 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
     word64Be :: Word64 -> m
     word64Be = wordBe
 
-    {- | Serialize an integral number in little-endian format. -}
-    wordLe :: (Integral a, FiniteBits a) => a -> m
-    wordLe = many . bytes
-
-    {- | Specialization of 'wordLe' to 'Word16', -}
-    word16Le :: Word16 -> m
-    word16Le = wordLe
-
-    {- | Specialization of 'wordLe' to 'Word32', -}
-    word32Le :: Word32 -> m
-    word32Le = wordLe
-
-    {- | Specialization of 'wordLe' to 'Word64', -}
-    word64Le :: Word64 -> m
-    word64Le = wordLe
-
 
 -- Instances.
+instance Binary Bytes.Builder where
+    word16Le = word16LE
+    word32Le = word32LE
+    word64Le = word64LE
+    word16Be = word16BE
+    word32Be = word32BE
+    word64Be = word64BE
