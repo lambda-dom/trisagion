@@ -12,11 +12,12 @@ module Trisagion.Typeclasses.Binary (
 -- Imports.
 -- Base.
 import Data.Bits (FiniteBits)
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import qualified Data.ByteString.Builder as Bytes (Builder)
-import Data.ByteString.Builder (word16LE, word32LE, word64LE, word16BE, word32BE, word64BE)
+import qualified Data.ByteString.Builder as Bytes (Builder, int8)
+import Data.ByteString.Builder (word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, int16LE, int32LE, int64LE, int16BE, int32BE, int64BE)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
@@ -64,12 +65,72 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
     word64Be :: Word64 -> m
     word64Be = wordBe
 
+    {- | Serialize an 'Int8'. -}
+    int8 :: Int8 -> m
+    int8 = one . fromIntegral
+
+    {- | Serialize an 'Int16' in little-endian format. -}
+    int16Le :: Int16 -> m
+    int16Le = word16Le . fromIntegral
+
+    {- | Serialize an 'Int32' in little-endian format. -}
+    int32Le :: Int32 -> m
+    int32Le = word32Le . fromIntegral
+
+    {- | Serialize an 'Int64' in little-endian format. -}
+    int64Le :: Int64 -> m
+    int64Le = word64Le . fromIntegral
+
+    {- | Serialize an 'Int16' in big-endian format. -}
+    int16Be :: Int16 -> m
+    int16Be = word16Be . fromIntegral
+
+    {- | Serialize an 'Int32' in big-endian format. -}
+    int32Be :: Int32 -> m
+    int32Be = word32Be . fromIntegral
+
+    {- | Serialize an 'Int64' in big-endian format. -}
+    int64Be :: Int64 -> m
+    int64Be = word64Be . fromIntegral
+
 
 -- Instances.
 instance Binary Bytes.Builder where
+    {-# INLINE word16Le #-}
     word16Le = word16LE
+
+    {-# INLINE word32Le #-}
     word32Le = word32LE
+
+    {-# INLINE word64Le #-}
     word64Le = word64LE
+
+    {-# INLINE word16Be #-}
     word16Be = word16BE
+
+    {-# INLINE word32Be #-}
     word32Be = word32BE
+
+    {-# INLINE word64Be #-}
     word64Be = word64BE
+
+    {-# INLINE int8 #-}
+    int8 = Bytes.int8
+
+    {-# INLINE int16Le #-}
+    int16Le = int16LE
+
+    {-# INLINE int32Le #-}
+    int32Le = int32LE
+
+    {-# INLINE int64Le #-}
+    int64Le = int64LE
+
+    {-# INLINE int16Be #-}
+    int16Be = int16BE
+
+    {-# INLINE int32Be #-}
+    int32Be = int32BE
+
+    {-# INLINE int64Be #-}
+    int64Be = int64BE
