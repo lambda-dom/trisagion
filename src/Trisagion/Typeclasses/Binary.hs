@@ -16,7 +16,7 @@ import Data.Word (Word8, Word16, Word32, Word64)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
-import Mono.Types.ByteArray (bytes)
+import Mono.Types.ByteArray (bytes, bytesReverse)
 
 -- Package.
 import Trisagion.Typeclasses.Builder (Builder (..))
@@ -25,12 +25,13 @@ import Trisagion.Typeclasses.Builder (Builder (..))
 {- | The @Binary@ typeclass for binary builders.
 
 This class is used for optimization purposes only, as it does not add any new operations that
-be done with the parent class.
+cannot be done with the parent superclass.
 -}
 class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
 
     {- | Serialize an integral number in big-endian format. -}
     wordBe :: (Integral a, FiniteBits a) => a -> m
+    wordBe = many . bytesReverse
 
     {- | Specialization of 'wordBe' to 'Word16', -}
     word16Be :: Word16 -> m
