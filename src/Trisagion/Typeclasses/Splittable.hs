@@ -3,7 +3,9 @@
 {- |
 Module: Trisagion.Typeclasses.Splittable
 
-The @Splittable@ typeclass.
+The 'Streamable' typeclass allows us to, in principle, write all the needed parsers, but the
+implementations can be very inefficient. To address that, the @Splittable@ typeclass adds two new
+primitives.
 -}
 
 module Trisagion.Typeclasses.Splittable (
