@@ -30,8 +30,8 @@ __Compatibility__: 'merge' should be compatible with 'Builder.one' in the sense 
 
 prop> merge . single == one
 
-__Monoid morphism__: with the constraint 'Monoid (PrefixOf (BuilderOf m))', 'merge' is a monoid
-morphism.
+__Monoid morphism__: with the constraint @'Monoid' ('PrefixOf' ('BuilderOf' m))@, 'merge' is a
+monoid morphism.
 -}
 class (Builder m, Splittable (BuilderOf m)) => Mergeable m where
     {-# MINIMAL merge #-}
