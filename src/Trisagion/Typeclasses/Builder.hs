@@ -30,14 +30,19 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Trisagion.Typeclasses.Streamable (Streamable)
 
 
-{- | Typeclass for builders of streamable sequences. -}
+{- | Typeclass for builders of streamable sequences.
+
+The 'Builder' must satisfy the following law:
+
+__Monoid morphism__: the function 'unpack' is a monoid morphism.
+-}
 class (Monoid m, Streamable (BuilderOf m)) => Builder m where
     {-# MINIMAL unpack, pack, one #-}
 
     {- | The type of sequence that the builder builds. -}
     type BuilderOf m :: Type
 
-    {- | The monoid-isomorphism with what the builder builds. -}
+    {- | The monoid morphism with what the builder builds. -}
     unpack :: m -> BuilderOf m
 
     {- | The inverse of 'unpack'. -}
