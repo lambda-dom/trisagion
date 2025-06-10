@@ -21,7 +21,18 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Typeclasses.Builder (Builder (..))
 
 
-{- | The builder typeclass for 'Splittable' streams. -}
+{- | The builder typeclass for 'Splittable' streams.
+
+We assume that all overriden instance implementations are extensionally equal to the default ones.
+There are two laws, the 'Mergeable' typeclass should satisfy:
+
+__Compatibility__: 'merge' should be compatible with 'Builder.one' in the sense that:
+
+prop> merge . single == one
+
+__Monoid morphism__: with the constraint 'Monoid (PrefixOf (BuilderOf m))', 'merge' is a monoid
+morphism.
+-}
 class (Builder m, Splittable (BuilderOf m)) => Mergeable m where
     {-# MINIMAL merge #-}
 

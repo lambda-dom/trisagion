@@ -16,8 +16,8 @@ import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import qualified Data.ByteString.Builder as Bytes (Builder, int8)
 import Data.ByteString.Builder (word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, int16LE, int32LE, int64LE, int16BE, int32BE, int64BE)
+import qualified Data.ByteString.Builder as Bytes (Builder, int8)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (ElementOf)
