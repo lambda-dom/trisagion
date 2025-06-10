@@ -1,7 +1,7 @@
 cabal-version:      3.0
 name:               trisagion
 version:            0.1.0.0
-synopsis:           A monadic parsing library.
+synopsis:           A monadic parsing and serializing library.
 description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
 category:           Parsing
 homepage:           https://github.com/lambda-dom/trisagion#readme
@@ -53,9 +53,10 @@ library
     hs-source-dirs:
         src
     build-depends:
+        containers >=0.6 && <0.8,
+        contravariant >=1.5 && <1.6,
         mtl >=2.3 && <2.4,
         text >=2.0 && <2.2,
-        containers >=0.6 && <0.8,
         vector >=0.13 && <0.14,
     other-modules:
         Trisagion.Lib.Utils
@@ -76,6 +77,10 @@ library
         Trisagion.Parsers.Char
         Trisagion.Parsers.Word8
         Trisagion.Streams.Chunk
+        Trisagion.Typeclasses.Builder
+        Trisagion.Typeclasses.Binary
+        Trisagion.Typeclasses.Mergeable
+        Trisagion.Serializer
 
 test-suite trisagion-tests
     import: common-fields
