@@ -39,13 +39,13 @@ prop_function_extensional_equality f g gen = do
 prop_hof_extensional_equality
     :: (Monad m, Show (p a b), Show a, Eq b, Show b)
     => (forall c d . p c d -> c -> d)
+    -> (forall c d . p c d -> c -> d)
     -> Gen (p a b)
     -> Gen a
     -> PropertyT m ()
-prop_hof_extensional_equality h genF genA = do
+prop_hof_extensional_equality h g genF genA = do
     f <- forAll genF
-    g <- forAll genF
-    prop_function_extensional_equality (h f) (h g) genA
+    prop_function_extensional_equality (h f) (g f) genA
 
 
 {- | Monoid left identity. -}
