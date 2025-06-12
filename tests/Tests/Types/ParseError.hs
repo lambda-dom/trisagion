@@ -7,13 +7,22 @@ module Tests.Types.ParseError (
 
 -- Imports.
 -- Base.
+import Data.Maybe (fromMaybe)
+
+-- Libraries.
+import Optics.Core ((%), review)
+
 -- Testing.
-import Hedgehog (Group (..), property, checkParallel)
+import Hedgehog (Gen, Group (..), property, checkParallel)
 import qualified Hedgehog.Range as Range (linearBounded)
-import qualified Hedgehog.Gen as Gen (word8)
+import qualified Hedgehog.Gen as Gen (word8, maybe)
+
+-- Package.
+import Trisagion.Types.ErrorItem (errorItem)
+import Trisagion.Types.ParseError (ParseError, singleton)
 
 -- Package testing helpers.
-import Lib.Generators (genParseError)
+import Lib.Generators (genSize)
 import Lib.Properties (
     prop_monoid_left_identity,
     prop_monoid_right_identity,
@@ -21,6 +30,13 @@ import Lib.Properties (
     prop_monoid_idempotency,
     )
 
+
+{- | Generate 'ParseError' errors with no backtrace. -}
+genParseError :: Gen e -> Gen (ParseError e)
+genParseError gen = fromMaybe mempty <$> Gen.maybe genError
+    where
+        makeError offset tag = review (singleton % errorItem) (offset, tag)
+        genError = makeError <$> genSize <*> gen
 
 -- Properties.
 -- prop_monoidMorphism_Unit :: (Eq e, Show e) => (e -> e -> e) -> Gen e -> Property
