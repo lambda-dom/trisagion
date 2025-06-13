@@ -5,12 +5,10 @@ module Tests.Types.ParseError (
     tests,
 
     -- * Properties.
-    prop_fmap_monoid_morphism_unit,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor(..))
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Word (Word8)
@@ -24,6 +22,7 @@ import qualified Hedgehog.Range as Range (linearBounded)
 import qualified Hedgehog.Gen as Gen (word8, maybe)
 
 -- Package.
+import Trisagion.Lib.Utils (withBinary)
 import Trisagion.Types.ErrorItem (errorItem)
 import Trisagion.Types.ParseError (ParseError, singleton)
 
@@ -46,26 +45,21 @@ genParseError gen = fromMaybe mempty <$> Gen.maybe genError
         makeError offset tag = review (singleton % errorItem) (offset, tag)
         genError = makeError <$> genSize <*> gen
 
+
 -- Properties.
 prop_fmap_monoid_morphism_unit
     :: forall m e . (Monad m, Show e, Ord e)
     => Gen e
     -> PropertyT m ()
 prop_fmap_monoid_morphism_unit gen = do
-        f <- forAll genF
-        prop_monoid_morphism_unit (transf f)
+        f <- forAll (genFunction gen gen)
+        prop_monoid_morphism_unit (trans f)
     where
-        genF :: Gen (Function e e)
-        genF = genFunction gen gen
-
-        combine :: (b -> b -> b) -> (a -> b) -> (a -> b) -> (a -> b)
-        combine h f g = uncurry h . bimap f g . (\ x -> (x, x))
-
         nat :: Function e e -> e -> e
-        nat = fromFunction (id :| []) ((.) :| [combine min, combine max])
+        nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
 
-        transf :: Function e e -> ParseError e -> ParseError e
-        transf g = fmap (nat g)
+        trans :: Function e e -> ParseError e -> ParseError e
+        trans f = fmap (nat f)
 
 -- prop_monoidMorphism_Mult :: (Eq e, Show e) => (e -> e -> e) -> Gen e -> Property
 -- prop_monoidMorphism_Mult h gen = property $ do

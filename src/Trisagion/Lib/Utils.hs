@@ -5,10 +5,30 @@ Misc untilities that have found no better place.
 -}
 
 module Trisagion.Lib.Utils (
+    -- * Function combinators.
+    withBinary,
+
+    -- * Tuple functions.
+    diagonal,
+
     -- * List functions.
     enumDown,
     enumUp,
 ) where
+
+-- Imports.
+-- Base.
+import Data.Bifunctor (Bifunctor (..))
+
+
+{- | The diagonal, or duplicate, function. -}
+diagonal :: a -> (a, a)
+diagonal x = (x, x)
+
+{- | Function combinator using a binary function. -}
+withBinary :: (b -> b -> b) -> (a -> b) -> (a -> b) -> (a -> b)
+withBinary h f g = uncurry h . bimap f g . diagonal
+
 
 {- | Enumerate the elements of a list downwards from @n@ to @0@.
 

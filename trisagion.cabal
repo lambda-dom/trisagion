@@ -59,9 +59,9 @@ library
         -- Non-hackage libraries.
         mono >=0.1 && <0.2,
     other-modules:
-        Trisagion.Lib.Utils
         Trisagion.Types.Result
     exposed-modules:
+        Trisagion.Lib.Utils
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable
