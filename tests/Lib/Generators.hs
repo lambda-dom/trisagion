@@ -15,9 +15,12 @@ import Data.ByteString (ByteString)
 
 
 {- | Generate sizes. -}
-genSize :: Gen Word
-genSize = Gen.word (Range.linear 0 12)
+genSize :: Word -> Gen Word
+genSize n = Gen.word (Range.linear 0 n)
 
-{- | Generator for input streams given a stream constructor from 'ByteString'. -}
-genStream :: (ByteString -> s) -> Gen s
-genStream f = f <$> Gen.bytes (Range.linear 0 10)
+{- | Generator for binary input streams given a stream constructor for 'ByteString'. -}
+genStream
+    :: (ByteString -> s)      -- ^ Stream constructor.
+    -> Word                   -- ^ Upper bound for the (scaling) size.
+    -> Gen s
+genStream f n = f <$> Gen.bytes (Range.linear 0 (fromIntegral n))

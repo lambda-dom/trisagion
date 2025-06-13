@@ -43,7 +43,7 @@ genParseError :: Gen e -> Gen (ParseError e)
 genParseError gen = fromMaybe mempty <$> Gen.maybe genError
     where
         makeError offset tag = review (singleton % errorItem) (offset, tag)
-        genError = makeError <$> genSize <*> gen
+        genError = makeError <$> genSize 10 <*> gen
 
 
 -- Properties.

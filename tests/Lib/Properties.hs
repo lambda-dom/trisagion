@@ -12,15 +12,27 @@ module Lib.Properties (
     -- * Monoid morphism properties.
     prop_monoid_morphism_unit,
     prop_monoid_morphism_mult,
+
+    -- * Monofunctor properties.
+    prop_monofunctor_identity,
+    prop_monofunctor_composition,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor(..))
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Tuple (swap)
 
 -- Testing.
 import Hedgehog (Gen, PropertyT, (===), forAll)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+
+-- Testing helpers.
+import Lib.Functions (Function, genFunction, fromFunction)
+import Trisagion.Lib.Utils (withBinary)
 
 
 {- | Testing extensional equality of functions. -}
@@ -95,3 +107,28 @@ prop_monoid_morphism_mult f gen =
             genPairs
     where
         genPairs = (,) <$> gen <*> gen
+
+
+{- | Monofunctors preserve the identity. -}
+prop_monofunctor_identity
+    :: (Monad m, MonoFunctor s, Eq s, Show s)
+    => Gen s
+    -> PropertyT m ()
+prop_monofunctor_identity = prop_function_extensional_equality (monomap id) id
+
+{- | Monofunctors preserve composition. -}
+prop_monofunctor_composition
+    :: forall m s .(Monad m, MonoFunctor s, Eq s, Show s, Show (ElementOf s), Ord (ElementOf s))
+    => Gen (ElementOf s)
+    -> Gen s
+    -> PropertyT m ()
+prop_monofunctor_composition genE genS = do
+    f <- forAll (genFunction genE genE)
+    g <- forAll (genFunction genE genE)
+    prop_function_extensional_equality
+        (monomap (nat f . nat g))
+        (monomap (nat f) . monomap (nat g))
+        genS
+    where
+        nat :: Function (ElementOf s) (ElementOf s) -> ElementOf s -> ElementOf s
+        nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))

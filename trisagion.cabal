@@ -46,6 +46,8 @@ common common-fields
         bytestring >=0.11 && <0.13,
         optics-core >= 0.4.1 && <0.4.2,
         vector >=0.13 && <0.14,
+        -- Non-hackage libraries.
+        mono >=0.1 && <0.2,
 
 library
     import: common-fields
@@ -56,8 +58,6 @@ library
         contravariant >=1.5 && <1.6,
         mtl >=2.3 && <2.4,
         text >=2.0 && <2.2,
-        -- Non-hackage libraries.
-        mono >=0.1 && <0.2,
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
@@ -92,8 +92,9 @@ test-suite trisagion-tests
         hedgehog ^>=1.4 && <1.5,
         trisagion,
     other-modules:
+        Lib.Generators
         Lib.Predicates
         Lib.Functions
-        Lib.Generators
         Lib.Properties
         Tests.Types.ParseError
+        Tests.Typeclasses.Streamable
