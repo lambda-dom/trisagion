@@ -92,9 +92,12 @@ test-suite trisagion-tests
         hedgehog ^>=1.4 && <1.5,
         trisagion,
     other-modules:
+        Lib.Predicate
+        Lib.Function
         Lib.Generators
-        Lib.Predicates
-        Lib.Functions
-        Lib.Properties
-        Tests.Types.ParseError
-        Tests.Typeclasses.Streamable
+        Lib.Property
+        Lib.Properties.Monoid
+        Lib.Properties.MonoFunctor
+        Lib.Properties.Streamable
+        Lib.Properties.Splittable
+        -- Tests.Types.ParseError

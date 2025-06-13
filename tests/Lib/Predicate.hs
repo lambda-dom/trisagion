@@ -1,4 +1,4 @@
-module Lib.Predicates (
+module Lib.Predicate (
     -- * Types.
     Predicate,
 
@@ -6,13 +6,13 @@ module Lib.Predicates (
     fromPredicate,
 
     -- ** Generators.
-    genPredicate,
+    predicates,
 ) where
 
 -- Imports.
 -- Testing.
 import Hedgehog (Gen)
-import qualified Hedgehog.Internal.Gen as Gen (recursive, choice, bool, subterm, subterm2, filter)
+import qualified Hedgehog.Gen as Gen (recursive, choice, bool, subterm, subterm2, filter)
 
 
 {- | The 'Predicate' type. -}
@@ -34,9 +34,10 @@ fromPredicate r = case r of
     And      p q -> \ x -> fromPredicate p x && fromPredicate q x
     Or       p q -> \ x -> fromPredicate p x || fromPredicate q x
 
+
 {- | Generator for @'Predicate' a@ values. -}
-genPredicate :: Ord a => Gen a -> Gen (Predicate a)
-genPredicate gen = go
+predicates :: Ord a => Gen a -> Gen (Predicate a)
+predicates gen = go
     where
         -- Guarantee intervals are non-empty.
         genIntervals = do

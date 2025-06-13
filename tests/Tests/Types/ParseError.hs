@@ -38,14 +38,6 @@ import Lib.Properties (
     )
 
 
-{- | Generate 'ParseError' errors with no backtrace. -}
-genParseError :: Gen e -> Gen (ParseError e)
-genParseError gen = fromMaybe mempty <$> Gen.maybe genError
-    where
-        makeError offset tag = review (singleton % errorItem) (offset, tag)
-        genError = makeError <$> genSize 10 <*> gen
-
-
 -- Properties.
 prop_fmap_monoid_morphism_unit
     :: forall m e . (Monad m, Show e, Ord e)

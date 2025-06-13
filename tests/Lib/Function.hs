@@ -1,4 +1,4 @@
-module Lib.Functions (
+module Lib.Function (
     -- * Types.
     Function (..),
 
@@ -6,7 +6,7 @@ module Lib.Functions (
     fromFunction,
 
     -- ** Generators.
-    genFunction,
+    functions,
 ) where
 
 -- Imports.
@@ -24,7 +24,7 @@ import qualified Hedgehog.Gen as Gen (recursive, choice, word16, subterm2)
 import qualified Hedgehog.Range as Range (constantBounded)
 
 -- Testing helpers.
-import Lib.Predicates (Predicate, fromPredicate, genPredicate)
+import Lib.Predicate (Predicate, fromPredicate, predicates)
 
 
 {- | The 'Function' type. -}
@@ -66,14 +66,14 @@ fromFunction fs bs = go
                     h (go f) (go g)
 
 {- | Generator for 'Function' values. -}
-genFunction :: Ord a => Gen a -> Gen b -> Gen (Function a b)
-genFunction g1 g2 = go
+functions :: Ord a => Gen a -> Gen b -> Gen (Function a b)
+functions ga gb = go
     where
         gen = Gen.word16 Range.constantBounded
         go = Gen.recursive
             Gen.choice
-            [Const <$> g2, Atomic <$> gen]
+            [Const <$> gb, Atomic <$> gen]
             [
-                genPredicate g1 >>= \ p -> Gen.subterm2 go go (If p),
+                predicates ga >>= \ p -> Gen.subterm2 go go (If p),
                 gen >>= \ i -> Gen.subterm2 go go (Binary i)
             ]
