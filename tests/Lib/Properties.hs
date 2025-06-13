@@ -1,7 +1,6 @@
 module Lib.Properties (
     -- * Extensional functional equality.
     prop_function_extensional_equality,
-    prop_hof_extensional_equality,
 
     -- * Monoid properties.
     prop_monoid_left_identity,
@@ -34,18 +33,6 @@ prop_function_extensional_equality
 prop_function_extensional_equality f g gen = do
     x <- forAll gen
     f x === g x
-
-{- | Testing extensional equality of higher-order functions by proxy. -}
-prop_hof_extensional_equality
-    :: (Monad m, Show (p a b), Show a, Eq b, Show b)
-    => (forall c d . p c d -> c -> d)
-    -> (forall c d . p c d -> c -> d)
-    -> Gen (p a b)
-    -> Gen a
-    -> PropertyT m ()
-prop_hof_extensional_equality h g genF genA = do
-    f <- forAll genF
-    prop_function_extensional_equality (h f) (g f) genA
 
 
 {- | Monoid left identity. -}
