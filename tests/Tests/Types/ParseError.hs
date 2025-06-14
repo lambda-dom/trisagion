@@ -1,76 +1,98 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Monoid law, left identity" #-}
-{-# HLINT ignore "Monoid law, right identity" #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Tests.Types.ParseError (
     -- * Tests.
     tests,
+
+    -- * Properties.
+    prop_fmap_monoid_morphism_unit,
+    prop_fmap_monoid_morphism_mult,
+    fmapMonoidMorphismLaws,
 ) where
 
 -- Imports.
 -- Base.
--- Testing.
-import Hedgehog (Property, Gen, Group (..), (===), property, forAll, checkParallel)
-import qualified Hedgehog.Range as Range (linearBounded)
+import Data.List.NonEmpty (NonEmpty (..))
+
+-- Testing library.
+import Hedgehog (PropertyT, Gen, Property, Group (..), checkParallel, forAll, property)
 import qualified Hedgehog.Gen as Gen (word8)
+import qualified Hedgehog.Range as Range (linearBounded)
 
 -- Package.
-
--- Package testing helpers.
-import Lib.Generators (genParseError)
-import Lib.FunctionExp (genFunctionExp, makeFunction)
+import Trisagion.Lib.Utils (withBinary)
 import Trisagion.Types.ParseError (ParseError)
+
+-- Package testing.
+import Lib.Generators (parseErrors)
+import Lib.Function (Function, functions, fromFunction)
+import Lib.Property (makeGroup, andM)
+import Lib.Properties.Monoid (
+    monoidLaws,
+    prop_monoid_morphism_mult,
+    prop_monoid_morphism_unit,
+    prop_monoid_idempotency
+    )
 
 
 -- Properties.
-prop_leftIdentity :: (Eq e, Show e) => Gen e -> Property
-prop_leftIdentity gen = property $ do
-    e <- forAll (genParseError gen)
-    mempty <> e === e
-
-prop_rightIdentity :: (Eq e, Show e) => Gen e -> Property
-prop_rightIdentity gen = property $ do
-    e <- forAll (genParseError gen)
-    e <> mempty === e
-
-prop_Associativity :: (Eq e, Show e) => Gen e -> Property
-prop_Associativity gen = property $ do
-    e1 <- forAll (genParseError gen)
-    e2 <- forAll (genParseError gen)
-    e3 <- forAll (genParseError gen)
-    (e1 <> e2) <> e3 === e1 <> (e2 <> e3)
-
-prop_Idempotency :: (Eq e, Show e) => Gen e -> Property
-prop_Idempotency gen = property $ do
-    err <- forAll (genParseError gen)
-    err <> err === err
-
-prop_monoidMorphism_Unit :: (Eq e, Show e) => (e -> e -> e) -> Gen e -> Property
-prop_monoidMorphism_Unit h gen = property $ do
-    -- Needed for inference.
-    let unit = mempty :: ParseError e
-
-    f <- forAll (genFunctionExp gen)
-    fmap (makeFunction h f) unit === unit
-
-prop_monoidMorphism_Mult :: (Eq e, Show e) => (e -> e -> e) -> Gen e -> Property
-prop_monoidMorphism_Mult h gen = property $ do
-    f <- forAll (genFunctionExp gen)
-    e1 <- forAll (genParseError gen)
-    e2 <- forAll (genParseError gen)
-    fmap (makeFunction h f) (e1 <> e2) === fmap (makeFunction h f) e1 <> fmap (makeFunction h f) e2
-
-
--- Main module test driver.
-tests :: IO Bool
-tests = checkParallel $ Group "Tests.Types.ParseError" [
-        ("prop_leftIdentity", prop_leftIdentity gen),
-        ("prop_rightIdentity", prop_rightIdentity gen),
-        ("prop_Associativity", prop_Associativity gen),
-        ("prop_Idempotency", prop_Idempotency gen),
-        ("prop_monoidMorphism_Unit", prop_monoidMorphism_Unit max gen),
-        ("prop_monoidMorphism_Mult", prop_monoidMorphism_Mult max gen)
-        ]
+prop_fmap_monoid_morphism_unit
+    :: forall m a . (Monad m, Ord a, Show a)
+    => Gen a
+    -> PropertyT m ()
+prop_fmap_monoid_morphism_unit xs = do
+        f <- nat <$> forAll (functions xs xs)
+        prop_monoid_morphism_unit (transf f)
     where
-        gen = Gen.word8 Range.linearBounded
+        nat :: Function a a -> a -> a
+        nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
+
+        transf :: (a -> a) -> ParseError a -> ParseError a
+        transf = fmap
+
+prop_fmap_monoid_morphism_mult
+    :: forall m a . (Monad m, Ord a, Show a)
+    => Gen a
+    -> PropertyT m ()
+prop_fmap_monoid_morphism_mult elems = do
+        f <- nat <$> forAll (functions elems elems)
+        prop_monoid_morphism_mult (fmap f) (parseErrors 10 elems)
+    where
+        nat :: Function a a -> a -> a
+        nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
+
+fmapMonoidMorphismLaws
+    :: forall a . (Ord a, Show a)
+    => Gen a
+    -> [(String, Property)]
+fmapMonoidMorphismLaws elems = fmap property <$> props
+    where
+        props = [
+            ("Monoid morphism unit", prop_fmap_monoid_morphism_unit elems),
+            ("Monoid morphism multiplication", prop_fmap_monoid_morphism_mult elems)
+            ]
+
+-- Property groups.
+testMonoidLaws :: Group
+testMonoidLaws =
+    makeGroup
+        "Monoid laws for ParseError"
+        (monoidLaws $ parseErrors 10 (Gen.word8 Range.linearBounded))
+
+testMonoidIdempotency :: Group
+testMonoidIdempotency =
+        makeGroup
+            "Idempotency of ParseError monoid"
+            [("Idempotency", property $ prop_monoid_idempotency gen)]
+    where
+        gen = parseErrors 10 (Gen.word8 Range.linearBounded)
+
+testMonoidMorphismLaws :: Group
+testMonoidMorphismLaws =
+    makeGroup
+        "Monoid morphism laws for @fmap f@"
+        (fmapMonoidMorphismLaws $ Gen.word8 Range.linearBounded)
+
+-- Main test driver.
+tests :: IO Bool
+tests = andM (checkParallel <$> [testMonoidLaws, testMonoidIdempotency, testMonoidMorphismLaws])
