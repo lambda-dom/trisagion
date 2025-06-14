@@ -106,25 +106,6 @@ prop_compatibility_uncons_splitPrefix = prop_function_extensional_equality
     (maybe ([], []) (bimap (: []) toList) . uncons)
     (bimap monotoList toList . splitPrefix 1)
 
-{- | Mononaturality law for 'splitWith'. -}
-prop_mononaturality_splitWith
-    :: forall m s .
-        (Monad m, Splittable s, MonoFunctor (PrefixOf s), ElementOf (PrefixOf s) ~ ElementOf s,
-        Eq s, Show s, Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf s), Show (ElementOf s))
-    => Gen (ElementOf s)
-    -> Gen s
-    -> PropertyT m ()
-prop_mononaturality_splitWith elems streams = do
-        p <- fromPredicate <$> forAll (predicates elems)
-        f <- nat <$> forAll (functions elems elems)
-        prop_function_extensional_equality
-            (splitWith p . monomap f)
-            (bimap (monomap f) (monomap f) . splitWith p)
-            streams
-    where
-        nat :: Function (ElementOf s) (ElementOf s) -> ElementOf s -> ElementOf s
-        nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
-
 {- | Law for 'splitPrefix' at the level of lists. -}
 prop_splitWith_lists
     :: forall m s .
@@ -157,6 +138,5 @@ splittableLaws n elems streams = ("Splittable laws", fmap property <$> props)
             ("Mononaturality for splitPrefix", prop_mononaturality_splitPrefix n elems streams),
             ("splitPrefix at the level of lists", prop_splitPrefix_lists n streams),
             ("Compatibility between splitPrefix and uncons", prop_compatibility_uncons_splitPrefix streams),
-            ("Mononaturality of splitWith", prop_mononaturality_splitWith elems streams),
             ("splitWith at the level of lists", prop_splitWith_lists elems streams)
             ]

@@ -139,7 +139,7 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 
 prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 
-=== __Examples:__
+=== __Counterexample:__
 
 The next example shows that right distributivity is violated even with an idempotent monoid.
 

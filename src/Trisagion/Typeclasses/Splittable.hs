@@ -37,14 +37,29 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 -- Package.
 import Trisagion.Typeclasses.Streamable (Streamable)
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Mono.Typeclasses.MonoFunctor
+-- >>> import Trisagion.Parsers.Splittable
+
 
 {- | The @Splittable@ typeclass of monomorphic splittable functors.
 
 Mirroring the laws for the 'Streamable' typeclass, the first law is:
 
 __Mononaturality__: With the constraints @('MonoFunctor' ('PrefixOf' s), 'ElementOf' ('PrefixOf' s)
-~ 'ElementOf' s)@, for every @n@ and every @p@, @splitPrefix n@, @splitWith p@ and @single@ are
-mononatural.
+~ 'ElementOf' s)@, @single@ and @splitPrefix n@ are mononatural.
+
+=== __Counterexample:__
+
+The following example shows that @'splitWith' p@ is /not/ mononatural.
+
+>>> let p = ('\NUL' ==)
+>>> let f = const '\NUL'
+>>> splitWith p . monomap f $ "a"
+("\NUL","")
+>>> bimap (monomap f) (monomap f) . splitWith p $ "a"
+("","\NUL")
 
 __Single singleton__: The second law says that @single@ is @singleton@ at the level of lists:
 
