@@ -55,7 +55,7 @@ __List identities__: For the third law, assuming
 constraint, then at the level of lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is
 'Data.List.span':
 
-prop> bimap monotoList toList . splitPrefix n == splitPrefix n . toList
+prop> bimap monotoList toList . splitPrefix n == splitAt n . toList
 prop> bimap monotoList toList . splitWith p == span p . toList
 
 __Compatibility__: The fourth and final law is a compatibility condition between
