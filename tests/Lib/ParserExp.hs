@@ -11,31 +11,38 @@ module Lib.ParserExp (
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word (Word16)
+import Data.Void (absurd)
 
 -- Libraries.
 import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector (fromList)
-import qualified Hedgehog.Range as Range (constantBounded)
 
 -- Testing library.
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen (recursive, choice, word16, subterm2, subterm)
+import qualified Hedgehog.Range as Range (constantBounded)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFunctor (ElementOf)
 
 -- Package.
 import Trisagion.Typeclasses.HasOffset (HasOffset)
+import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.ParseError (throwParseError)
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Parsers.Streamable (one)
 
 
 {- | The @ParserExp@ type. -}
 data ParserExp e a where
-    Pure :: a -> ParserExp e a
-    Throw :: e -> ParserExp e a
-    Unary :: Word16 -> ParserExp e a -> ParserExp e a
+    One    :: ParserExp e a
+    Pure   :: a -> ParserExp e a
+    Throw  :: e -> ParserExp e a
+    Unary  :: Word16 -> ParserExp e a -> ParserExp e a
     Binary :: Word16 -> ParserExp e a -> ParserExp e a -> ParserExp e a
     deriving stock (Eq, Show, Functor)
 
@@ -43,11 +50,12 @@ data ParserExp e a where
 {- | Convert a 'ParserExp' into a parser. -}
 fromParserExp
     :: forall s e a . (HasOffset s)
-    => NonEmpty (Parser s (ParseError e) a -> Parser s (ParseError e) a)
+    => (ElementOf s -> a)
+    -> NonEmpty (Parser s (ParseError e) a -> Parser s (ParseError e) a)
     -> NonEmpty (Parser s (ParseError e) a -> Parser s (ParseError e) a -> Parser s (ParseError e) a)
     -> ParserExp e a
     -> Parser s (ParseError e) a
-fromParserExp fs bs = go
+fromParserExp conv fs bs = go
     where
         uns :: Vector (Parser s (ParseError e) a -> Parser s (ParseError e) a)
         uns = Vector.fromList (toList fs)
@@ -56,6 +64,7 @@ fromParserExp fs bs = go
         bns = Vector.fromList (toList bs)
 
         go r = case r of
+            One          -> conv <$> first (fmap absurd) one
             Pure x       -> pure x
             Throw e      -> throwParseError e
             Unary i p    -> let h = uns ! (fromIntegral i `rem` length uns) in h (go p)

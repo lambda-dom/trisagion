@@ -101,6 +101,7 @@ test-suite trisagion-tests
         Lib.Properties.MonoFunctor
         Lib.Properties.Streamable
         Lib.Properties.Splittable
+        Lib.Properties.Alternative
         Tests.Types.Counter
         Tests.Types.Offset
         Tests.Types.ParseError

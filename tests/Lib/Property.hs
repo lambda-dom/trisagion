@@ -2,6 +2,7 @@ module Lib.Property (
     -- * Properties.
     -- ** Extensional functional equality.
     prop_function_extensional_equality,
+    prop_parser_extensional_equality,
 
     -- * Property groups.
     makeGroup,
@@ -15,8 +16,12 @@ module Lib.Property (
 import Data.Bifunctor (Bifunctor (..))
 import Data.String (IsString (..))
 
--- Testing.
+-- Testing library.
 import Hedgehog (Gen, PropertyT, Property, Group (..), (===), forAll)
+
+-- Package.
+import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Parser (Parser, parse)
 
 
 {- | Testing extensional equality of functions. -}
@@ -29,6 +34,17 @@ prop_function_extensional_equality
 prop_function_extensional_equality f g gen = do
     x <- forAll gen
     f x === g x
+
+{- | Testing extensional equality of parsers. -}
+prop_parser_extensional_equality
+    :: (Monad m, Eq a, Show a, Eq e, Show e, Eq s, Show s)
+    => Parser s (ParseError e) a
+    -> Parser s (ParseError e) a
+    -> Gen s
+    -> PropertyT m ()
+prop_parser_extensional_equality p q streams = do
+    xs <- forAll streams
+    parse p xs === parse q xs
 
 {- | Constructor for a property group. -}
 makeGroup :: String -> [(String, Property)] -> Group
