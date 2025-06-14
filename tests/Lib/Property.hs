@@ -1,5 +1,6 @@
 module Lib.Property (
-    -- * Extensional functional equality.
+    -- * Properties.
+    -- ** Extensional functional equality.
     prop_function_extensional_equality,
 
     -- * Property groups.
