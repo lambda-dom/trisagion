@@ -101,3 +101,4 @@ test-suite trisagion-tests
         Lib.Properties.Streamable
         Lib.Properties.Splittable
         Tests.Types.Counter
+        Tests.Types.Offset
