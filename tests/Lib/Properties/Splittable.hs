@@ -110,8 +110,9 @@ prop_compatibility_uncons_splitPrefix = prop_function_extensional_equality
 
 {- | Mononaturality law for 'splitWith'. -}
 prop_mononaturality_splitWith
-    :: forall m s . (Monad m, Splittable s, MonoFunctor (PrefixOf s), ElementOf (PrefixOf s) ~ ElementOf s,
-    Eq s, Show s, Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf s), Show (ElementOf s))
+    :: forall m s .
+        (Monad m, Splittable s, MonoFunctor (PrefixOf s), ElementOf (PrefixOf s) ~ ElementOf s,
+        Eq s, Show s, Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)
     -> Gen s
     -> PropertyT m ()
@@ -128,8 +129,9 @@ prop_mononaturality_splitWith elems streams = do
 
 {- | Law for 'splitPrefix' at the level of lists. -}
 prop_splitWith_lists
-    :: forall m s . (Monad m, Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ ElementOf s,
-    Show s, Ord (ElementOf s), Show (ElementOf s))
+    :: forall m s .
+        (Monad m, Splittable s, MonoFoldable (PrefixOf s), ElementOf (PrefixOf s) ~ ElementOf s,
+        Show s, Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)
     -> Gen s
     -> PropertyT m ()
