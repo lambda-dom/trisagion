@@ -102,3 +102,4 @@ test-suite trisagion-tests
         Lib.Properties.Splittable
         Tests.Types.Counter
         Tests.Types.Offset
+        Tests.Types.ParseError

@@ -4,6 +4,10 @@ module Lib.Properties.Monoid (
     prop_monoid_commutativity,
     prop_monoid_idempotency,
 
+    -- ** Monoid morphism properties.
+    prop_monoid_morphism_unit,
+    prop_monoid_morphism_mult,
+    
     -- * Property groups.
     monoidLaws,
     monoidMorphismLaws,
