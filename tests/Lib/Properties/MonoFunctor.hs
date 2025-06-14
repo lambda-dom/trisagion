@@ -1,7 +1,6 @@
 module Lib.Properties.MonoFunctor (
-    -- * Monofunctor properties.
-    prop_monofunctor_identity,
-    prop_monofunctor_composition,
+    -- * Property groups.
+    monofunctorLaws,
 ) where
 
 -- Imports.
@@ -9,7 +8,7 @@ module Lib.Properties.MonoFunctor (
 import Data.List.NonEmpty (NonEmpty (..))
 
 -- Testing library.
-import Hedgehog (PropertyT, Gen, forAll)
+import Hedgehog (PropertyT, Gen, Property, forAll, property)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -45,3 +44,15 @@ prop_monofunctor_composition elems streams = do
     where
         nat :: Function (ElementOf s) (ElementOf s) -> ElementOf s -> ElementOf s
         nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
+
+monofunctorLaws
+    :: (MonoFunctor s, Eq s, Show s, Ord (ElementOf s), Show (ElementOf s))
+    => Gen (ElementOf s)
+    -> Gen s
+    -> (String, [(String, Property)])
+monofunctorLaws elems streams = ("Monofunctor laws", fmap property <$> props)
+    where
+        props = [
+            ("MonoFunctor identity", prop_monofunctor_identity streams),
+            ("MonoFunctor composition", prop_monofunctor_composition elems streams)
+            ]

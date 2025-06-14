@@ -4,11 +4,9 @@ module Lib.Properties.Splittable (
     -- * Splittable properties.
     prop_mononaturality_single,
     prop_single_lists,
-    prop_mononaturality_splitPrefix,
-    prop_splitPrefix_lists,
-    prop_compatibility_uncons_splitPrefix,
-    prop_mononaturality_splitWith,
-    prop_splitWith_lists,
+
+    -- * Property groups.
+    splittableLaws,
 ) where
 
 -- Imports.
@@ -18,7 +16,7 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Word (Word32)
 
 -- Testing library.
-import Hedgehog (PropertyT, Gen, forAll)
+import Hedgehog (PropertyT, Gen, Property, forAll, property)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
@@ -40,7 +38,7 @@ import Lib.Property (prop_function_extensional_equality)
 prop_mononaturality_single
     :: forall m s .
         (Monad m, Splittable s, MonoFunctor (PrefixOf s), ElementOf s ~ ElementOf (PrefixOf s),
-        Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf (PrefixOf s)), Show (ElementOf (PrefixOf s)))
+        Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)
     -> PropertyT m ()
 prop_mononaturality_single elems = do
@@ -141,3 +139,24 @@ prop_splitWith_lists elems streams = do
         (bimap monotoList toList . splitWith p)
         (span p . toList)
         streams
+
+
+{- | 'Splittable' laws property group. -}
+splittableLaws
+    :: forall s . (Splittable s, MonoFoldable (PrefixOf s), Eq s, Show s, ElementOf (PrefixOf s) ~ ElementOf s,
+        Eq (PrefixOf s), Show (PrefixOf s), Ord (ElementOf s), Show (ElementOf s))
+    => Word32
+    -> Gen (ElementOf s)
+    -> Gen s
+    -> (String, [(String, Property)])
+splittableLaws n elems streams = ("Splittable laws", fmap property <$> props)
+    where
+        props = [
+            -- ("Mononaturality of single", property $ prop_mononaturality_single elems),
+            -- ("single at the level of lists", prop_single_lists elems),
+            ("Mononaturality for splitPrefix", prop_mononaturality_splitPrefix n elems streams),
+            ("splitPrefix at the level of lists", prop_splitPrefix_lists n streams),
+            ("Compatibility between splitPrefix and uncons", prop_compatibility_uncons_splitPrefix streams),
+            ("Mononaturality of splitWith", prop_mononaturality_splitWith elems streams),
+            ("splitWith at the level of lists", prop_splitWith_lists elems streams)
+            ]
