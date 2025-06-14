@@ -83,8 +83,8 @@ prop_monoid_morphism_mult f gen =
 monoidLaws
     :: (Monoid a, Eq a, Show a)
     => Gen a
-    -> (String, [(String, Property)])
-monoidLaws elems = ("Monoid laws", fmap property <$> props)
+    -> [(String, Property)]
+monoidLaws elems = fmap property <$> props
     where
         props = [
             ("Monoid left identity", prop_monoid_left_identity elems),
@@ -97,8 +97,8 @@ monoidMorphismLaws
     :: (Monoid a, Show a, Monoid b, Eq b, Show b)
     => (a -> b)
     -> Gen a
-    -> (String, [(String, Property)])
-monoidMorphismLaws f elems = ("Monoid morphism laws", fmap property <$> props)
+    -> [(String, Property)]
+monoidMorphismLaws f elems = fmap property <$> props
     where
         props = [
             ("Monoid morphism unit", prop_monoid_morphism_unit f),

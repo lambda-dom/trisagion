@@ -34,10 +34,10 @@ streams = Offset.initialize <$> Gen.bytes (Range.linear 0 10)
 
 -- Property groups.
 testStreamable :: Group
-testStreamable = makeGroup $ streamableLaws word8s streams
+testStreamable = makeGroup "Streamable laws for Offset" (streamableLaws word8s streams)
 
 testSplittable :: Group
-testSplittable = makeGroup $ splittableLaws 10 word8s streams
+testSplittable = makeGroup "Splittable laws for Offset" (splittableLaws 10 word8s streams)
 
 
 -- Main test driver.

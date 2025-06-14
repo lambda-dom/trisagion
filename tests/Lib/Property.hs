@@ -30,8 +30,11 @@ prop_function_extensional_equality f g gen = do
     f x === g x
 
 {- | Constructor for a property group. -}
-makeGroup :: (String, [(String, Property)]) -> Group
-makeGroup pairs = uncurry Group $ bimap fromString (fmap (first fromString)) pairs
+makeGroup :: String -> [(String, Property)] -> Group
+makeGroup name props = Group {
+    groupName = fromString name,
+    groupProperties = fmap (first fromString) props
+    }
 
 {- | Combine checking of test groups. -}
 andM :: Monad m => [m Bool] -> m Bool

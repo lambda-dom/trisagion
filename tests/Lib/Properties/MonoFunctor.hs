@@ -49,8 +49,8 @@ monofunctorLaws
     :: (MonoFunctor s, Eq s, Show s, Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)
     -> Gen s
-    -> (String, [(String, Property)])
-monofunctorLaws elems streams = ("Monofunctor laws", fmap property <$> props)
+    -> [(String, Property)]
+monofunctorLaws elems streams = fmap property <$> props
     where
         props = [
             ("MonoFunctor identity", prop_monofunctor_identity streams),

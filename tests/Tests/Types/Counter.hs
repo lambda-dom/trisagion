@@ -25,10 +25,10 @@ streams = Counter.initialize <$> Gen.string (Range.linear 0 10) Gen.ascii
 
 -- Property groups.
 testStreamable :: Group
-testStreamable = makeGroup $ streamableLaws Gen.ascii streams
+testStreamable = makeGroup "Streamable laws for Counter" (streamableLaws Gen.ascii streams)
 
 testSplittable :: Group
-testSplittable = makeGroup $ splittableLaws 10 Gen.ascii streams
+testSplittable = makeGroup "Splittable laws for Counter" (splittableLaws 10 Gen.ascii streams)
 
 
 -- Main test driver.

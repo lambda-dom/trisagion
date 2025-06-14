@@ -129,8 +129,8 @@ splittableLaws
     => Word32
     -> Gen (ElementOf s)
     -> Gen s
-    -> (String, [(String, Property)])
-splittableLaws n elems streams = ("Splittable laws", fmap property <$> props)
+    -> [(String, Property)]
+splittableLaws n elems streams = fmap property <$> props
     where
         props = [
             -- ("Mononaturality of single", property $ prop_mononaturality_single elems),

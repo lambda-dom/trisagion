@@ -53,8 +53,8 @@ streamableLaws
     :: (Streamable s, Eq s, Show s, Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)
     -> Gen s
-    -> (String, [(String, Property)])
-streamableLaws elems streams = ("Streamable laws", fmap property <$> props)
+    -> [(String, Property)]
+streamableLaws elems streams = fmap property <$> props
     where
         props = [
             ("Mononaturality of uncons", prop_uncons_mononaturality elems streams),
