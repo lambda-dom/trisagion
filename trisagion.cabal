@@ -100,4 +100,4 @@ test-suite trisagion-tests
         Lib.Properties.MonoFunctor
         Lib.Properties.Streamable
         Lib.Properties.Splittable
-        -- Tests.Types.ParseError
+        Tests.Types.Counter

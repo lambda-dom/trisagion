@@ -3,6 +3,7 @@
 import Hedgehog.Main (defaultMain)
 
 -- Package.
+import qualified Tests.Types.Counter as Counter (tests)
 -- import qualified Tests.Typeclasses.Streamable as Streamable (tests)
 -- import qualified Tests.Typeclasses.Splittable as Splittable (tests)
 -- import qualified Tests.Types.ParseError as ParseError (tests)
@@ -15,5 +16,5 @@ main = defaultMain [
     -- Streamable.tests,
     -- Splittable.tests,
     -- ParseError.tests
-    -- Parser.tests
+    Counter.tests
     ] 
