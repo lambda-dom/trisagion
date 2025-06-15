@@ -50,17 +50,6 @@ Mirroring the laws for the 'Streamable' typeclass, the first law is:
 __Mononaturality__: With the constraints @('MonoFunctor' ('PrefixOf' s), 'ElementOf' ('PrefixOf' s)
 ~ 'ElementOf' s)@, @single@ and @splitPrefix n@ are mononatural.
 
-=== __Counterexample:__
-
-The following example shows that @'splitWith' p@ is /not/ mononatural.
-
->>> let p = ('\NUL' ==)
->>> let f = const '\NUL'
->>> splitWith p . monomap f $ "a"
-("\NUL","")
->>> bimap (monomap f) (monomap f) . splitWith p $ "a"
-("","\NUL")
-
 __Single singleton__: The second law says that @single@ is @singleton@ at the level of lists:
 
 prop> singleton == toList . single
@@ -77,6 +66,17 @@ __Compatibility__: The fourth and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
 prop> maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
+
+=== __Counterexample:__
+
+The following example shows that @'splitWith' p@ is /not/ mononatural.
+
+>>> let p = ('\NUL' ==)
+>>> let f = const '\NUL'
+>>> splitWith p . monomap f $ "a"
+("\NUL","")
+>>> bimap (monomap f) (monomap f) . splitWith p $ "a"
+("","\NUL")
  -}
 class Streamable s => Splittable s where
     {-# MINIMAL splitPrefix, splitWith, single #-}
