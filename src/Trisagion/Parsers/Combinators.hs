@@ -347,7 +347,7 @@ skipSome p = p *> first absurd (skipMany p)
 
 note(s):
 
-  * The difference with 'manyTillEnd' is that the @end@ parser will not consume any input.
+  * The difference with 'manyTill' is that the @end@ parser will not consume any input.
 
 === __Examples:__
 
