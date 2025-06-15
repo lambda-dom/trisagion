@@ -148,7 +148,7 @@ line
 line = do
     b <- gets Streamable.null
     if b
-        then throwError (makeEOI 0)
+        then throwError (makeEOI 1)
         else first absurd $ takeWith (/= '\n') <* optional lf
 
 {- | Parse a, possibly null, prefix of whitespace.
