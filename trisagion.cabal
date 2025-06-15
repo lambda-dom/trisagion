@@ -96,10 +96,13 @@ test-suite trisagion-tests
         Lib.Function
         Lib.Generators
         Lib.Property
+        Lib.ParserExp
         Lib.Properties.Monoid
         Lib.Properties.MonoFunctor
         Lib.Properties.Streamable
         Lib.Properties.Splittable
+        Lib.Properties.Alternative
         Tests.Types.Counter
         Tests.Types.Offset
         Tests.Types.ParseError
+        Tests.Parser
