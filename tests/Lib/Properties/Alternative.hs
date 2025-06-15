@@ -1,4 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# HLINT ignore "Alternative law, left identity" #-}
 {-# HLINT ignore "Alternative law, right identity" #-}
@@ -55,7 +54,7 @@ nat = fromParserExp id unaries binaries
         binaries = (<|>) :| [(*>), (<*), pairWith min, pairWith max]
 
 
--- Parsers.
+{- | A parser for functions @Word8 -> Word8@. -}
 parseFunction :: (HasOffset s, ElementOf s ~ Word8) => Parser s (ParseError Word8) (Word8 -> Word8)
 parseFunction = do
     x <- first (fmap absurd) one
@@ -137,6 +136,7 @@ prop_alternative_left_absorption elems streams = do
             empty
             streams
     where
+        -- Needed for inference.
         unit = empty :: Parser s (ParseError (ElementOf s)) (ElementOf s -> ElementOf s)
 
 {- | Left zero for the 'Alternative' instance. -}
@@ -185,6 +185,7 @@ alternativeLaws elems streams = fmap (property <$>)
             ("Left zero", prop_alternative_left_zero elems streams)
         ]
 
+{- | Left distributivity for 'Alternative'. -}
 distributiveLaw
     :: (HasOffset s, ElementOf s ~ Word8, Eq s, Show s)
     => Gen s
