@@ -21,14 +21,12 @@ import Lib.Function (Function, fromFunction, functions)
 import Lib.Property (prop_function_extensional_equality)
 
 
-{- | Monofunctors preserve the identity. -}
 prop_monofunctor_identity
     :: (Monad m, MonoFunctor s, Eq s, Show s)
     => Gen s
     -> PropertyT m ()
 prop_monofunctor_identity = prop_function_extensional_equality (monomap id) id
 
-{- | Monofunctors preserve composition. -}
 prop_monofunctor_composition
     :: forall m s .(Monad m, MonoFunctor s, Eq s, Show s, Show (ElementOf s), Ord (ElementOf s))
     => Gen (ElementOf s)
@@ -45,6 +43,7 @@ prop_monofunctor_composition elems streams = do
         nat :: Function (ElementOf s) (ElementOf s) -> ElementOf s -> ElementOf s
         nat = fromFunction (id :| []) ((.) :| (withBinary <$> [min, max]))
 
+{- | 'MonoFunctor' laws. -}
 monofunctorLaws
     :: (MonoFunctor s, Eq s, Show s, Ord (ElementOf s), Show (ElementOf s))
     => Gen (ElementOf s)

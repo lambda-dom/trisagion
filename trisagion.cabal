@@ -103,6 +103,7 @@ test-suite trisagion-tests
         Lib.Properties.Splittable
         Lib.Properties.Alternative
         Lib.Properties.Builder
+        Lib.Properties.Adjoints
         Tests.Types.Counter
         Tests.Types.Offset
         Tests.Types.ParseError
