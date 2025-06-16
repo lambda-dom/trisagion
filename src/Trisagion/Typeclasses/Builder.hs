@@ -32,24 +32,29 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 
 {- | Typeclass for builders of streamable sequences.
 
-The 'Builder' must satisfy the following law:
+The 'Builder' must satisfy the following two laws:
 
-__Monoid morphism__: the function 'unpack' is a monoid morphism.
+__Monoid isomorphism__: with the constraint @Monoid ('BuilderOf' m)@, the function 'unpack' is a
+monoid morphism and has an inverse.
+
+__Singleton__: compatibility between 'one' and 'unpack':
+
+prop> toList . unpack . one = singleton
 -}
-class (Monoid m, Streamable (BuilderOf m)) => Builder m where
+class (Monoid a, Streamable (BuilderOf a)) => Builder a where
     {-# MINIMAL unpack, pack, one #-}
 
     {- | The type of sequence that the builder builds. -}
-    type BuilderOf m :: Type
+    type BuilderOf a :: Type
 
     {- | The monoid morphism with what the builder builds. -}
-    unpack :: m -> BuilderOf m
+    unpack :: a -> BuilderOf a
 
     {- | The inverse of 'unpack'. -}
-    pack :: BuilderOf m -> m
+    pack :: BuilderOf a -> a
 
     {- | Build from one @'ElementOf' ('BuilderOf' m)@. -}
-    one :: ElementOf (BuilderOf m) -> m
+    one :: ElementOf (BuilderOf a) -> a
 
     {- | Build from a foldable of many @'ElementOf' ('BuilderOf' m)@.
 
@@ -57,7 +62,7 @@ class (Monoid m, Streamable (BuilderOf m)) => Builder m where
 
     @many = foldMap one@
     -}
-    many :: Foldable t => t (ElementOf (BuilderOf m)) -> m
+    many :: Foldable t => t (ElementOf (BuilderOf a)) -> a
     many = foldMap one
 
 

@@ -102,7 +102,9 @@ test-suite trisagion-tests
         Lib.Properties.Streamable
         Lib.Properties.Splittable
         Lib.Properties.Alternative
+        Lib.Properties.Builder
         Tests.Types.Counter
         Tests.Types.Offset
         Tests.Types.ParseError
+        Tests.Typeclasses.Builder
         Tests.Parser
