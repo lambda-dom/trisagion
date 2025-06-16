@@ -32,9 +32,14 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 
 {- | Typeclass for builders of streamable sequences.
 
-The 'Builder' must satisfy the following law:
+The 'Builder' must satisfy the following two laws:
 
-__Monoid morphism__: the function 'unpack' is a monoid morphism.
+__Monoid isomorphism__: with the constraint @Monoid ('BuilderOf' m)@, the function 'unpack' is a
+monoid morphism and has an inverse.
+
+__Singleton__: compatibility between 'one' and 'unpack':
+
+prop> toList . unpack . one = singleton
 -}
 class (Monoid m, Streamable (BuilderOf m)) => Builder m where
     {-# MINIMAL unpack, pack, one #-}
