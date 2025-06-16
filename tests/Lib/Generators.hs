@@ -2,6 +2,7 @@ module Lib.Generators (
     -- * Generators.
     sizes,
     byteStrings,
+    lazyByteStrings,
     parseErrors,
 ) where
 
@@ -11,7 +12,8 @@ import Data.Maybe (fromMaybe)
 import Data.Word (Word32)
 
 -- Libraries.
-import Data.ByteString (ByteString)
+import Data.ByteString (ByteString, fromStrict)
+import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import Optics.Core ((%), review)
 
 -- Testing.
@@ -33,6 +35,12 @@ byteStrings
     :: Word32                 -- ^ Upper bound for the (scaling) size.
     -> Gen ByteString
 byteStrings n = Gen.bytes $ Range.linear 0 (fromIntegral n)
+
+{- | Generator for lazy 'ByteString'. -}
+lazyByteStrings
+    :: Word32                 -- ^ Upper bound for the (scaling) size.
+    -> Gen Lazy.ByteString
+lazyByteStrings = fmap fromStrict . byteStrings
 
 {- | Generator for 'ParseError' values with no backtrace. -}
 parseErrors :: Word32 -> Gen e -> Gen (ParseError e)

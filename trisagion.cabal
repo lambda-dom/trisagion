@@ -106,4 +106,5 @@ test-suite trisagion-tests
         Tests.Types.Counter
         Tests.Types.Offset
         Tests.Types.ParseError
+        Tests.Typeclasses.Builder
         Tests.Parser
