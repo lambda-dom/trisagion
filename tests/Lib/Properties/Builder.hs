@@ -39,15 +39,18 @@ prop_unpack_left_inverse bs _ = prop_function_extensional_equality
     id
     bs
 
+
 {- | Builder laws. -}
 builderLaws
-    :: forall a . (Builder a, Eq (BuilderOf a), Show (BuilderOf a),
-        Eq (ElementOf (BuilderOf a)), Show (ElementOf (BuilderOf a)))
+    :: (Builder a, Eq (BuilderOf a), Show (BuilderOf a), Eq (ElementOf (BuilderOf a)), Show (ElementOf (BuilderOf a)))
     => Gen (ElementOf (BuilderOf a))
     -> Gen (BuilderOf a)
     -> Gen a
     -> [(String, Property)]
-builderLaws es bs ls
-    = ("unpack and one compatibility", property $ prop_one_singleton ls es)
-    : [("pack a left inverse of unpack", property $ prop_unpack_left_inverse bs ls)]
-    -- : monoidMorphismLaws unpack ls
+builderLaws es bs ls = fmap property <$> props
+    where
+        props = [
+            ("unpack and one compatibility", prop_one_singleton ls es),
+            ("pack a left inverse of unpack", prop_unpack_left_inverse bs ls)
+            ]
+            -- : monoidMorphismLaws unpack ls
