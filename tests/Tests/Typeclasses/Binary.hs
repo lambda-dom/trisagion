@@ -9,12 +9,11 @@ import Data.Int (Int8)
 import Data.Word (Word8)
 
 -- Libraries.
-import Data.ByteString.Lazy as Lazy (null)
 import Data.ByteString.Builder (Builder)
 
 -- Testing library.
 import Hedgehog (Group, checkParallel)
-import qualified Hedgehog.Gen as Gen (int8, word8, filter)
+import qualified Hedgehog.Gen as Gen (int8, word8)
 import qualified Hedgehog.Range as Range (constantBounded)
 
 -- Package.
@@ -38,7 +37,7 @@ testWord8Adjoint =
             (adjointParserLaws
                 Parsers.one
                 (embed one :: Serializer Builder Word8)
-                (Gen.filter (not . Lazy.null) (lazyByteStrings 10))
+                (lazyByteStrings 10)
                 (Gen.word8 Range.constantBounded))
 
 testInt8Adjoint :: Group
@@ -48,7 +47,7 @@ testInt8Adjoint =
             (adjointParserLaws
                 Parsers.int8
                 (embed Serializers.int8 :: Serializer Builder Int8)
-                (Gen.filter (not . Lazy.null) (lazyByteStrings 10))
+                (lazyByteStrings 10)
                 (Gen.int8 Range.constantBounded))
 
 

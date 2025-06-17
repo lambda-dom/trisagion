@@ -5,10 +5,14 @@ module Lib.Properties.Adjoints (
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
+
 -- Testing library.
 import Hedgehog (Gen, PropertyT, Property, property)
 
 -- Package.
+import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Builder (Builder (..))
 import Trisagion.Parser (Parser, parse)
 import Trisagion.Serializer (Serializer, serialize)
@@ -26,15 +30,15 @@ encoder xs = unpack . serialize xs
 
 
 -- Properties.
--- prop_left_adjoint
---     :: (Monad m, Builder b, BuilderOf b ~ s, Show s, Eq s)
---     => Parser s e a
---     -> Serializer b a
---     -> Gen s
---     -> PropertyT m ()
--- prop_left_adjoint p s = prop_function_extensional_equality
---     (fmap (encoder s) . decoder p)
---     Just
+prop_left_adjoint
+    :: (Monad m, Builder b, BuilderOf b ~ s, Monoid s, Eq s, Show s, Streamable s)
+    => Parser s e a
+    -> Serializer b a
+    -> Gen s
+    -> PropertyT m ()
+prop_left_adjoint p s = prop_function_extensional_equality
+    (fmap (uncurry (<>) . first (encoder s)) . decoder p)
+    (\ xs -> if Streamable.null xs then Nothing else Just xs)
 
 prop_right_adjoint
     :: (Monad m, Builder b, BuilderOf b ~ s, Monoid s, Eq a, Show a, Eq s, Show s)
@@ -44,7 +48,7 @@ prop_right_adjoint
     -> PropertyT m ()
 prop_right_adjoint p s = prop_function_extensional_equality
     (decoder p . encoder s)
-    (pure . (, mempty))
+    (Just . (, mempty))
 
 
 -- Property groups.
@@ -55,9 +59,9 @@ adjointParserLaws
     -> Gen s
     -> Gen a
     -> [(String, Property)]
-adjointParserLaws p s _ as = fmap property <$> props
+adjointParserLaws p s xs as = fmap property <$> props
     where
         props = [
-            -- ("Left adjoint law", prop_left_adjoint p s xs),
+            ("Left adjoint law", prop_left_adjoint p s xs),
             ("Right adjoint law", prop_right_adjoint p s as)
             ]
