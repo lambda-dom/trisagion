@@ -9,14 +9,12 @@ import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import Data.ByteString (fromStrict)
 import Data.ByteString.Builder (Builder)
-import qualified Data.ByteString.Lazy as Lazy (ByteString)
 
 -- Testing library.
-import Hedgehog (Group, Gen, checkParallel)
-import qualified Hedgehog.Gen as Gen (int8, word8, word16, word32, word64, bytes)
-import qualified Hedgehog.Range as Range (constantBounded, linear)
+import Hedgehog (Group, checkParallel)
+import qualified Hedgehog.Gen as Gen (int8, word8, word16, word32, word64)
+import qualified Hedgehog.Range as Range (constantBounded)
 
 -- Package.
 import Trisagion.Typeclasses.Binary as Serializers (Binary (..))
@@ -25,14 +23,10 @@ import qualified Trisagion.Parsers.Streamable as Parsers (one)
 import Trisagion.Serializer (Serializer, embed)
 
 -- Package testing.
+import Lib.Generators (lazyByteStrings)
 import Lib.Property (andM, makeGroup)
 import Lib.Properties.Adjoints (adjointParserLaws)
 import Trisagion.Typeclasses.Builder (one)
-
-
--- Ensure stream has length >= to be able to satisfy the request.
-lazyByteStrings :: Gen Lazy.ByteString
-lazyByteStrings = fromStrict <$> Gen.bytes (Range.linear 8 16)
 
 
 -- Testing groups.
@@ -43,7 +37,7 @@ testWord8Adjoint =
             (adjointParserLaws
                 Parsers.one
                 (embed one :: Serializer Builder Word8)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word8 Range.constantBounded))
 
 testWord16LeAdjoint :: Group
@@ -53,7 +47,7 @@ testWord16LeAdjoint =
             (adjointParserLaws
                 Parsers.word16Le
                 (embed Serializers.word16Le :: Serializer Builder Word16)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word16 Range.constantBounded))
 
 testWord32LeAdjoint :: Group
@@ -63,7 +57,7 @@ testWord32LeAdjoint =
             (adjointParserLaws
                 Parsers.word32Le
                 (embed Serializers.word32Le :: Serializer Builder Word32)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word32 Range.constantBounded))
 
 testWord64LeAdjoint :: Group
@@ -73,7 +67,7 @@ testWord64LeAdjoint =
             (adjointParserLaws
                 Parsers.word64Le
                 (embed Serializers.word64Le :: Serializer Builder Word64)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word64 Range.constantBounded))
 
 testWord16BeAdjoint :: Group
@@ -83,7 +77,7 @@ testWord16BeAdjoint =
             (adjointParserLaws
                 Parsers.word16Be
                 (embed Serializers.word16Be :: Serializer Builder Word16)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word16 Range.constantBounded))
 
 testWord32BeAdjoint :: Group
@@ -93,7 +87,7 @@ testWord32BeAdjoint =
             (adjointParserLaws
                 Parsers.word32Be
                 (embed Serializers.word32Be :: Serializer Builder Word32)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word32 Range.constantBounded))
 
 testWord64BeAdjoint :: Group
@@ -103,7 +97,7 @@ testWord64BeAdjoint =
             (adjointParserLaws
                 Parsers.word64Be
                 (embed Serializers.word64Be :: Serializer Builder Word64)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.word64 Range.constantBounded))
 
 testInt8Adjoint :: Group
@@ -113,7 +107,7 @@ testInt8Adjoint =
             (adjointParserLaws
                 Parsers.int8
                 (embed Serializers.int8 :: Serializer Builder Int8)
-                lazyByteStrings
+                (lazyByteStrings 16)
                 (Gen.int8 Range.constantBounded))
 
 

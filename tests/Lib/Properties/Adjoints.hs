@@ -11,8 +11,6 @@ import Data.Bifunctor (Bifunctor (..))
 import Hedgehog (Gen, PropertyT, Property, property)
 
 -- Package.
-import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Builder (Builder (..))
 import Trisagion.Parser (Parser, parse)
 import Trisagion.Serializer (Serializer, serialize)
@@ -31,14 +29,19 @@ encoder xs = unpack . serialize xs
 
 -- Properties.
 prop_left_adjoint
-    :: (Monad m, Builder b, BuilderOf b ~ s, Monoid s, Eq s, Show s, Streamable s)
+    :: forall m s e a b . (Monad m, Builder b, BuilderOf b ~ s, Monoid s, Eq s, Show s)
     => Parser s e a
     -> Serializer b a
     -> Gen s
     -> PropertyT m ()
 prop_left_adjoint p s = prop_function_extensional_equality
-    (fmap (uncurry (<>) . first (encoder s)) . decoder p)
-    (\ xs -> if Streamable.null xs then Nothing else Just xs)
+        (fmap (uncurry (<>) . first (encoder s)) . decoder p)
+        just
+    where
+        just :: s -> Maybe s
+        just xs = case decoder p xs of
+            Nothing -> Nothing
+            Just _  -> Just xs
 
 prop_right_adjoint
     :: (Monad m, Builder b, BuilderOf b ~ s, Monoid s, Eq a, Show a, Eq s, Show s)
