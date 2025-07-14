@@ -26,7 +26,7 @@ import Data.Void (Void, absurd)
 import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..))
 
 
-{- | The serializer type. -}
+{- | The @Serializer@ type. -}
 newtype Serializer m a = Serializer (a -> m)
 
 
@@ -79,7 +79,7 @@ instance Monoid m => Decidable (Serializer m) where
 serialize :: Serializer m a -> a -> m
 serialize (Serializer m) = m
 
-{- | Embed a serializing function in a 'Serializer'.
+{- | Embed a serializing function in a t'Serializer'.
 
 The inverse to 'serialize'.
 -}
