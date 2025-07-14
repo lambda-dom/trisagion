@@ -25,9 +25,6 @@ module Trisagion.Serializers.Binary (
     int32Be,
     int64Be,
 
-    -- * List to binary serializers.
-    sizedOf,
-
     -- * Text to binary serializers.
     char,
     string,
@@ -122,11 +119,6 @@ int32Be = embed Binary.int32Be
 {- | Serialize a 'Int64' in big-endian format. -}
 int64Be :: Binary m => Serializer m Int64
 int64Be = embed Binary.int64Be
-
-
-{- | Serializer for lists prefixed by their size. -}
-sizedOf :: Binary m => Serializer m Word -> Serializer m a -> Serializer m [a]
-sizedOf len val = contramap (fromIntegral . length) len <> listOf val
 
 
 {- | Serialize a 'Char'.
