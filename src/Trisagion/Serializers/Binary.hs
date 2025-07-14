@@ -31,6 +31,9 @@ module Trisagion.Serializers.Binary (
     -- * Text to binary serializers.
     char,
     string,
+
+    -- * 'ByteString' serializers.
+    bytestring,
 ) where
 
 -- Imports.
@@ -40,13 +43,26 @@ import Data.Functor.Contravariant (Contravariant (..))
 import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
+-- Libraries.
+import Data.ByteString (ByteString)
+
 -- Package.
 import Trisagion.Typeclasses.Builder (one)
 import Trisagion.Typeclasses.Binary (Binary)
-import qualified Trisagion.Typeclasses.Binary as Binary (word16Le, word32Le, word64Le)
-import qualified Trisagion.Typeclasses.Binary as Binary (word16Be, word32Be, word64Be)
-import qualified Trisagion.Typeclasses.Binary as Binary (int16Le, int32Le, int64Le)
-import qualified Trisagion.Typeclasses.Binary as Binary (int16Be, int32Be, int64Be)
+import qualified Trisagion.Typeclasses.Binary as Binary (
+    word16Le,
+    word32Le,
+    word64Le,
+    word16Be,
+    word32Be,
+    word64Be,
+    int16Le,
+    int32Le,
+    int64Le,
+    int16Be,
+    int32Be,
+    int64Be,
+    bytestring,)
 import Trisagion.Serializer (Serializer, embed)
 import Trisagion.Serializers.Combinators (listOf)
 
@@ -108,9 +124,9 @@ int64Be :: Binary m => Serializer m Int64
 int64Be = embed Binary.int64Be
 
 
-{- | Serializer for lists. -}
-sizedOf :: Binary m => Serializer m Int -> Serializer m a -> Serializer m [a]
-sizedOf len val = contramap length len <> listOf val
+{- | Serializer for lists prefixed by their size. -}
+sizedOf :: Binary m => Serializer m Word -> Serializer m a -> Serializer m [a]
+sizedOf len val = contramap (fromIntegral . length) len <> listOf val
 
 
 {- | Serialize a 'Char'.
@@ -126,3 +142,8 @@ Truncates 'Char' to 'Word8'. It is the responsability of the caller to sanitize 
 -}
 string :: Binary m => Serializer m String
 string = listOf char
+
+
+{- | Serialize a (strict) 'ByteString'. -}
+bytestring :: Binary m => Serializer m ByteString
+bytestring = embed Binary.bytestring
