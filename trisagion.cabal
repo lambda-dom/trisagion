@@ -81,6 +81,7 @@ library
         Trisagion.Typeclasses.Binary
         Trisagion.Typeclasses.Mergeable
         Trisagion.Serializer
+        Trisagion.Serializers.Binary
 
 test-suite trisagion-tests
     import: common-fields
