@@ -41,8 +41,8 @@ common common-fields
         -Wmissing-deriving-strategies
         -Wunused-packages
     build-depends:
-        -- GHC 9.8
-        base >=4.19 && <4.20,
+        -- GHC 9.6 - 9.8
+        base >=4.18 && <4.20,
         bytestring >=0.11 && <0.13,
         optics-core >= 0.4.1 && <0.4.2,
         vector >=0.13 && <0.14,
@@ -81,6 +81,7 @@ library
         Trisagion.Typeclasses.Binary
         Trisagion.Typeclasses.Mergeable
         Trisagion.Serializer
+        Trisagion.Serializers.Combinators
         Trisagion.Serializers.Binary
 
 test-suite trisagion-tests
