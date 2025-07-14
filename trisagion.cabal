@@ -90,7 +90,7 @@ test-suite trisagion-tests
         tests
     main-is: Main.hs
     build-depends:
-        hedgehog ^>=1.4 && <1.6,
+        hedgehog >=1.4 && <1.6,
         trisagion,
     other-modules:
         Lib.Predicate
