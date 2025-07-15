@@ -22,13 +22,16 @@ import Trisagion.Serializer (Serializer, embed)
 
 
 {- | Serialize a single @'ElementOf' ('BuilderOf' m)@. -}
+{-# INLINE one #-}
 one :: Builder m => Serializer m (ElementOf (BuilderOf m))
 one = embed Builder.one
 
 {- | Serialize a foldable of @'ElementOf' ('BuilderOf' m)@. -}
+{-# INLINE many #-}
 many :: (Builder m, Foldable t) => Serializer m (t (ElementOf (BuilderOf m)))
 many = embed Builder.many
 
 {- | Serialize a @'BuilderOf' m@. -}
+{-# INLINE pack #-}
 pack :: Builder m => Serializer m (BuilderOf m)
 pack = embed Builder.pack

@@ -22,10 +22,12 @@ import Data.Bifunctor (Bifunctor (..))
 
 
 {- | The diagonal, or duplicate, function. -}
+{-# INLINE diagonal #-}
 diagonal :: a -> (a, a)
 diagonal x = (x, x)
 
 {- | Function combinator using a binary function. -}
+{-# INLINE withBinary #-}
 withBinary :: (b -> b -> b) -> (a -> b) -> (a -> b) -> (a -> b)
 withBinary h f g = uncurry h . bimap f g . diagonal
 

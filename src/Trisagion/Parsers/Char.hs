@@ -466,6 +466,7 @@ note(s):
 >>> parse (comment (skip $ matchOne '#')) (initialize "#a line comment\r\n code starts here")
 Right ("a line comment\r",Counter 17 " code starts here")
 -}
+{-# INLINE comment #-}
 comment
     :: (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s e ()                    -- ^ Parser for start of line comment.

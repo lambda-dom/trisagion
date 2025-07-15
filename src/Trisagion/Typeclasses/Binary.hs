@@ -111,7 +111,6 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
     bytestring :: ByteString -> m
     bytestring = foldMap one . unpack
 
-
 -- Instances.
 instance Binary Bytes.Builder where
     {-# INLINE word16Le #-}
