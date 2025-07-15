@@ -1,7 +1,7 @@
 packages:
     ./trisagion.cabal
 
-with-compiler: ghc-9.6
+# with-compiler: ghc-9.6
 
 source-repository-package
     type: git
