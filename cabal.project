@@ -1,9 +1,7 @@
 packages:
     ./trisagion.cabal
 
-# with-compiler: ghc-9.6
-
 source-repository-package
     type: git
     location: https://github.com/lambda-dom/mono
-    tag: main
+    tag: 5c533355c93abecd036b3e7a900b90987f60ac0b
