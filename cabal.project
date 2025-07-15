@@ -1,4 +1,3 @@
-tests: True
 packages:
     ./trisagion.cabal
 

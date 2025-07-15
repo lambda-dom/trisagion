@@ -16,7 +16,21 @@ import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import Data.ByteString.Builder (word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, int16LE, int32LE, int64LE, int16BE, int32BE, int64BE)
+import Data.ByteString (ByteString, unpack)
+import Data.ByteString.Builder (
+    word16LE,
+    word32LE,
+    word64LE,
+    word16BE,
+    word32BE,
+    word64BE,
+    int16LE,
+    int32LE,
+    int64LE,
+    int16BE,
+    int32BE,
+    int64BE,
+    byteString)
 import qualified Data.ByteString.Builder as Bytes (Builder, int8)
 
 -- non-Hackage libraries.
@@ -24,7 +38,7 @@ import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Mono.Types.ByteArray (bytes, bytesReverse)
 
 -- Package.
-import Trisagion.Typeclasses.Builder (Builder (..))
+import Trisagion.Typeclasses.Builder (Builder, BuilderOf, many, one)
 
 
 {- | The @Binary@ typeclass for binary builders.
@@ -93,6 +107,10 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
     int64Be :: Int64 -> m
     int64Be = word64Be . fromIntegral
 
+    {- | Serialize a (strict) 'ByteString'. -}
+    bytestring :: ByteString -> m
+    bytestring = foldMap one . unpack
+
 
 -- Instances.
 instance Binary Bytes.Builder where
@@ -134,3 +152,6 @@ instance Binary Bytes.Builder where
 
     {-# INLINE int64Be #-}
     int64Be = int64BE
+
+    {-# INLINE bytestring #-}
+    bytestring = byteString

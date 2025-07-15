@@ -94,7 +94,7 @@ data EscapeError
     deriving stock (Eq, Ord, Show)
 
 
-{- | The 'StringError' error tag type thrown by the 'string' parser.
+{- | The @StringError@ error tag type thrown by the 'string' parser.
 
 There is only one value of this type, so all the discriminating information is in the backtrace.
 -}

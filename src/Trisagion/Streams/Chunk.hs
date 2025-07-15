@@ -51,7 +51,7 @@ instance HasOffset (Chunk s e a) where
     offset (Chunk n _ _) = n
 
 
-{- | Initialize a 'Chunk'-ing stream. -}
+{- | Initialize a t'Chunk'-ing stream. -}
 {-# INLINE initialize #-}
 initialize :: s -> Parser s e a -> Chunk s e a
 initialize = Chunk 0
