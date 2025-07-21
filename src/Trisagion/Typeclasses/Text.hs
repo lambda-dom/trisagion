@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Typeclasses.Text
 
-The @Text@ typeclass for text builders.
+The @Textual@ typeclass for text builders.
 -}
 
 module Trisagion.Typeclasses.Text (
@@ -20,7 +20,7 @@ import Trisagion.Typeclasses.Builder (Builder)
 
 
 
-{- | The @Text@ typeclass for text builders.
+{- | The @Textual@ typeclass for text builders.
 
 This class, like its binary analog 'Trisagion.Typeclasses.Binary.Binary' is used for optimization
 purposes only, as it does not add any new operations that cannot be done with the parent 'Builder'
