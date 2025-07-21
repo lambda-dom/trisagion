@@ -31,25 +31,27 @@ import Data.ByteString.Builder (
     int32BE,
     int64BE,
     byteString)
-import qualified Data.ByteString.Builder as Bytes (Builder, int8)
+import qualified Data.ByteString.Builder as Bytes (Builder, word8, int8)
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (ElementOf)
 import Mono.Types.ByteArray (bytes, bytesReverse)
 
 -- Package.
-import Trisagion.Typeclasses.Builder (Builder, BuilderOf, many, one)
+import Trisagion.Typeclasses.Builder (Builder)
 
 
 {- | The @Binary@ typeclass for binary builders.
 
 This class is used for optimization purposes only, as it does not add any new operations that
-cannot be done with the parent superclass.
+cannot be done with the parent superclass and an appropriate constraint.
 -}
-class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
+class Builder m => Binary m where
+    {- | Serialize a single 'Word8'. -}
+    word8 :: Word8 -> m
+
     {- | Serialize an integral number in little-endian format. -}
     wordLe :: (Integral a, FiniteBits a) => a -> m
-    wordLe = many . bytes
+    wordLe = foldMap word8 .  bytes
 
     {- | Specialization of 'wordLe' to 'Word16', -}
     word16Le :: Word16 -> m
@@ -65,7 +67,7 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
 
     {- | Serialize an integral number in big-endian format. -}
     wordBe :: (Integral a, FiniteBits a) => a -> m
-    wordBe = many . bytesReverse
+    wordBe = foldMap word8 . bytesReverse
 
     {- | Specialization of 'wordBe' to 'Word16', -}
     word16Be :: Word16 -> m
@@ -81,7 +83,7 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
 
     {- | Serialize an 'Int8'. -}
     int8 :: Int8 -> m
-    int8 = one . fromIntegral
+    int8 = word8 . fromIntegral
 
     {- | Serialize an 'Int16' in little-endian format. -}
     int16Le :: Int16 -> m
@@ -109,10 +111,13 @@ class (Builder m, ElementOf (BuilderOf m) ~ Word8) => Binary m where
 
     {- | Serialize a (strict) 'ByteString'. -}
     bytestring :: ByteString -> m
-    bytestring = foldMap one . unpack
+    bytestring = foldMap word8 . unpack
 
 -- Instances.
 instance Binary Bytes.Builder where
+    {-# INLINE word8 #-}
+    word8 = Bytes.word8
+
     {-# INLINE word16Le #-}
     word16Le = word16LE
 

@@ -44,9 +44,9 @@ import Data.Word (Word8, Word16, Word32, Word64)
 import Data.ByteString (ByteString)
 
 -- Package.
-import Trisagion.Typeclasses.Builder (one)
 import Trisagion.Typeclasses.Binary (Binary)
 import qualified Trisagion.Typeclasses.Binary as Binary (
+    word8,
     word16Le,
     word32Le,
     word64Le,
@@ -67,7 +67,7 @@ import Trisagion.Serializers.Combinators (listOf)
 {- | Serialize a 'Word8'. -}
 {-# INLINE word8 #-}
 word8 :: Binary m => Serializer m Word8
-word8 = embed one
+word8 = embed Binary.word8
 
 {- | Serialize an 'Int8'. -}
 {-# INLINE int8 #-}
