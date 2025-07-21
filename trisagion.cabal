@@ -79,6 +79,7 @@ library
         Trisagion.Streams.Chunk
         Trisagion.Typeclasses.Builder
         Trisagion.Typeclasses.Binary
+        Trisagion.Typeclasses.Text
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
         Trisagion.Serializers.Builder
