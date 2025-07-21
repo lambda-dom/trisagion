@@ -84,6 +84,7 @@ library
         Trisagion.Serializers.Combinators
         Trisagion.Serializers.Builder
         Trisagion.Serializers.Binary
+        Trisagion.Serializers.Text
 
 test-suite trisagion-tests
     import: common-fields
