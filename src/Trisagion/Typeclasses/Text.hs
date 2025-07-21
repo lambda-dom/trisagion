@@ -29,25 +29,28 @@ superclass.
 class Builder m => Textual m where
     {-# MINIMAL char #-}
 
-    {- | Serialize a 'Char'. -}
+    {- | Serialize a utf8 'Char'. -}
     char :: Char -> m
 
-    {- | Serialize a 'String'. -}
+    {- | Serialize a utf8-encoded 'String'. -}
     string :: String -> m
     string = foldMap char
 
-    {- | Serialize a (strict) 'Text'. -}
+    {- | Serialize a utf8-encoded (strict) 'Text'. -}
     text :: Text -> m
     text = string . unpack
 
 
 -- Instances.
 instance Textual Bytes.Builder where
+    {-# INLINE char #-}
     char :: Char -> Bytes.Builder
     char = Bytes.charUtf8
 
+    {-# INLINE string #-}
     string :: String -> Bytes.Builder
     string = Bytes.stringUtf8
 
+    {-# INLINE text #-}
     text :: Text -> Bytes.Builder
     text = Bytes.byteString . encodeUtf8
