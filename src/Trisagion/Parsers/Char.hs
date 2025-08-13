@@ -40,11 +40,15 @@ module Trisagion.Parsers.Char (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (Foldable (..))
+
 -- Base.
 import Control.Applicative ((<|>))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
-import Data.Foldable (foldl')
+-- foldl' is exported by the prelude since 9.10.
+import Data.Foldable (Foldable (..))
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 

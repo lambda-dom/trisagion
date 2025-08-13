@@ -41,8 +41,8 @@ common common-fields
         -Wmissing-deriving-strategies
         -Wunused-packages
     build-depends:
-        -- GHC 9.6 - 9.8
-        base >=4.18 && <4.20,
+        -- GHC 9.6 - 9.10
+        base >=4.18 && <4.21,
         bytestring >=0.11 && <0.13,
         optics-core >= 0.4.1 && <0.4.2,
         vector >=0.13 && <0.14,
