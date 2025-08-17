@@ -12,7 +12,7 @@ maintainer:         grodrigues.math@gmail.com
 copyright:          2025 G. Rodrigues
 build-type:         Simple
 tested-with:
-    GHC == {9.8.4}
+    GHC == {9.10.2}
 extra-doc-files:
     LICENSE
     README.md
@@ -28,6 +28,8 @@ common common-fields
         DerivingStrategies
         DerivingVia
         TypeFamilies
+        RequiredTypeArguments
+        ExplicitNamespaces
     ghc-options:
         -Wall
         -Wcompat
@@ -42,8 +44,8 @@ common common-fields
         -Wunused-packages
     build-depends:
         -- GHC 9.6 - 9.10
-        base >=4.18 && <4.21,
-        bytestring >=0.11 && <0.13,
+        base >=4.20 && <4.21,
+        bytestring >=0.12 && <0.13,
         optics-core >= 0.4.1 && <0.4.2,
         vector >=0.13 && <0.14,
         -- Non-hackage libraries.
@@ -54,10 +56,10 @@ library
     hs-source-dirs:
         src
     build-depends:
-        containers >=0.6 && <0.8,
+        containers >=0.7 && <0.8,
         contravariant >=1.5 && <1.6,
         mtl >=2.3 && <2.4,
-        text >=2.0 && <2.2,
+        text >=2.1 && <2.2,
     other-modules:
         Trisagion.Types.Result
     exposed-modules:
@@ -93,7 +95,7 @@ test-suite trisagion-tests
         tests
     main-is: Main.hs
     build-depends:
-        hedgehog >=1.4 && <1.6,
+        hedgehog >=1.5 && <1.6,
         trisagion,
     other-modules:
         Lib.Predicate

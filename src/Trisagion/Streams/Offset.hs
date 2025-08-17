@@ -77,8 +77,7 @@ instance Splittable s => Splittable (Offset s) where
     splitWith p (Offset m xs) = Offset m <$> splitWith p xs
 
     {-# INLINE single #-}
-    single :: ElementOf (Offset s) -> PrefixOf (Offset s)
-    single = single @s
+    single = single
 
 instance (MonoFoldable s, Streamable s) => HasOffset (Offset s) where
     {-# INLINE offset #-}

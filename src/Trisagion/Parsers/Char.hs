@@ -396,15 +396,15 @@ escape = do
     where
         v :: Char -> EscapeError :+: PrefixOf s
         v c = case c of
-            't'  -> Right (single @s '\t')
-            'n'  -> Right (single @s '\n')
-            'v'  -> Right (single @s '\v')
-            'f'  -> Right (single @s '\f')
-            'r'  -> Right (single @s '\r')
-            's'  -> Right (single @s ' ')
-            '\'' -> Right (single @s '\'')
-            '"'  -> Right (single @s '"')
-            '\\' -> Right (single @s '\\')
+            't'  -> Right (single s '\t')
+            'n'  -> Right (single s '\n')
+            'v'  -> Right (single s '\v')
+            'f'  -> Right (single s '\f')
+            'r'  -> Right (single s '\r')
+            's'  -> Right (single s ' ')
+            '\'' -> Right (single s '\'')
+            '"'  -> Right (single s '"')
+            '\\' -> Right (single s '\\')
             _    -> Left (EscapeSequenceError c)
 
 {- | Parse a quoted string with escape sequences.
