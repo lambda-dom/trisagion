@@ -1,5 +1,3 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-
 {- |
 Module: Trisagion.Typeclasses.Splittable
 
@@ -96,15 +94,8 @@ class Streamable s => Splittable s where
     @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
     splitWith :: (ElementOf s -> Bool) -> s -> (PrefixOf s, s)
 
-    {- | Convert an @'ElementOf' s@ to a prefix @'PrefixOf' s@.
-
-    note(s):
-    
-      * Because of lack of injectivity, this method requires the @AllowAmbiguousTypes@ extension to
-      keep GHC happy and inference commonly requires help from the user, e. g. instead of
-      @'single'@, use @'single' \@s@ with the @TypeApplications@ extension.
-    -}
-    single :: ElementOf s -> PrefixOf s
+    {- | Convert an @'ElementOf' s@ to a prefix @'PrefixOf' s@. -}
+    single :: forall t -> s ~ t => ElementOf t -> PrefixOf t
 
     {- | Return the remainder of the stream as a prefix.
 
@@ -149,8 +140,7 @@ instance Splittable Bytes.ByteString where
     splitWith = Bytes.span
 
     {-# INLINE single #-}
-    single :: Word8 -> Bytes.ByteString
-    single = Bytes.singleton
+    single Bytes.ByteString = Bytes.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
@@ -176,8 +166,7 @@ instance Splittable LBytes.ByteString where
     splitWith = LBytes.span
 
     {-# INLINE single #-}
-    single :: Word8 -> LBytes.ByteString
-    single = LBytes.singleton
+    single LBytes.ByteString = LBytes.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
@@ -203,8 +192,7 @@ instance Splittable SBytes.ShortByteString where
     splitWith = SBytes.span
 
     {-# INLINE single #-}
-    single :: Word8 -> SBytes.ShortByteString
-    single = SBytes.singleton
+    single SBytes.ShortByteString = SBytes.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
@@ -230,8 +218,7 @@ instance Splittable Text.Text where
     splitWith = Text.span
 
     {-# INLINE single #-}
-    single :: Char -> Text.Text
-    single = Text.singleton
+    single Text.Text = Text.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Text.Text -> (Text.Text, Text.Text)
@@ -257,8 +244,7 @@ instance Splittable LText.Text where
     splitWith = LText.span
 
     {-# INLINE single #-}
-    single :: Char -> LText.Text
-    single = LText.singleton
+    single LText.Text = LText.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: LText.Text -> (LText.Text, LText.Text)
@@ -284,8 +270,7 @@ instance Splittable [a] where
     splitWith = span
 
     {-# INLINE single #-}
-    single :: a -> [a]
-    single x = [x]
+    single (type [_]) x = [x]
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: [a] -> ([a], [a])
@@ -311,8 +296,7 @@ instance Splittable (Seq.Seq a) where
     splitWith = Seq.spanl
 
     {-# INLINE single #-}
-    single :: a -> Seq.Seq a
-    single = Seq.singleton
+    single (Seq.Seq _) = Seq.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Seq.Seq a -> (Seq.Seq a, Seq.Seq a)
@@ -338,8 +322,7 @@ instance Splittable (Vector.Vector a) where
     splitWith = Vector.span
 
     {-# INLINE single #-}
-    single :: a -> Vector.Vector a
-    single = Vector.singleton
+    single (Vector.Vector _) = Vector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
@@ -362,11 +345,10 @@ instance Splittable (SVector.Vector a) where
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
-    splitWith = SVector.span
+    splitWith  = SVector.span
 
     {-# INLINE single #-}
-    single :: a -> SVector.Vector a
-    single = SVector.singleton
+    single (SVector.Vector _) = SVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
@@ -392,8 +374,7 @@ instance UVector.Unbox a => Splittable (UVector.Vector a) where
     splitWith = UVector.span
 
     {-# INLINE single #-}
-    single :: a -> UVector.Vector a
-    single = UVector.singleton
+    single (UVector.Vector _) = UVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
@@ -419,8 +400,7 @@ instance StVector.Storable a => Splittable (StVector.Vector a) where
     splitWith = StVector.span
 
     {-# INLINE single #-}
-    single :: a -> StVector.Vector a
-    single = StVector.singleton
+    single (StVector.Vector _) = StVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
