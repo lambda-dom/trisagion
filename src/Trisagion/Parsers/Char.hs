@@ -57,6 +57,7 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (gets)
+import Optics.Core (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
@@ -67,8 +68,8 @@ import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI)
-import Trisagion.Parser (Parser, (:+:))
+import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI, validationError)
+import Trisagion.Parser (Parser, (:+:), catch)
 import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
 import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
 import Trisagion.Parsers.Streamable (InputError, matchOne, satisfy, one)
@@ -149,13 +150,14 @@ cr = matchOne '\r'
 newline
     :: (HasOffset s, ElementOf s ~ Char)
     => Parser s (ParseError (ValidationError Char)) Newline
-newline = fmap (const LF) lf <|> crlf <|> fmap (const CR) cr 
-    where
-        crlf = do
-            _ <- cr
-            _ <- lf
-            pure CRLF
-
+newline = do
+    c <- first (fmap absurd) one
+    if c == '\n'
+        then pure LF
+        else if c == '\r'
+            then
+                catch (fmap (const CRLF) (matchOne '\n')) (const $ pure CR)
+            else throwParseError (review validationError c)
 
 {- | Parse a line out of the input stream. The line does not contain the ending @'\n'@ and can be null.
 
