@@ -12,10 +12,12 @@ module Trisagion.Parsers.Char (
 
     -- * Types.
     Sign (..),
+    Newline (..),
 
     -- * Newline parsers.
     lf,
     cr,
+    newline,
     line,
 
     -- * Whitespace parsers.
@@ -111,6 +113,11 @@ data Sign = Negative | Positive
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
 
+{- | The universal newline type. -}
+data Newline = LF | CRLF | CR
+    deriving stock (Eq, Ord, Bounded, Enum, Show)
+
+
 {- | Parse a line feed (character @'\\n'@).
 
 === __Examples:__
@@ -136,6 +143,19 @@ cr
     :: (HasOffset s, ElementOf s ~ Char)
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
+
+{- | Parse a newline. -}
+{-# INLINE newline #-}
+newline
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Newline
+newline = fmap (const LF) lf <|> crlf <|> fmap (const CR) cr 
+    where
+        crlf = do
+            _ <- cr
+            _ <- lf
+            pure CRLF
+
 
 {- | Parse a line out of the input stream. The line does not contain the ending @'\n'@ and can be null.
 
