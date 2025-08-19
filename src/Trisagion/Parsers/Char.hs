@@ -145,7 +145,7 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
-{- | Parse a newline. -}
+{- | Parse a newline from the stream. -}
 {-# INLINE newline #-}
 newline
     :: (HasOffset s, ElementOf s ~ Char)
