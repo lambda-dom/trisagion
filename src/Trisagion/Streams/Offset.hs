@@ -77,7 +77,7 @@ instance Splittable s => Splittable (Offset s) where
     splitWith p (Offset m xs) = Offset m <$> splitWith p xs
 
     {-# INLINE single #-}
-    single = single
+    single (type (Offset t)) = single t
 
 instance (MonoFoldable s, Streamable s) => HasOffset (Offset s) where
     {-# INLINE offset #-}
