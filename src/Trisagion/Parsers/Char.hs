@@ -214,24 +214,6 @@ line = do
         then throwError (makeEOI 1)
         else first absurd $ takeWith (/= '\n') <* optional lf
 
--- line
---     :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
---     => Parser s InputError (PrefixOf s)
--- line = fold <$> do
---         b <- gets Streamable.null
---         if b
---             then throwError (makeEOI 1)
---             else go
---     where
---         go :: Parser s InputError ([PrefixOf s]) 
---         go = do
---             xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
---             endline <- first absurd $ optional newline
---             case endline of
---                 -- TODO: hangs here, do not know why.
---                 Just CR -> fmap ([xs, (single s '\r')] ++) go
---                 _       -> pure [xs]
-
 {- | Parse a, possibly null, prefix of whitespace.
 
 === __Examples:__
