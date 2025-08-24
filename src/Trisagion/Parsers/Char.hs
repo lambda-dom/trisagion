@@ -51,6 +51,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
 -- foldl' is exported by the prelude since 9.10.
 import Data.Foldable (Foldable (..))
+import Data.List (intersperse)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
@@ -188,7 +189,7 @@ newline = do
 Right ("0123",Counter 5 "456")
 
 >>> parse line (initialize "0123\r\n456")
-Right ("0123\r",Counter 6 "456")
+Right ("0123",Counter 6 "456")
 
 >>> parse line (initialize "0123\r456")
 Right ("0123\r456",Counter 8 "")
@@ -205,14 +206,23 @@ Right ("456",Counter 3 "")
 >>> parse line (initialize "")
 Left (Cons (EndOfInput 1) [])
 -}
+
 line
-    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char)
+    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
     => Parser s InputError (PrefixOf s)
-line = do
-    b <- gets Streamable.null
-    if b
-        then throwError (makeEOI 1)
-        else first absurd $ takeWith (/= '\n') <* optional lf
+line = (fold . intersperse (single s '\r')) <$> do
+        b <- gets Streamable.null
+        if b
+            then throwError (makeEOI 1)
+            else go
+    where
+        go :: Parser s InputError ([PrefixOf s]) 
+        go = do
+            xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
+            endline <- first absurd $ optional newline
+            case endline of
+                Just CR -> fmap (xs :) go
+                _       -> pure [xs]
 
 {- | Parse a, possibly null, prefix of whitespace.
 
