@@ -145,7 +145,7 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
-{- | Parse a newline from the stream.
+{- | Parse a universal newline from the stream.
 
 === __Examples:__
 
@@ -180,23 +180,45 @@ newline = do
                 catch (fmap (const CRLF) (matchOne '\n')) (const $ pure CR)
             else throwParseError (review validationError c)
 
-{- | Parse a line out of the input stream. The line does not contain the ending @'\n'@ and can be null.
+{- | Parse a line out of the input stream. The line does not contain the ending newline and can be null.
 
-note(s):
+=== __Examples:__
 
-    * If the input stream contains Windows end of lines, then the line text will contain an ending
-    @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
-    solution) or complicating the implementation.
+>>> parse line (initialize "0123\n456")
+Right ("0123",Counter 5 "456")
+
+>>> parse line (initialize "0123\r\n456")
+Right ("0123",Counter 6 "456")
+
+>>> parse line (initialize "0123\r456")
+Right ("0123456",Counter 8 "")
+
+>>> parse line (initialize "0123\n\n456")
+Right ("0123",Counter 5 "\n456")
+
+>>> parse line (initialize "\n456")
+Right ("",Counter 1 "456")
+
+>>> parse line (initialize "")
+Left (Cons (EndOfInput 1) [])
 -}
-{-# INLINE line #-}
+{-# INLINEABLE line #-}
 line
-    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
+    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
     => Parser s InputError (PrefixOf s)
-line = do
-    b <- gets Streamable.null
-    if b
-        then throwError (makeEOI 1)
-        else first absurd $ takeWith (/= '\n') <* optional lf
+line = fold <$> go
+    where
+        go :: Parser s InputError ([PrefixOf s]) 
+        go = do
+            b <- gets Streamable.null
+            if b
+                then throwError (makeEOI 1)
+                else do
+                    xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
+                    end <- first absurd $ optional newline
+                    case end of
+                        Just CR -> fmap (xs :) go
+                        _       -> pure [xs]
 
 {- | Parse a, possibly null, prefix of whitespace.
 
