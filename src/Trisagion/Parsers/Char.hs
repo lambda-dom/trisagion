@@ -145,7 +145,28 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
-{- | Parse a newline from the stream. -}
+{- | Parse a newline from the stream.
+
+=== __Examples:__
+
+>>> parse newline (initialize "\n123")
+Right (LF,Counter 1 "123")
+
+>>> parse newline (initialize "\r123")
+Right (CR,Counter 1 "123")
+
+>>> parse newline (initialize "\r\n123")
+Right (CRLF,Counter 2 "123")
+
+>>> parse newline (initialize "\n\r123")
+Right (LF,Counter 1 "\r123")
+
+>>> parse newline (initialize "123")
+Left (Cons (ErrorItem 1 (ValidationError '1')) [])
+
+>>> parse newline (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
 {-# INLINE newline #-}
 newline
     :: (HasOffset s, ElementOf s ~ Char)
