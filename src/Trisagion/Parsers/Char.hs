@@ -56,7 +56,6 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (gets)
 import Optics.Core (review)
 
 -- non-Hackage libraries.
@@ -66,14 +65,15 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI, validationError)
+import Trisagion.Types.ParseError (ParseError, ValidationError, validationError, makeEOI)
 import Trisagion.Parser (Parser, (:+:), catch)
 import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
 import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
 import Trisagion.Parsers.Streamable (InputError, matchOne, satisfy, one)
 import Trisagion.Parsers.Splittable (takeWith, takeWith1)
+import qualified Trisagion.Typeclasses.Streamable as Streamable
+import Control.Monad.State (gets)
 
 
 -- $setup
@@ -180,7 +180,7 @@ newline = do
                 catch (fmap (const CRLF) (matchOne '\n')) (const $ pure CR)
             else throwParseError (review validationError c)
 
-{- | Parse a line out of the input stream. The line does not contain the ending newline and can be null.
+{- | Parse a line out of the input stream. The line does not contain the ending '\n' character and can be null.
 
 === __Examples:__
 
@@ -188,7 +188,7 @@ newline = do
 Right ("0123",Counter 5 "456")
 
 >>> parse line (initialize "0123\r\n456")
-Right ("0123",Counter 6 "456")
+Right ("0123\r",Counter 6 "456")
 
 >>> parse line (initialize "0123\r456")
 Right ("0123\r456",Counter 8 "")
@@ -199,29 +199,38 @@ Right ("0123",Counter 5 "\n456")
 >>> parse line (initialize "\n456")
 Right ("",Counter 1 "456")
 
->>> parse line (initialize "0123")
-Right ("0123",Counter 4 "")
+>>> parse line (initialize "456")
+Right ("456",Counter 3 "")
 
 >>> parse line (initialize "")
 Left (Cons (EndOfInput 1) [])
 -}
-{-# INLINEABLE line #-}
 line
-    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
+    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char)
     => Parser s InputError (PrefixOf s)
-line = fold <$> go
-    where
-        go :: Parser s InputError ([PrefixOf s]) 
-        go = do
-            b <- gets Streamable.null
-            if b
-                then throwError (makeEOI 1)
-                else do
-                    xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
-                    end <- first absurd $ optional newline
-                    case end of
-                        Just CR -> let xss = [xs, single s '\r'] in fmap (xss ++) go
-                        _       -> pure [xs]
+line = do
+    b <- gets Streamable.null
+    if b
+        then throwError (makeEOI 1)
+        else first absurd $ takeWith (/= '\n') <* optional lf
+
+-- line
+--     :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
+--     => Parser s InputError (PrefixOf s)
+-- line = fold <$> do
+--         b <- gets Streamable.null
+--         if b
+--             then throwError (makeEOI 1)
+--             else go
+--     where
+--         go :: Parser s InputError ([PrefixOf s]) 
+--         go = do
+--             xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
+--             endline <- first absurd $ optional newline
+--             case endline of
+--                 -- TODO: hangs here, do not know why.
+--                 Just CR -> fmap ([xs, (single s '\r')] ++) go
+--                 _       -> pure [xs]
 
 {- | Parse a, possibly null, prefix of whitespace.
 
