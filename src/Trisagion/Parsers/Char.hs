@@ -12,10 +12,12 @@ module Trisagion.Parsers.Char (
 
     -- * Types.
     Sign (..),
+    Newline (..),
 
     -- * Newline parsers.
     lf,
     cr,
+    newline,
     line,
 
     -- * Whitespace parsers.
@@ -55,6 +57,7 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (gets)
+import Optics.Core (review)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor(..))
@@ -65,8 +68,8 @@ import Trisagion.Lib.Utils (enumDown)
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI)
-import Trisagion.Parser (Parser, (:+:))
+import Trisagion.Types.ParseError (ParseError, ValidationError, makeEOI, validationError)
+import Trisagion.Parser (Parser, (:+:), catch)
 import Trisagion.Parsers.Combinators (manyTill, optional, lookAhead)
 import Trisagion.Parsers.ParseError (validate, throwParseError, onParseError)
 import Trisagion.Parsers.Streamable (InputError, matchOne, satisfy, one)
@@ -111,6 +114,11 @@ data Sign = Negative | Positive
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
 
+{- | The universal newline type. -}
+data Newline = LF | CRLF | CR
+    deriving stock (Eq, Ord, Bounded, Enum, Show)
+
+
 {- | Parse a line feed (character @'\\n'@).
 
 === __Examples:__
@@ -137,23 +145,80 @@ cr
     => Parser s (ParseError (ValidationError Char)) Char
 cr = matchOne '\r'
 
-{- | Parse a line out of the input stream. The line does not contain the ending @'\n'@ and can be null.
+{- | Parse a universal newline from the stream.
 
-note(s):
+=== __Examples:__
 
-    * If the input stream contains Windows end of lines, then the line text will contain an ending
-    @'\\r'@. This can only be stripped by assuming more about @'PrefixOf' s@ (the practical
-    solution) or complicating the implementation.
+>>> parse newline (initialize "\n123")
+Right (LF,Counter 1 "123")
+
+>>> parse newline (initialize "\r123")
+Right (CR,Counter 1 "123")
+
+>>> parse newline (initialize "\r\n123")
+Right (CRLF,Counter 2 "123")
+
+>>> parse newline (initialize "\n\r123")
+Right (LF,Counter 1 "\r123")
+
+>>> parse newline (initialize "123")
+Left (Cons (ErrorItem 1 (ValidationError '1')) [])
+
+>>> parse newline (initialize "")
+Left (Cons (EndOfInput 1) [])
 -}
-{-# INLINE line #-}
+{-# INLINE newline #-}
+newline
+    :: (HasOffset s, ElementOf s ~ Char)
+    => Parser s (ParseError (ValidationError Char)) Newline
+newline = do
+    c <- first (fmap absurd) one
+    if c == '\n'
+        then pure LF
+        else if c == '\r'
+            then
+                catch (fmap (const CRLF) (matchOne '\n')) (const $ pure CR)
+            else throwParseError (review validationError c)
+
+{- | Parse a line out of the input stream. The line does not contain the ending newline and can be null.
+
+=== __Examples:__
+
+>>> parse line (initialize "0123\n456")
+Right ("0123",Counter 5 "456")
+
+>>> parse line (initialize "0123\r\n456")
+Right ("0123",Counter 6 "456")
+
+>>> parse line (initialize "0123\r456")
+Right ("0123456",Counter 8 "")
+
+>>> parse line (initialize "0123\n\n456")
+Right ("0123",Counter 5 "\n456")
+
+>>> parse line (initialize "\n456")
+Right ("",Counter 1 "456")
+
+>>> parse line (initialize "")
+Left (Cons (EndOfInput 1) [])
+-}
+{-# INLINEABLE line #-}
 line
-    :: (HasOffset s, Splittable s, ElementOf s ~ Char)
+    :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
     => Parser s InputError (PrefixOf s)
-line = do
-    b <- gets Streamable.null
-    if b
-        then throwError (makeEOI 1)
-        else first absurd $ takeWith (/= '\n') <* optional lf
+line = fold <$> go
+    where
+        go :: Parser s InputError ([PrefixOf s]) 
+        go = do
+            b <- gets Streamable.null
+            if b
+                then throwError (makeEOI 1)
+                else do
+                    xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
+                    end <- first absurd $ optional newline
+                    case end of
+                        Just CR -> fmap (xs :) go
+                        _       -> pure [xs]
 
 {- | Parse a, possibly null, prefix of whitespace.
 
