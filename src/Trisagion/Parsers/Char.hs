@@ -206,7 +206,7 @@ Right ("456",Counter 3 "")
 >>> parse line (initialize "")
 Left (Cons (EndOfInput 1) [])
 -}
-
+{-# INLINEABLE line #-}
 line
     :: forall s . (HasOffset s, Splittable s, ElementOf s ~ Char, Monoid (PrefixOf s))
     => Parser s InputError (PrefixOf s)
