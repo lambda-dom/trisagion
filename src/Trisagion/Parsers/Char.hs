@@ -181,7 +181,7 @@ newline = do
                 catch (fmap (const CRLF) (matchOne '\n')) (const $ pure CR)
             else throwParseError (review validationError c)
 
-{- | Parse a line out of the input stream. The line does not contain the ending '\n' character and can be null.
+{- | Parse a line from the stream. The line does not contain the ending newline and can be null.
 
 === __Examples:__
 
