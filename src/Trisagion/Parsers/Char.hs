@@ -191,13 +191,16 @@ Right ("0123",Counter 5 "456")
 Right ("0123",Counter 6 "456")
 
 >>> parse line (initialize "0123\r456")
-Right ("0123456",Counter 8 "")
+Right ("0123\r456",Counter 8 "")
 
 >>> parse line (initialize "0123\n\n456")
 Right ("0123",Counter 5 "\n456")
 
 >>> parse line (initialize "\n456")
 Right ("",Counter 1 "456")
+
+>>> parse line (initialize "0123")
+Right ("0123",Counter 4 "")
 
 >>> parse line (initialize "")
 Left (Cons (EndOfInput 1) [])
@@ -217,7 +220,7 @@ line = fold <$> go
                     xs  <- first absurd $ takeWith (\ c -> c /= '\n' && c /= '\r')
                     end <- first absurd $ optional newline
                     case end of
-                        Just CR -> fmap (xs :) go
+                        Just CR -> let xss = [xs, single s '\r'] in fmap (xss ++) go
                         _       -> pure [xs]
 
 {- | Parse a, possibly null, prefix of whitespace.
