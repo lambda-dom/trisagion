@@ -20,7 +20,7 @@ import Optics.Core (Iso', iso)
 
 {- | The 'Result' type of a parsing function, isomorphic to @'Either' e (a, s)@. -}
 data Result s e a
-    = Error !e                          -- ^ Error case.
+    = Error e                           -- ^ Error case.
     | Success a !s                      -- ^ Success case.
     deriving stock (Eq, Show, Functor)
 
