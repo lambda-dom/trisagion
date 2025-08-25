@@ -34,7 +34,7 @@ import Optics.Prism (Prism', prism')
 {- | The @ErrorItem@ error type. -}
 data ErrorItem e
     = EndOfInput {-# UNPACK #-} !Word   -- ^ End of input error. Argument is the amount requested.
-    | ErrorItem {-# UNPACK #-} !Word !e -- ^ Error with input stream offset and error tag @e@.
+    | ErrorItem {-# UNPACK #-} !Word e  -- ^ Error with input stream offset and error tag @e@.
     deriving stock (Eq, Show, Functor)
 
 

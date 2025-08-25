@@ -23,7 +23,7 @@ import Trisagion.Parser (Parser, parse)
 
 
 {- | Chunk a stream with a parser. -}
-data Chunk s e a = Chunk {-# UNPACK #-} !Word !s !(Parser s e a)
+data Chunk s e a = Chunk {-# UNPACK #-} !Word !s (Parser s e a)
     deriving stock Functor
 
 -- Instances.
