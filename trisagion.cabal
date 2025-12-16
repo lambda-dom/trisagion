@@ -48,3 +48,4 @@ library
     other-modules:
     exposed-modules:
         Trisagion.Types.Result
+        Trisagion.ParserT
