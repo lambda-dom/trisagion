@@ -15,6 +15,16 @@ module Trisagion.ParserT (
     parse,
     eval,
     remainder,
+
+    -- * Functoriality.
+    hoist,
+
+    -- * Error parsers.
+    catch,
+    try,
+
+    -- * State parsers.
+    lookAhead,
 ) where
 
 -- Imports.
@@ -23,6 +33,11 @@ import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
+import Data.Void (Void)
+
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.Result (Result (..), (:+:), toEither)
@@ -116,6 +131,58 @@ instance (Monad m, Monoid e) => Alternative (ParserT m s e) where
                     x'@(Success _ _) -> pure x'
                     Error e'         -> pure . Error $ e <> e'
 
+{- | The 'MonadState' instance.
+
+The @'get'@ parser allows probing the t'ParserT' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
+the t'ParserT' state.
+-}
+instance Monad m => MonadState s (ParserT m s e) where
+    {-# INLINE get #-}
+    get :: ParserT m s e s
+    get = embed $ \ xs -> pure $ Success xs xs
+
+    {-# INLINE put #-}
+    put :: s -> ParserT m s e ()
+    put xs = embed $ const . pure $ Success () xs
+
+{- | The 'MonadError' instance.
+
+The typeclass provides error handling for the t'ParserT' monad. The @'throwError' e@ parser fails
+unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
+the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
+returned by @p@.
+
+The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
+difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
+continuation to depend on the specific error that was thrown.
+
+note(s):
+
+  * The monad analogy is not precise, because even if we make the obvious generalization of
+  @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
+-}
+instance Monad m => MonadError e (ParserT m s e) where
+    {-# INLINE throwError #-}
+    throwError :: e -> ParserT m s e a
+    throwError e = embed $ const . pure . Error $ e
+
+    {-# INLINE catchError #-}
+    catchError :: ParserT m s e a -> (e -> ParserT m s e a) -> ParserT m s e a
+    catchError p h = embed $ \ s -> do
+        r <- run p s
+        -- Case statement instead of 'catch' to make use of sharing in the Success branch.
+        case r of
+            x@(Success _ _) -> pure x
+            Error e         -> run (h e) s
+
 
 {- | Type alias for @t'ParserT' m@ specialized to @m ~ 'Identity'@.-}
 type Parser :: Type -> Type -> Type -> Type
@@ -146,3 +213,44 @@ eval p = fmap (fmap fst) . parse p
 {-# INLINE remainder #-}
 remainder :: Functor m => ParserT m s e a -> s -> m (e :+: s)
 remainder p = fmap (fmap snd) . parse p
+
+
+{- | Functoriality in the monad @m@ type parameter. -}
+hoist :: (forall b . m b -> n b) -> ParserT m s e a -> ParserT n s e a
+hoist f p = embed $ \ s -> f (run p s)
+
+{- | The type-changing version of 'catchError'.
+
+The parser @'catch' p h@ runs @p@ and if it throws an error @e@, backtracks and runs @h e@.
+-}
+{-# INLINE catch #-}
+catch
+    :: Monad m
+    => ParserT m s d a                  -- ^ Parser to try.
+    -> (d -> ParserT m s e a)           -- ^ Error handler.
+    -> ParserT m s e a
+catch p h = embed $ \ xs -> do
+    r <- run p xs
+    case r of
+        Error e      -> run (h e) xs
+        Success x ys -> pure $ Success x ys
+
+{- | Parser implementing backtracking.
+
+The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
+backtracks and returns the error as a 'Left'.
+-}
+{-# INLINE try #-}
+try :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
+try p = embed $ \ xs -> do
+    r <- run p xs
+    case r of
+        Error e      -> pure . flip Success xs . Left $ e
+        Success x ys -> pure . flip Success ys . Right $ x
+
+{- | Run the parser and return the result, but do not consume any input. -}
+{-# INLINE lookAhead #-}
+lookAhead :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
+lookAhead p = embed $ \ xs -> do
+    x <- eval p xs
+    pure $ Success x xs
