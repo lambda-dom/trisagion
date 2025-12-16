@@ -44,7 +44,9 @@ library
         -- GHC 9.10.
         base >=4.20 && <4.21,
         -- Libraries.
+        mtl >=2.3 && <2.4,
     build-depends:
     other-modules:
     exposed-modules:
         Trisagion.Types.Result
+        Trisagion.ParserT
