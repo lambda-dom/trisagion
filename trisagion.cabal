@@ -1,0 +1,50 @@
+cabal-version:      3.0
+name:               trisagion
+version:            0.1.0.0
+synopsis:           A monadic parsing and serializing library.
+description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
+category:           Parsing
+homepage:           https://github.com/lambda-dom/trisagion#readme
+author:             lambda-dom
+license:            BSD-3-Clause
+license-file:       LICENSE
+maintainer:         grodrigues.math@gmail.com
+copyright:          2025 G. Rodrigues
+build-type:         Simple
+tested-with:
+extra-doc-files:
+    LICENSE
+    README.md
+    CHANGELOG.md
+
+source-repository head
+    type: git
+    location: https://github.com/lambda-dom/trisagion
+
+library
+    default-language: GHC2021
+    default-extensions:
+        DerivingStrategies
+        DerivingVia
+    ghc-options:
+        -Wall
+        -Wcompat
+        -Widentities
+        -Wincomplete-record-updates
+        -Wincomplete-uni-patterns
+        -Wmissing-export-lists
+        -Wmissing-home-modules
+        -Wpartial-fields
+        -Wredundant-constraints
+        -Wmissing-deriving-strategies
+        -Wunused-packages
+    hs-source-dirs:
+        src
+    build-depends:
+        -- GHC 9.10.
+        base >=4.20 && <4.21,
+        -- Libraries.
+    build-depends:
+    other-modules:
+    exposed-modules:
+        Trisagion.Types.Result
