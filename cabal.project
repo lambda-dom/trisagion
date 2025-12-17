@@ -1,0 +1,7 @@
+packages:
+    ./trisagion.cabal
+
+source-repository-package
+    type: git
+    location: https://github.com/lambda-dom/mono
+    tag: v0.1.0

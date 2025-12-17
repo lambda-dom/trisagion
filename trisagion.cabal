@@ -26,6 +26,7 @@ library
     default-extensions:
         DerivingStrategies
         DerivingVia
+        FunctionalDependencies
     ghc-options:
         -Wall
         -Wcompat
@@ -45,9 +46,12 @@ library
         base >=4.20 && <4.21,
         -- Libraries.
         mtl >=2.3 && <2.4,
+        -- Non-hackage libraries.
+        mono >=0.1 && <0.2,
     build-depends:
     other-modules:
     exposed-modules:
         Trisagion.Types.Result
+        Trisagion.Typeclasses.Streamable
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
