@@ -16,12 +16,16 @@ module Trisagion.Types.ParseError (
 ) where
 
 -- Imports.
+-- Base.
+import Data.Kind (Type)
+
 -- Package.
 import Trisagion.Types.Result ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The t'ParseError' type. -}
+type ParseError :: Type -> Type
 data ParseError e
     = Failure
     | ParseError !Word e
@@ -52,6 +56,7 @@ instance Monoid (ParseError e) where
 
 
 {- | Constructor helper for t'ParseError'. -}
+{-# INLINE makeParseError #-}
 makeParseError
     :: (HasOffset m a s, Monad m)
     => s                                -- ^ Input stream.
@@ -62,5 +67,6 @@ makeParseError xs e = do
     pure (ParseError n e)
 
 {- | Dual of 'zip' for 'Either'. -}
+{-# INLINE cozip #-}
 cozip :: Functor f => f a :+: f b -> f (a :+: b)
 cozip = either (fmap Left) (fmap Right)
