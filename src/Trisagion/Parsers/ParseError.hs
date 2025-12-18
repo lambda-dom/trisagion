@@ -5,7 +5,7 @@ Parsers for handling t'ParseError' errors.
 -}
 
 module Trisagion.Parsers.ParseError (
-    -- * Error parsers.
+    -- * t'ParseError' parsers.
     throwParseError,
     capture,
     validate,

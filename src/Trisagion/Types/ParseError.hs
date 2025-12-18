@@ -8,7 +8,7 @@ module Trisagion.Types.ParseError (
     -- * Types.
     ParseError (..),
 
-    -- ** Constructors helpers.
+    -- ** Constructor helpers.
     makeParseError,
 
     -- * Merging errors.
