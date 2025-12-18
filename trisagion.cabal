@@ -52,6 +52,8 @@ library
     other-modules:
     exposed-modules:
         Trisagion.Types.Result
+        Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.HasOffset
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
