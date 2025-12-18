@@ -13,20 +13,21 @@ module Trisagion.Parsers.ParseError (
 
 -- Imports.
 import Data.Bifunctor (Bifunctor (..))
+import Data.Void (absurd)
 
 -- Package.
-import Trisagion.Types.Result (Result (..), (:+:))
+import Trisagion.Types.Result ((:+:))
 import Trisagion.Types.ParseError (ParseError (..), makeParseError)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.ParserT (ParserT, embed, run)
+import Trisagion.ParserT (ParserT, lift, throw)
 
 
 {- | Throw @t'ParseError'@ with error tag @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
 throwParseError :: (Monad m, HasOffset m s) => e -> ParserT m s (ParseError e) a
-throwParseError e = embed $ \ xs -> do
-    err <- makeParseError xs e
-    pure $ Error err
+throwParseError e = do
+    err <- first absurd $ lift (flip makeParseError e)
+    throw err
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
 
@@ -51,9 +52,9 @@ parser = capture $ do
 -}
 {-# INLINE capture #-}
 capture :: (Monad m, HasOffset m s) => ParserT m s (ParseError e) a -> ParserT m s (ParseError e) a
-capture p = embed $ \ xs -> do
-        n <- offset xs
-        fmap (first (set n)) $ run p xs
+capture p = do
+        n <- first absurd $ lift offset
+        first (set n) p
     where
         set :: Word -> ParseError e -> ParseError e
         set _ Failure          = Failure

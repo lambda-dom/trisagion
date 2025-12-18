@@ -25,6 +25,7 @@ module Trisagion.ParserT (
     try,
 
     -- * State parsers.
+    lift,
     lookAhead,
 ) where
 
@@ -220,6 +221,7 @@ remainder p = fmap (fmap snd) . parse p
 hoist :: (forall b . m b -> n b) -> ParserT m s e a -> ParserT n s e a
 hoist f p = embed $ \ s -> f (run p s)
 
+
 {- | Parser that fails unconditionally with error @e@. -}
 {-# INLINE throw #-}
 throw :: Applicative m => e -> ParserT m s e a
@@ -254,9 +256,15 @@ try p = embed $ \ xs -> do
         Error e      -> pure . flip Success xs . Left $ e
         Success x ys -> pure . flip Success ys . Right $ x
 
+
+{- | Lift a monadic stream function to the t'ParserT' monad. -}
+{-# INLINE lift #-}
+lift :: Monad m => (s -> m a) -> ParserT m s Void a
+lift h = embed $ \ xs -> do
+    r <- h xs
+    pure $ Success r xs
+
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
-lookAhead p = embed $ \ xs -> do
-    x <- eval p xs
-    pure $ Success x xs
+lookAhead p = lift (eval p)
