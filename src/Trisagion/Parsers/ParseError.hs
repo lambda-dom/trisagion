@@ -21,7 +21,7 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.ParserT (ParserT, embed, run)
 
 
-{- | Throw @'Trisagion.Types.ParseError'@ with error tag @e@ and offset the current stream offset. -}
+{- | Throw @t'ParseError'@ with error tag @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
 throwParseError :: (Monad m, HasOffset m s) => e -> ParserT m s (ParseError e) a
 throwParseError e = embed $ \ xs -> do
