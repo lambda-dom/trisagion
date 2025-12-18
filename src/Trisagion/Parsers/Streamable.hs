@@ -21,15 +21,20 @@ module Trisagion.Parsers.Streamable (
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
+import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
-import Data.Void (Void)
+import Data.Void (Void, absurd)
+
+-- Libraries.
+import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.Result (Result (..), (:+:))
+import Trisagion.Types.Result ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.ParserT (ParserT, embed)
+import Trisagion.ParserT (ParserT, lift, throw)
 import Trisagion.Parsers.ParseError (validate)
 
 
@@ -47,37 +52,35 @@ newtype ValidationError e = ValidationError e
 {- | Monadic check for nullity of the input stream. -}
 {-# INLINE eoi #-}
 eoi :: Streamable m a s => ParserT m s Void Bool
-eoi = embed $ \ xs -> do
-    r <- nullM xs
-    pure (Success r xs)
+eoi = lift nullM >>= pure
 
 {- | Parse one element from the input stream. -}
 {-# INLINE one #-}
 one :: (Streamable m a s, HasOffset m s) => ParserT m s (ParseError InputError) a
-one = embed $ \ xs -> do
-    n <- offset xs
-    r <- unconsM xs
+one = do
+    n <- first absurd $ lift offset
+    r <- first absurd $ lift unconsM
     case r of
-        Nothing      -> pure $ Error (ParseError n (InputError 1))
-        Just (x, ys) -> pure $ Success x ys
+        Nothing      -> throw (ParseError n (InputError 1))
+        Just (x, ys) -> put ys $> x
 
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable m a s => ParserT m s Void ()
-skipOne = embed $ \ xs -> do
-    r <- unconsM xs
+skipOne = do
+    r <- lift unconsM
     case r of
-        Nothing      -> pure $ Success () xs
-        Just (_, ys) -> pure $ Success () ys
+        Nothing      -> pure ()
+        Just (_, ys) -> put ys
 
 {- | Extract the first element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
 peek :: Streamable m a s => ParserT m s Void (Maybe a)
-peek = embed $ \ xs -> do
-    r <- unconsM xs
+peek = do
+    r <- lift unconsM
     case r of
-        Nothing     -> pure $ Success Nothing xs
-        Just (x, _) -> pure $ Success (Just x) xs
+        Nothing     -> pure $ Nothing
+        Just (x, _) -> pure $ Just x
 
 {- | Parse one element from the input stream satisfying a predicate. -}
 {-# INLINE satisfy #-}
