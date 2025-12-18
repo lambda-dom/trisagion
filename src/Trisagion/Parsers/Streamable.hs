@@ -21,6 +21,7 @@ module Trisagion.Parsers.Streamable (
 
 -- Imports.
 -- Base.
+import Data.Functor.Identity (Identity (..))
 import Data.Void (Void)
 
 -- Package.
@@ -40,6 +41,7 @@ newtype InputError = InputError Word
 {- | The t'ValidationError' error tag type thrown on failed validations. -}
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
+    deriving (Applicative, Monad) via Identity
 
 
 {- | Monadic check for nullity of the input stream. -}
