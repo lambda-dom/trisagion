@@ -57,3 +57,4 @@ library
         Trisagion.Typeclasses.HasOffset
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.ParseError

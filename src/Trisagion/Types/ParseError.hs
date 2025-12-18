@@ -58,7 +58,7 @@ instance Monoid (ParseError e) where
 {- | Constructor helper for t'ParseError'. -}
 {-# INLINE makeParseError #-}
 makeParseError
-    :: (HasOffset m a s, Monad m)
+    :: (HasOffset m s, Monad m)
     => s                                -- ^ Input stream.
     -> e                                -- ^ Error tag.
     -> m (ParseError e)

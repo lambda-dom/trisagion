@@ -20,6 +20,7 @@ module Trisagion.ParserT (
     hoist,
 
     -- * Error parsers.
+    throw,
     catch,
     try,
 
@@ -172,7 +173,7 @@ note(s):
 instance Monad m => MonadError e (ParserT m s e) where
     {-# INLINE throwError #-}
     throwError :: e -> ParserT m s e a
-    throwError e = embed $ const . pure . Error $ e
+    throwError = throw
 
     {-# INLINE catchError #-}
     catchError :: ParserT m s e a -> (e -> ParserT m s e a) -> ParserT m s e a
@@ -218,6 +219,11 @@ remainder p = fmap (fmap snd) . parse p
 {- | Functoriality in the monad @m@ type parameter. -}
 hoist :: (forall b . m b -> n b) -> ParserT m s e a -> ParserT n s e a
 hoist f p = embed $ \ s -> f (run p s)
+
+{- | Parser that fails unconditionally with error @e@. -}
+{-# INLINE throw #-}
+throw :: Applicative m => e -> ParserT m s e a
+throw e = embed $ const . pure . Error $ e
 
 {- | The type-changing version of 'catchError'.
 
