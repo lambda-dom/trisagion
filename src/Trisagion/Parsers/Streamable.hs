@@ -15,6 +15,8 @@ module Trisagion.Parsers.Streamable (
     skipOne,
     peek,
     satisfy,
+    matchOne,
+    oneOf,
 ) where
 
 -- Imports.
@@ -79,9 +81,25 @@ peek = embed $ \ xs -> do
 {-# INLINE satisfy #-}
 satisfy
     :: forall m a s . (HasOffset m s, Streamable m a s)
-    => (a -> Bool)            -- ^ @a@-predicate.
+    => (a -> Bool)                      -- ^ @a@-predicate.
     -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
 satisfy p = validate v one
     where
         v :: a -> ValidationError a :+: a
         v x = if p x then Left (ValidationError x) else Right x
+
+{- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
+{-# INLINE matchOne #-}
+matchOne
+    :: (HasOffset m s, Streamable m a s, Eq a)
+    => a                                -- ^ Matching @x :: a@.
+    -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
+matchOne x = satisfy (== x)
+
+{- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
+{-# INLINE oneOf #-}
+oneOf
+    :: (HasOffset m s, Streamable m a s, Eq a, Foldable t)
+    => t a                              -- ^ Foldable of @x :: a@ against which to test inclusion.
+    -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
+oneOf xs = satisfy (`elem` xs)
