@@ -10,8 +10,11 @@ module Trisagion.Parsers.Splittable (
     drop,
     takeWith,
     dropWith,
+    takeExact,
     takeWith1,
     isolate,
+    match,
+    consumed,
 ) where
 
 -- Imports.
@@ -26,13 +29,16 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.State (MonadState(..))
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+
 -- Package.
 import Trisagion.Types.Result ((:+:), Result (..))
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, lift, lookAhead, throw, parse, embed)
-import Trisagion.Parsers.Streamable (ValidationError, InputError, satisfy)
-import Trisagion.Typeclasses.HasOffset (HasOffset)
+import Trisagion.ParserT (ParserT, parse, embed, lift, lookAhead, throw)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), satisfy)
 
 
 {- | Parse a fixed size prefix.
@@ -66,6 +72,41 @@ dropWith p = do
     (_, remainder) <- first absurd $ lift (splitWithM p)
     put remainder $> ()
 
+{- | Parse an exact, fixed size prefix.
+
+note(s):
+
+    * Implementation requires computing the length of the prefix.
+-}
+{-# INLINE takeExact #-}
+takeExact
+    :: (HasOffset m s, Splittable m a b s, MonoFoldable a b)
+    => Word -> ParserT m s (ParseError InputError) b
+takeExact n = do
+    m <- first absurd $ lift offset
+    prefix <- first absurd $ take n
+    if monolength prefix /= n
+        then throw $ ParseError m (InputError n)
+        else pure prefix
+
+{- | Parse a matching prefix.
+
+note(s):
+
+    * Implementation requires computing the length of the argument prefix.
+-}
+{-# INLINE match #-}
+match
+    :: (HasOffset m s, Splittable m a b s, Eq b, MonoFoldable a b)
+    => b                                -- ^ Matching prefix.
+    -> ParserT m s (ParseError ((ValidationError b) :+: InputError)) b
+match xs = do
+    m <- first absurd $ lift offset
+    prefix <- first (fmap Right) $ takeExact (monolength xs)
+    if xs == prefix
+        then pure xs
+        else throw $ ParseError m (Left (ValidationError xs))
+
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
 {-# INLINE takeWith1 #-}
 takeWith1
@@ -95,3 +136,21 @@ isolate n p = embed $ \xs -> do
     case r of
         Left e  -> pure $ Error e
         Right x -> pure $ Success x remainder
+
+{- | Run the parser and return its result along with the prefix of consumed input.
+
+note(s):
+
+  * Implementation requires computing the difference of offsets, so it implicitly relies on
+    normality of @p@.
+-}
+{-# INLINE consumed #-}
+consumed :: (HasOffset m s, Splittable m a b s) => ParserT m s e a -> ParserT m s e (b, a)
+consumed p = do
+    start  <- first absurd $ lift offset
+    xs <- get
+    x  <- p
+    end  <- first absurd $ lift offset
+    -- Implicitly relies on the parser @p@ being normal, for positivity of @start - end@.
+    ys <- first absurd $ lift (const (fst <$> splitAtM (start - end) xs))
+    pure (ys, x)
