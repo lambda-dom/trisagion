@@ -13,6 +13,7 @@ module Trisagion.Parsers.Splittable (
     takeExact,
     takeWith1,
     isolate,
+    match,
 ) where
 
 -- Imports.
@@ -36,7 +37,7 @@ import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.ParserT (ParserT, parse, embed, lift, lookAhead, throw)
-import Trisagion.Parsers.Streamable (ValidationError, InputError (..), satisfy)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), satisfy)
 
 
 {- | Parse a fixed size prefix.
@@ -70,7 +71,12 @@ dropWith p = do
     (_, remainder) <- first absurd $ lift (splitWithM p)
     put remainder $> ()
 
-{- | Parse an exact, fixed size prefix. -}
+{- | Parse an exact, fixed size prefix.
+
+note(s):
+
+    * Implementation requires computing the length of the prefix.
+-}
 {-# INLINE takeExact #-}
 takeExact
     :: (HasOffset m s, Splittable m a b s, MonoFoldable a b)
@@ -81,6 +87,24 @@ takeExact n = do
     if monolength prefix /= n
         then throw $ ParseError m (InputError n)
         else pure prefix
+
+{- | Parse a matching prefix.
+
+note(s):
+
+    * Implementation requires computing the length of the argument prefix.
+-}
+{-# INLINE match #-}
+match
+    :: (HasOffset m s, Splittable m a b s, Eq b, MonoFoldable a b)
+    => b                                -- ^ Matching prefix.
+    -> ParserT m s (ParseError ((ValidationError b) :+: InputError)) b
+match xs = do
+    m <- first absurd $ lift offset
+    prefix <- first (fmap Right) $ takeExact (monolength xs)
+    if xs == prefix
+        then pure xs
+        else throw $ ParseError m (Left (ValidationError xs))
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
 {-# INLINE takeWith1 #-}
