@@ -14,6 +14,7 @@ module Trisagion.Parsers.Splittable (
     takeWith1,
     isolate,
     match,
+    consumed,
 ) where
 
 -- Imports.
@@ -135,3 +136,21 @@ isolate n p = embed $ \xs -> do
     case r of
         Left e  -> pure $ Error e
         Right x -> pure $ Success x remainder
+
+{- | Run the parser and return its result along with the prefix of consumed input.
+
+note(s):
+
+  * Implementation requires computing the difference of offsets, so it implicitly relies on
+    normality of @p@.
+-}
+{-# INLINE consumed #-}
+consumed :: (HasOffset m s, Splittable m a b s) => ParserT m s e a -> ParserT m s e (b, a)
+consumed p = do
+    start  <- first absurd $ lift offset
+    xs <- get
+    x  <- p
+    end  <- first absurd $ lift offset
+    -- Implicitly relies on the parser @p@ being normal, for positivity of @start - end@.
+    ys <- first absurd $ lift (const (fst <$> splitAtM (start - end) xs))
+    pure (ys, x)
