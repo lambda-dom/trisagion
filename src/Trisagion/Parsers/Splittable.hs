@@ -10,6 +10,7 @@ module Trisagion.Parsers.Splittable (
     drop,
     takeWith,
     dropWith,
+    takeExact,
     takeWith1,
     isolate,
 ) where
@@ -26,13 +27,16 @@ import Data.Void (Void, absurd)
 -- Libraries.
 import Control.Monad.State (MonadState(..))
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+
 -- Package.
 import Trisagion.Types.Result ((:+:), Result (..))
-import Trisagion.Types.ParseError (ParseError)
+import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, lift, lookAhead, throw, parse, embed)
-import Trisagion.Parsers.Streamable (ValidationError, InputError, satisfy)
-import Trisagion.Typeclasses.HasOffset (HasOffset)
+import Trisagion.ParserT (ParserT, parse, embed, lift, lookAhead, throw)
+import Trisagion.Parsers.Streamable (ValidationError, InputError (..), satisfy)
 
 
 {- | Parse a fixed size prefix.
@@ -65,6 +69,18 @@ dropWith :: Splittable m a b s => (a -> Bool) -> ParserT m s Void ()
 dropWith p = do
     (_, remainder) <- first absurd $ lift (splitWithM p)
     put remainder $> ()
+
+{- | Parse an exact, fixed size prefix. -}
+{-# INLINE takeExact #-}
+takeExact
+    :: (HasOffset m s, Splittable m a b s, MonoFoldable a b)
+    => Word -> ParserT m s (ParseError InputError) b
+takeExact n = do
+    m <- first absurd $ lift offset
+    prefix <- first absurd $ take n
+    if monolength prefix /= n
+        then throw $ ParseError m (InputError n)
+        else pure prefix
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
 {-# INLINE takeWith1 #-}
