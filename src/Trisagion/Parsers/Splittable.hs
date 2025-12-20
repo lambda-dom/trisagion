@@ -10,6 +10,8 @@ module Trisagion.Parsers.Splittable (
     drop,
     takeWith,
     dropWith,
+    takeWith1,
+    isolate,
 ) where
 
 -- Imports.
@@ -25,8 +27,12 @@ import Data.Void (Void, absurd)
 import Control.Monad.State (MonadState(..))
 
 -- Package.
+import Trisagion.Types.Result ((:+:), Result (..))
+import Trisagion.Types.ParseError (ParseError)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, lift)
+import Trisagion.ParserT (ParserT, lift, lookAhead, throw, parse, embed)
+import Trisagion.Parsers.Streamable (ValidationError, InputError, satisfy)
+import Trisagion.Typeclasses.HasOffset (HasOffset)
 
 
 {- | Parse a fixed size prefix.
@@ -60,3 +66,32 @@ dropWith p = do
     (_, remainder) <- first absurd $ lift (splitWithM p)
     put remainder $> ()
 
+{- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
+{-# INLINE takeWith1 #-}
+takeWith1
+    :: (Splittable m a b s, HasOffset m s)
+    => (a -> Bool)                      -- ^ Predicate on @a@.
+    -> ParserT m s (ParseError (ValidationError a :+: InputError)) b
+takeWith1 p = do
+    x <- first absurd $ lookAhead (satisfy p)
+    case x of
+        Left e  -> throw e
+        Right _ -> first absurd $ takeWith p
+
+{- | Run a parser isolated to a fixed size prefix of the stream.
+
+The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
+in the stream. Any unconsumed input in the prefix is returned along with the result.
+-}
+{-# INLINE isolate #-}
+isolate
+    :: Splittable m a b s
+    => Word                             -- ^ Prefix size.
+    -> ParserT m b e a                  -- ^ Parser to run.
+    -> ParserT m s e (a, b)
+isolate n p = embed $ \xs -> do
+    (prefix, remainder) <- splitAtM n xs
+    r      <- parse p prefix
+    case r of
+        Left e  -> pure $ Error e
+        Right x -> pure $ Success x remainder
