@@ -43,7 +43,7 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError(..))
 
 -- Package.
-import Trisagion.Types.Result ((:+:))
+import Trisagion.Types.Either ((:+:))
 import Trisagion.ParserT (ParserT, try, lookAhead)
 
 

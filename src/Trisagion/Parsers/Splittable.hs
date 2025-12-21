@@ -33,7 +33,7 @@ import Control.Monad.State (MonadState(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Types.Result ((:+:))
+import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))

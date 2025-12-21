@@ -18,7 +18,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.Result ((:+:))
+import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.ParserT (ParserT, lift, throw)
