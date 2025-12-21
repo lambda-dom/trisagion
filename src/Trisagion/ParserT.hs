@@ -74,7 +74,7 @@ note(s):
 instance Monad m => Applicative (ParserT m s e) where
     {-# INLINE pure #-}
     pure :: a -> ParserT m s e a
-    pure x = embed $ pure . Success x
+    pure x = embed $ \ xs -> pure $ Success x xs
 
     {-# INLINE (<*>) #-}
     (<*>) :: ParserT m s e (a -> b) -> ParserT m s e a -> ParserT m s e b
@@ -119,7 +119,7 @@ note(s):
 instance (Monad m, Monoid e) => Alternative (ParserT m s e) where
     {-# INLINE empty #-}
     empty :: ParserT m s e a
-    empty = embed $ const . pure . Error $ mempty
+    empty = embed . const . pure $ Error mempty
 
     {-# INLINE (<|>) #-}
     (<|>) :: ParserT m s e a -> ParserT m s e a -> ParserT m s e a
@@ -131,7 +131,7 @@ instance (Monad m, Monoid e) => Alternative (ParserT m s e) where
                 s <- run q xs
                 case s of
                     x'@(Success _ _) -> pure x'
-                    Error e'         -> pure . Error $ e <> e'
+                    Error e'         -> pure $ Error (e <> e')
 
 {- | The 'MonadState' instance.
 
@@ -153,7 +153,7 @@ instance Monad m => MonadState s (ParserT m s e) where
 
     {-# INLINE put #-}
     put :: s -> ParserT m s e ()
-    put xs = embed $ const . pure $ Success () xs
+    put xs = embed . const . pure $ Success () xs
 
 {- | The 'MonadError' instance.
 
@@ -225,7 +225,7 @@ hoist f p = embed $ \ s -> f (run p s)
 {- | Parser that fails unconditionally with error @e@. -}
 {-# INLINE throw #-}
 throw :: Applicative m => e -> ParserT m s e a
-throw e = embed $ const . pure . Error $ e
+throw e = embed . const . pure $ Error e
 
 {- | The type-changing version of 'catchError'.
 
@@ -253,18 +253,21 @@ try :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
 try p = embed $ \ xs -> do
     r <- run p xs
     case r of
-        Error e      -> pure . flip Success xs . Left $ e
-        Success x ys -> pure . flip Success ys . Right $ x
+        Error e      -> pure $ Success (Left e) xs
+        Success x ys -> pure $ Success (Right x) ys
 
 
-{- | Lift a monadic stream function to the t'ParserT' monad. -}
+{- | Lift a monadic action to the t'ParserT' monad.
+
+This parser does not consume input and does not throw errors.
+-}
 {-# INLINE lift #-}
-lift :: Monad m => (s -> m a) -> ParserT m s Void a
+lift :: Monad m => m a -> ParserT m s e a
 lift h = embed $ \ xs -> do
-    r <- h xs
-    pure $ Success r xs
+    x <- h
+    pure $ Success x xs
 
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
-lookAhead p = lift (eval p)
+lookAhead p = get >>= \ xs -> lift (eval p xs)

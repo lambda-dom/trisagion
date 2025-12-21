@@ -33,11 +33,11 @@ import Control.Monad.State (MonadState(..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Types.Result ((:+:), Result (..))
+import Trisagion.Types.Result ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, parse, embed, lift, lookAhead, throw)
+import Trisagion.ParserT (ParserT, parse, lift, lookAhead, throw)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), satisfy)
 
 
@@ -48,28 +48,28 @@ The parser does not error and it is guaranteed that the prefix has length equal 
 {-# INLINE take #-}
 take :: Splittable m a b s => Word -> ParserT m s Void b
 take n = do
-    (prefix, remainder) <- first absurd $ lift (splitAtM n)
+    (prefix, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> prefix
 
 {- | Drop a fixed size prefix from the stream. -}
 {-# INLINE drop #-}
 drop :: Splittable m a b s => Word -> ParserT m s Void ()
 drop n = do
-    (_, remainder) <- first absurd $ lift (splitAtM n)
+    (_, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> ()
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE takeWith #-}
 takeWith :: Splittable m a b s => (a -> Bool) -> ParserT m s Void b
 takeWith p = do
-    (prefix, remainder) <- first absurd $ lift (splitWithM p)
+    (prefix, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> prefix
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE dropWith #-}
 dropWith :: Splittable m a b s => (a -> Bool) -> ParserT m s Void ()
 dropWith p = do
-    (_, remainder) <- first absurd $ lift (splitWithM p)
+    (_, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> ()
 
 {- | Parse an exact, fixed size prefix.
@@ -83,7 +83,7 @@ takeExact
     :: (HasOffset m s, Splittable m a b s, MonoFoldable a b)
     => Word -> ParserT m s (ParseError InputError) b
 takeExact n = do
-    m <- first absurd $ lift offset
+    m <- get >>= \ xs -> lift (offset xs)
     prefix <- first absurd $ take n
     if monolength prefix /= n
         then throw $ ParseError m (InputError n)
@@ -101,7 +101,7 @@ match
     => b                                -- ^ Matching prefix.
     -> ParserT m s (ParseError ((ValidationError b) :+: InputError)) b
 match xs = do
-    m <- first absurd $ lift offset
+    m <- get >>= \ ys -> lift (offset ys)
     prefix <- first (fmap Right) $ takeExact (monolength xs)
     if xs == prefix
         then pure xs
@@ -128,14 +128,14 @@ in the stream. Any unconsumed input in the prefix is returned along with the res
 isolate
     :: Splittable m a b s
     => Word                             -- ^ Prefix size.
-    -> ParserT m b e a                  -- ^ Parser to run.
+    -> ParserT m b e a                  -- ^ Parser to run on the prefix.
     -> ParserT m s e (a, b)
-isolate n p = embed $ \xs -> do
-    (prefix, remainder) <- splitAtM n xs
-    r      <- parse p prefix
+isolate n p = do
+    prefix <- first absurd $ take n
+    r <- lift (parse p prefix)
     case r of
-        Left e  -> pure $ Error e
-        Right x -> pure $ Success x remainder
+        Left e  -> throw e
+        Right x -> pure x
 
 {- | Run the parser and return its result along with the prefix of consumed input.
 
@@ -147,10 +147,10 @@ note(s):
 {-# INLINE consumed #-}
 consumed :: (HasOffset m s, Splittable m a b s) => ParserT m s e a -> ParserT m s e (b, a)
 consumed p = do
-    start  <- first absurd $ lift offset
     xs <- get
+    start <- lift (offset xs)
     x  <- p
-    end  <- first absurd $ lift offset
-    -- Implicitly relies on the parser @p@ being normal, for positivity of @start - end@.
-    ys <- first absurd $ lift (const (fst <$> splitAtM (start - end) xs))
+    end <- get >>= \ ys -> lift (offset ys)
+    -- Implicitly relies on the parser @p@ being normal, for positivity of @end - start@.
+    ys <- first absurd $ lift (fst <$> splitAtM (end - start) xs)
     pure (ys, x)

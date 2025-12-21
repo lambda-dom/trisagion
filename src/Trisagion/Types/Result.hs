@@ -11,7 +11,7 @@ module Trisagion.Types.Result (
     -- * Types.
     Result (..),
 
-    -- * Isomorphisms.
+    -- ** Isomorphisms.
     toEither,
 ) where
 
