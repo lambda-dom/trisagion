@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Types.Either
 
-The return type of parsing functions.
+Some utilities for the `Either` coproduct bifunctor.
 -}
 
 module Trisagion.Types.Either (
