@@ -58,7 +58,7 @@ library
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable
         Trisagion.ParserT
-        Trisagion.Parsers.Combinators
-        Trisagion.Parsers.ParseError
-        Trisagion.Parsers.Streamable
-        Trisagion.Parsers.Splittable
+        -- Trisagion.Parsers.Combinators
+        -- Trisagion.Parsers.ParseError
+        -- Trisagion.Parsers.Streamable
+        -- Trisagion.Parsers.Splittable
