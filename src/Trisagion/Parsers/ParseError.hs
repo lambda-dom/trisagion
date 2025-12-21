@@ -13,7 +13,9 @@ module Trisagion.Parsers.ParseError (
 
 -- Imports.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Void (absurd)
+
+-- Libraries.
+import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.Result ((:+:))
@@ -26,7 +28,7 @@ import Trisagion.ParserT (ParserT, lift, throw)
 {-# INLINE throwParseError #-}
 throwParseError :: (Monad m, HasOffset m s) => e -> ParserT m s (ParseError e) a
 throwParseError e = do
-    err <- first absurd $ lift (flip makeParseError e)
+    err <- get >>= \ xs -> lift (makeParseError e xs)
     throw err
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
@@ -53,7 +55,7 @@ parser = capture $ do
 {-# INLINE capture #-}
 capture :: (Monad m, HasOffset m s) => ParserT m s (ParseError e) a -> ParserT m s (ParseError e) a
 capture p = do
-        n <- first absurd $ lift offset
+        n  <- get >>= \ xs -> lift (offset xs)
         first (set n) p
     where
         set :: Word -> ParseError e -> ParseError e

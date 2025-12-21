@@ -59,10 +59,10 @@ instance Monoid (ParseError e) where
 {-# INLINE makeParseError #-}
 makeParseError
     :: (HasOffset m s, Monad m)
-    => s                                -- ^ Input stream.
-    -> e                                -- ^ Error tag.
+    => e                                -- ^ Error tag.
+    -> s                                -- ^ Input stream.
     -> m (ParseError e)
-makeParseError xs e = do
+makeParseError e xs = do
     n <- offset xs
     pure (ParseError n e)
 

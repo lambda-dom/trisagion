@@ -11,7 +11,11 @@ module Trisagion.Types.Result (
     -- * Types.
     Result (..),
 
-    -- * Isomorphisms.
+    -- ** Constructor helpers.
+    errorM,
+    successM,
+
+    -- ** Isomorphisms.
     toEither,
 ) where
 
@@ -40,6 +44,17 @@ instance Bifunctor (Result s) where
     bimap :: (d -> e) -> (a -> b) -> Result s d a -> Result s e b
     bimap f _ (Error e)      = Error (f e)
     bimap _ g (Success x xs) = Success (g x) xs
+
+
+{- | Constructor helper for 'Result'. -}
+{-# INLINE errorM #-}
+errorM :: Applicative m => e -> m (Result s e a)
+errorM = pure . Error
+
+{- | Constructor helper for 'Result'. -}
+{-# INLINE successM #-}
+successM :: Applicative m => a -> s -> m (Result s e a)
+successM x = pure . Success x
 
 
 {- | The isomorphism @'Result' s e a -> 'Either' e (a, s)@. -}

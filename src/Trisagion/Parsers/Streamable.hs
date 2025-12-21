@@ -21,10 +21,9 @@ module Trisagion.Parsers.Streamable (
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
-import Data.Void (Void, absurd)
+import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
@@ -52,23 +51,23 @@ newtype ValidationError e = ValidationError e
 {- | Monadic check for nullity of the input stream. -}
 {-# INLINE eoi #-}
 eoi :: Streamable m a s => ParserT m s Void Bool
-eoi = lift nullM >>= pure
+eoi = get >>= \ xs -> lift (nullM xs)
 
 {- | Parse one element from the input stream. -}
 {-# INLINE one #-}
 one :: (Streamable m a s, HasOffset m s) => ParserT m s (ParseError InputError) a
 one = do
-    n <- first absurd $ lift offset
-    r <- first absurd $ lift unconsM
+    e <- get >>= \ xs -> lift ((flip ParseError (InputError 1)) <$> offset xs)
+    r <- get >>= \ xs -> lift (unconsM xs)
     case r of
-        Nothing      -> throw (ParseError n (InputError 1))
+        Nothing      -> throw e
         Just (x, ys) -> put ys $> x
 
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable m a s => ParserT m s Void ()
 skipOne = do
-    r <- lift unconsM
+    r <- get >>= \ xs -> lift (unconsM xs)
     case r of
         Nothing      -> pure ()
         Just (_, ys) -> put ys
@@ -77,7 +76,7 @@ skipOne = do
 {-# INLINE peek #-}
 peek :: Streamable m a s => ParserT m s Void (Maybe a)
 peek = do
-    r <- lift unconsM
+    r <- get >>= \ xs -> lift (unconsM xs)
     case r of
         Nothing     -> pure $ Nothing
         Just (x, _) -> pure $ Just x

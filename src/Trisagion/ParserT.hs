@@ -42,7 +42,7 @@ import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.Result (Result (..), (:+:), toEither)
+import Trisagion.Types.Result (Result (..), (:+:), successM, errorM, toEither)
 
 
 {- | The parsing monad transformer @ParserT m s e a@.
@@ -74,19 +74,19 @@ note(s):
 instance Monad m => Applicative (ParserT m s e) where
     {-# INLINE pure #-}
     pure :: a -> ParserT m s e a
-    pure x = embed $ pure . Success x
+    pure = embed . successM
 
     {-# INLINE (<*>) #-}
     (<*>) :: ParserT m s e (a -> b) -> ParserT m s e a -> ParserT m s e b
     (<*>) p q = embed $ \ xs -> do
         r <- run p xs
         case r of
-            Error d      -> pure $ Error d
+            Error d      -> errorM d
             Success f ys -> do
                 s <- run q ys
                 case s of
-                    Error e      -> pure $ Error e
-                    Success x zs -> pure $ Success (f x) zs
+                    Error e      -> errorM e
+                    Success x zs -> successM (f x) zs
 
 {- | The 'Monad' instance.
 
@@ -103,7 +103,7 @@ instance Monad m => Monad (ParserT m s e) where
     (>>=) p h = embed $ \ xs -> do
         r <- run p xs
         case r of
-            Error e      -> pure $ Error e
+            Error e      -> errorM e
             Success x ys -> run (h x) ys
 
 {- | The 'Alternative' instance.
@@ -119,7 +119,7 @@ note(s):
 instance (Monad m, Monoid e) => Alternative (ParserT m s e) where
     {-# INLINE empty #-}
     empty :: ParserT m s e a
-    empty = embed $ const . pure . Error $ mempty
+    empty = embed . const . errorM $ mempty
 
     {-# INLINE (<|>) #-}
     (<|>) :: ParserT m s e a -> ParserT m s e a -> ParserT m s e a
@@ -131,7 +131,7 @@ instance (Monad m, Monoid e) => Alternative (ParserT m s e) where
                 s <- run q xs
                 case s of
                     x'@(Success _ _) -> pure x'
-                    Error e'         -> pure . Error $ e <> e'
+                    Error e'         -> errorM $ e <> e'
 
 {- | The 'MonadState' instance.
 
@@ -149,11 +149,11 @@ the t'ParserT' state.
 instance Monad m => MonadState s (ParserT m s e) where
     {-# INLINE get #-}
     get :: ParserT m s e s
-    get = embed $ \ xs -> pure $ Success xs xs
+    get = embed $ \ xs -> successM xs xs
 
     {-# INLINE put #-}
     put :: s -> ParserT m s e ()
-    put xs = embed $ const . pure $ Success () xs
+    put xs = embed . const $ successM () xs
 
 {- | The 'MonadError' instance.
 
@@ -225,7 +225,7 @@ hoist f p = embed $ \ s -> f (run p s)
 {- | Parser that fails unconditionally with error @e@. -}
 {-# INLINE throw #-}
 throw :: Applicative m => e -> ParserT m s e a
-throw e = embed $ const . pure . Error $ e
+throw e = embed . const $ errorM e
 
 {- | The type-changing version of 'catchError'.
 
@@ -241,7 +241,7 @@ catch p h = embed $ \ xs -> do
     r <- run p xs
     case r of
         Error e      -> run (h e) xs
-        Success x ys -> pure $ Success x ys
+        Success x ys -> successM x ys
 
 {- | Parser implementing backtracking.
 
@@ -253,18 +253,21 @@ try :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
 try p = embed $ \ xs -> do
     r <- run p xs
     case r of
-        Error e      -> pure . flip Success xs . Left $ e
-        Success x ys -> pure . flip Success ys . Right $ x
+        Error e      -> successM (Left e) xs
+        Success x ys -> successM (Right x) ys
 
 
-{- | Lift a monadic stream function to the t'ParserT' monad. -}
+{- | Lift a monadic action to the t'ParserT' monad.
+
+This parser does not consume input and does not throw errors.
+-}
 {-# INLINE lift #-}
-lift :: Monad m => (s -> m a) -> ParserT m s Void a
+lift :: Monad m => m a -> ParserT m s e a
 lift h = embed $ \ xs -> do
-    r <- h xs
-    pure $ Success r xs
+    x <- h
+    successM x xs
 
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT m s e a -> ParserT m s Void (e :+: a)
-lookAhead p = lift (eval p)
+lookAhead p = get >>= \ xs -> lift (eval p xs)
