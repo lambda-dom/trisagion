@@ -8,9 +8,6 @@ module Trisagion.Types.ParseError (
     -- * Types.
     ParseError (..),
 
-    -- ** Constructor helpers.
-    makeParseError,
-
     -- * Merging errors.
     cozip,
 ) where
@@ -21,7 +18,6 @@ import Data.Kind (Type)
 
 -- Package.
 import Trisagion.Types.Result ((:+:))
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The t'ParseError' type. -}
@@ -54,17 +50,6 @@ instance Monoid (ParseError e) where
     mempty :: ParseError e
     mempty = Failure
 
-
-{- | Constructor helper for t'ParseError'. -}
-{-# INLINE makeParseError #-}
-makeParseError
-    :: (HasOffset m s, Monad m)
-    => e                                -- ^ Error tag.
-    -> s                                -- ^ Input stream.
-    -> m (ParseError e)
-makeParseError e xs = do
-    n <- offset xs
-    pure (ParseError n e)
 
 {- | Dual of 'zip' for 'Either'. -}
 {-# INLINE cozip #-}

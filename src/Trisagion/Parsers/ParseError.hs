@@ -19,7 +19,7 @@ import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Types.Result ((:+:))
-import Trisagion.Types.ParseError (ParseError (..), makeParseError)
+import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.ParserT (ParserT, lift, throw)
 
@@ -28,7 +28,7 @@ import Trisagion.ParserT (ParserT, lift, throw)
 {-# INLINE throwParseError #-}
 throwParseError :: (Monad m, HasOffset m s) => e -> ParserT m s (ParseError e) a
 throwParseError e = do
-    err <- get >>= \ xs -> lift (makeParseError e xs)
+    err <- get >>= \ xs -> lift ((flip ParseError e) <$> offset xs)
     throw err
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
