@@ -7,17 +7,11 @@ The @ParseError@ error type.
 module Trisagion.Types.ParseError (
     -- * Types.
     ParseError (..),
-
-    -- * Merging errors.
-    cozip,
 ) where
 
 -- Imports.
 -- Base.
 import Data.Kind (Type)
-
--- Package.
-import Trisagion.Types.Result ((:+:))
 
 
 {- | The t'ParseError' type. -}
@@ -49,9 +43,3 @@ instance Monoid (ParseError e) where
     {-# INLINE mempty #-}
     mempty :: ParseError e
     mempty = Failure
-
-
-{- | Dual of 'zip' for 'Either'. -}
-{-# INLINE cozip #-}
-cozip :: Functor f => f a :+: f b -> f (a :+: b)
-cozip = either (fmap Left) (fmap Right)

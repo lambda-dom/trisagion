@@ -51,6 +51,7 @@ library
     build-depends:
     other-modules:
     exposed-modules:
+        Trisagion.Types.Either
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable

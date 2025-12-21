@@ -42,7 +42,8 @@ import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..))
 
 -- Package.
-import Trisagion.Types.Result (Result (..), (:+:), toEither)
+import Trisagion.Types.Either ((:+:))
+import Trisagion.Types.Result (Result (..), toEither)
 
 
 {- | The parsing monad transformer @ParserT m s e a@.

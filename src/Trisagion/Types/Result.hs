@@ -5,9 +5,6 @@ The return type of parsing functions.
 -}
 
 module Trisagion.Types.Result (
-    -- * Type operators.
-    (:+:),
-
     -- * Types.
     Result (..),
 
@@ -20,10 +17,8 @@ module Trisagion.Types.Result (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
 
-
-{- | Right-associative type operator version of the 'Either' type constructor. -}
-type (:+:) = Either
-infixr 6 :+:
+-- Package.
+import Trisagion.Types.Either ((:+:))
 
 
 {- | The 'Result' type of a parsing function, isomorphic to @'Either' e (a, s)@. -}
