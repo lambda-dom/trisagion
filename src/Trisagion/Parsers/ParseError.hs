@@ -12,21 +12,20 @@ module Trisagion.Parsers.ParseError (
 ) where
 
 -- Imports.
-import Data.Bifunctor (Bifunctor (..))
-
 -- Libraries.
 import Control.Monad.State (MonadState (..))
+import Control.Monad.Trans (MonadTrans (..))
 
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.ParserT (ParserT, lift, throw)
+import Trisagion.ParserT (ParserT, throw, mapError)
 
 
 {- | Throw @t'ParseError'@ with error tag @e@ and offset the current stream offset. -}
 {-# INLINE throwParseError #-}
-throwParseError :: (Monad m, HasOffset m s) => e -> ParserT m s (ParseError e) a
+throwParseError :: (Monad m, HasOffset m s) => e -> ParserT s (ParseError e) m a
 throwParseError e = do
     err <- get >>= \ xs -> lift ((flip ParseError e) <$> offset xs)
     throw err
@@ -53,10 +52,10 @@ parser = capture $ do
 @
 -}
 {-# INLINE capture #-}
-capture :: (Monad m, HasOffset m s) => ParserT m s (ParseError e) a -> ParserT m s (ParseError e) a
+capture :: (Monad m, HasOffset m s) => ParserT s (ParseError e) m a -> ParserT s (ParseError e) m a
 capture p = do
         n  <- get >>= \ xs -> lift (offset xs)
-        first (set n) p
+        mapError (set n) p
     where
         set :: Word -> ParseError e -> ParseError e
         set _ Failure          = Failure
@@ -67,10 +66,10 @@ capture p = do
 validate
     :: (Monad m, HasOffset m s)
     => (a -> d :+: b)                   -- ^ Validator.
-    -> ParserT m s (ParseError e) a     -- ^ Parser to run.
-    -> ParserT m s (ParseError (d :+: e)) b
+    -> ParserT s (ParseError e) m a     -- ^ Parser to run.
+    -> ParserT s (ParseError (d :+: e)) m b
 validate v p = do
-    x <- first (fmap Right) p
+    x <- mapError (fmap Right) p
     case v x of
         Left d  -> throwParseError (Left d)
         Right y -> pure y

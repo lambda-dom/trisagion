@@ -34,7 +34,6 @@ module Trisagion.Parsers.Combinators (
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative ((<|>)), asum)
-import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
@@ -44,7 +43,7 @@ import Control.Monad.Except (MonadError(..))
 
 -- Package.
 import Trisagion.Types.Either ((:+:))
-import Trisagion.ParserT (ParserT, try, lookAhead)
+import Trisagion.ParserT (ParserT, try, lookAhead, mapError)
 
 
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
@@ -53,7 +52,7 @@ The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alt
 more precise type signature.
 -}
 {-# INLINE optional #-}
-optional :: Monad m => ParserT m s e a -> ParserT m s Void (Maybe a)
+optional :: Monad m => ParserT s e m a -> ParserT s Void m (Maybe a)
 optional p = either (const Nothing) Just <$> try p
 
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
@@ -61,41 +60,41 @@ optional p = either (const Nothing) Just <$> try p
 The parser does not consume input and throws the monoid unit for @e@ if @p@ succeeds.
 -}
 {-# INLINE failIff #-}
-failIff :: (Monad m, Monoid e) => ParserT m s e a -> ParserT m s e ()
+failIff :: (Monad m, Monoid e) => ParserT s e m a -> ParserT s e m ()
 failIff p = do
-    r <- first absurd $ lookAhead p
+    r <- mapError absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
         Right _ -> throwError mempty
 
 {- | Run the parser and discard the result. -}
 {-# INLINE skip #-}
-skip :: Functor m => ParserT m s e a -> ParserT m s e ()
+skip :: Functor m => ParserT s e m a -> ParserT s e m ()
 skip = ($> ())
 
 {- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
 {-# INLINE between #-}
 between
     :: Monad m
-    => ParserT m s e b                  -- ^ Opening parser.
-    -> ParserT m s e c                  -- ^ Closing parser.
-    -> ParserT m s e a                  -- ^ Parser to run in-between.
-    -> ParserT m s e a
+    => ParserT s e m b                  -- ^ Opening parser.
+    -> ParserT s e m c                  -- ^ Closing parser.
+    -> ParserT s e m a                  -- ^ Parser to run in-between.
+    -> ParserT s e m a
 between open close p = open *> p <* close
 
 {- | Sequence two parsers and pair up the results. -}
 {-# INLINE pair #-}
-pair :: Monad m => ParserT m s e a -> ParserT m s e b -> ParserT m s e (a, b)
+pair :: Monad m => ParserT s e m a -> ParserT s e m b -> ParserT s e m (a, b)
 pair = pairWith (,)
 
 {- | Sequence two parsers and pair the results with a binary function. -}
 {-# INLINE pairWith #-}
-pairWith :: Monad m => (a -> b -> c) -> ParserT m s e a -> ParserT m s e b -> ParserT m s e c
+pairWith :: Monad m => (a -> b -> c) -> ParserT s e m a -> ParserT s e m b -> ParserT s e m c
 pairWith = liftA2
 
 {- | Run the parser @n@ times and return the list of results. -}
 {-# INLINEABLE count #-}
-count :: Monad m => Word -> ParserT m s e a -> ParserT m s e [a]
+count :: Monad m => Word -> ParserT s e m a -> ParserT s e m [a]
 count n p = go n
     where
         go 0 = pure []
@@ -103,7 +102,7 @@ count n p = go n
 
 {- | Chain together a traversable of parsers and return the traversable of results. -}
 {-# INLINE chain #-}
-chain :: (Monad m, Traversable t) => t (ParserT m s e a) -> ParserT m s e (t a)
+chain :: (Monad m, Traversable t) => t (ParserT s e m a) -> ParserT s e m (t a)
 chain = sequenceA
 
 {- | Choose between two parsers.
@@ -111,7 +110,7 @@ chain = sequenceA
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
 -}
 {-# INLINE choose #-}
-choose :: (Monad m, Monoid e) => ParserT m s e a -> ParserT m s e b -> ParserT m s e (a :+: b)
+choose :: (Monad m, Monoid e) => ParserT s e m a -> ParserT s e m b -> ParserT s e m (a :+: b)
 choose q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Pick between a foldable of parsers.
@@ -119,7 +118,7 @@ choose q p = (Left <$> q) <|> (Right <$> p)
 Run the parsers in succession returning the result of the first successful one.
 -}
 {-# INLINE pick #-}
-pick :: (Monad m, Foldable t, Monoid e) => t (ParserT m s e a) -> ParserT m s e a
+pick :: (Monad m, Foldable t, Monoid e) => t (ParserT s e m a) -> ParserT s e m a
 pick = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
@@ -134,7 +133,7 @@ note(s):
   polymorphic variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
 -}
 {-# INLINEABLE many #-}
-many :: Monad m => ParserT m s e a -> ParserT m s Void [a]
+many :: Monad m => ParserT s e m a -> ParserT s Void m [a]
 many p = go
     where
         go = do
@@ -149,12 +148,12 @@ The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alter
 precise type signature.
 -}
 {-# INLINE some #-}
-some :: Monad m => ParserT m s e a -> ParserT m s e (NonEmpty a)
-some p = pairWith (:|) p (first absurd $ many p)
+some :: Monad m => ParserT s e m a -> ParserT s e m (NonEmpty a)
+some p = pairWith (:|) p (mapError absurd $ many p)
 
 {- | Run the parser zero or more times until it fails and discard the results. -}
 {-# INLINEABLE skipMany #-}
-skipMany :: Monad m => ParserT m s e a -> ParserT m s Void ()
+skipMany :: Monad m => ParserT s e m a -> ParserT s Void m ()
 skipMany p = go
     where
         go = do
@@ -165,8 +164,8 @@ skipMany p = go
 
 {- | Run the parser one or more times until it fails and discard the results. -}
 {-# INLINE skipSome #-}
-skipSome :: Monad m => ParserT m s e a -> ParserT m s e ()
-skipSome p = p *> first absurd (skipMany p)
+skipSome :: Monad m => ParserT s e m a -> ParserT s e m ()
+skipSome p = p *> mapError absurd (skipMany p)
 
 {- | The parser @'untilEnd' end p@ runs @p@ zero or more times until @end@ succeeds.
 
@@ -177,14 +176,14 @@ note(s):
 {-# INLINE untilEnd #-}
 untilEnd
     :: (Monad m, Monoid e)
-    => ParserT m s e b                  -- ^ Closing parser.
-    -> ParserT m s e a                  -- ^ Parser to run.
-    -> ParserT m s Void [a]
+    => ParserT s e m b                  -- ^ Closing parser.
+    -> ParserT s e m a                  -- ^ Parser to run.
+    -> ParserT s Void m [a]
 untilEnd end p = many $ failIff end *> p
 
 {- | @'manyTill' end p@ runs @p@ until @end@ succeeds, returning the results of @p@. -}
 {-# INLINEABLE manyTill #-}
-manyTill :: (Monad m, Monoid e) => ParserT m s e a -> ParserT m s e b -> ParserT m s e [b]
+manyTill :: (Monad m, Monoid e) => ParserT s e m a -> ParserT s e m b -> ParserT s e m [b]
 manyTill end p = go
     where
         go = do
@@ -197,9 +196,9 @@ manyTill end p = go
 {-# INLINEABLE manyTillEnd #-}
 manyTillEnd
     :: (Monad m, Monoid e)
-    => ParserT m s e a                  -- ^ Closiong parser.
-    -> ParserT m s e a                  -- ^ Parser to run.
-    -> ParserT m s e (NonEmpty a)
+    => ParserT s e m a                  -- ^ Closing parser.
+    -> ParserT s e m a                  -- ^ Parser to run.
+    -> ParserT s e m (NonEmpty a)
 manyTillEnd end p = go
     where
         go = do
@@ -210,7 +209,7 @@ manyTillEnd end p = go
 
 {- | The parser @'sepBy' sep p@ parses zero or more occurences of @p@ separated by @sep@. -}
 {-# INLINE sepBy #-}
-sepBy :: Monad m => ParserT m s e a -> ParserT m s e b -> ParserT m s Void [b]
+sepBy :: Monad m => ParserT s e m a -> ParserT s e m b -> ParserT s Void m [b]
 sepBy sep p = do
     x <- try p
     case x of
@@ -219,5 +218,5 @@ sepBy sep p = do
 
 {- | The parser @'sepBy1' sep p@ parses one or more occurences of @p@ separated by @sep@. -}
 {-# INLINE sepBy1 #-}
-sepBy1 :: Monad m => ParserT m s e a -> ParserT m s e b -> ParserT m s e (NonEmpty b)
-sepBy1 sep p = liftA2 (:|) p (first absurd $ many (sep *> p))
+sepBy1 :: Monad m => ParserT s e m a -> ParserT s e m b -> ParserT s e m (NonEmpty b)
+sepBy1 sep p = liftA2 (:|) p (mapError absurd $ many (sep *> p))
