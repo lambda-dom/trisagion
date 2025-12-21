@@ -27,13 +27,14 @@ import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
+import Control.Monad.Trans (MonadTrans (..))
 
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.ParserT (ParserT, lift, throw)
+import Trisagion.ParserT (ParserT, throw)
 import Trisagion.Parsers.ParseError (validate)
 
 
@@ -50,12 +51,12 @@ newtype ValidationError e = ValidationError e
 
 {- | Monadic check for nullity of the input stream. -}
 {-# INLINE eoi #-}
-eoi :: Streamable m a s => ParserT m s Void Bool
+eoi :: Streamable m a s => ParserT s Void m Bool
 eoi = get >>= \ xs -> lift (nullM xs)
 
 {- | Parse one element from the input stream. -}
 {-# INLINE one #-}
-one :: (Streamable m a s, HasOffset m s) => ParserT m s (ParseError InputError) a
+one :: (Streamable m a s, HasOffset m s) => ParserT s (ParseError InputError) m a
 one = do
     e <- get >>= \ xs -> lift ((flip ParseError (InputError 1)) <$> offset xs)
     r <- get >>= \ xs -> lift (unconsM xs)
@@ -65,7 +66,7 @@ one = do
 
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
-skipOne :: Streamable m a s => ParserT m s Void ()
+skipOne :: Streamable m a s => ParserT s Void m ()
 skipOne = do
     r <- get >>= \ xs -> lift (unconsM xs)
     case r of
@@ -74,7 +75,7 @@ skipOne = do
 
 {- | Extract the first element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
-peek :: Streamable m a s => ParserT m s Void (Maybe a)
+peek :: Streamable m a s => ParserT s Void m (Maybe a)
 peek = do
     r <- get >>= \ xs -> lift (unconsM xs)
     case r of
@@ -85,8 +86,8 @@ peek = do
 {-# INLINE satisfy #-}
 satisfy
     :: forall m a s . (HasOffset m s, Streamable m a s)
-    => (a -> Bool)                      -- ^ @a@-predicate.
-    -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
+    => (a -> Bool)                      -- ^ Predicate on @a@.
+    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
 satisfy p = validate v one
     where
         v :: a -> ValidationError a :+: a
@@ -97,7 +98,7 @@ satisfy p = validate v one
 matchOne
     :: (HasOffset m s, Streamable m a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
-    -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
+    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
 matchOne x = satisfy (== x)
 
 {- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
@@ -105,5 +106,5 @@ matchOne x = satisfy (== x)
 oneOf
     :: (HasOffset m s, Streamable m a s, Eq a, Foldable t)
     => t a                              -- ^ Foldable of @x :: a@ against which to test inclusion.
-    -> ParserT m s (ParseError ((ValidationError a) :+: InputError)) a
+    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
 oneOf xs = satisfy (`elem` xs)

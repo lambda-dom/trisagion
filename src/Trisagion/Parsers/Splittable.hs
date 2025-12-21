@@ -22,12 +22,12 @@ module Trisagion.Parsers.Splittable (
 import Prelude hiding (take, drop)
 
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.State (MonadState(..))
+import Control.Monad.Trans (MonadTrans (..))
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
@@ -37,7 +37,7 @@ import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, parse, lift, lookAhead, throw)
+import Trisagion.ParserT (ParserT, parse, lookAhead, throw, mapError)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), satisfy)
 
 
@@ -46,28 +46,28 @@ import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), sati
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 -}
 {-# INLINE take #-}
-take :: Splittable m a b s => Word -> ParserT m s Void b
+take :: Splittable m a b s => Word -> ParserT s Void m b
 take n = do
     (prefix, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> prefix
 
 {- | Drop a fixed size prefix from the stream. -}
 {-# INLINE drop #-}
-drop :: Splittable m a b s => Word -> ParserT m s Void ()
+drop :: Splittable m a b s => Word -> ParserT s Void m ()
 drop n = do
     (_, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> ()
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE takeWith #-}
-takeWith :: Splittable m a b s => (a -> Bool) -> ParserT m s Void b
+takeWith :: Splittable m a b s => (a -> Bool) -> ParserT s Void m b
 takeWith p = do
     (prefix, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> prefix
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE dropWith #-}
-dropWith :: Splittable m a b s => (a -> Bool) -> ParserT m s Void ()
+dropWith :: Splittable m a b s => (a -> Bool) -> ParserT s Void m ()
 dropWith p = do
     (_, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> ()
@@ -81,10 +81,10 @@ note(s):
 {-# INLINE takeExact #-}
 takeExact
     :: (HasOffset m s, Splittable m a b s, MonoFoldable a b)
-    => Word -> ParserT m s (ParseError InputError) b
+    => Word -> ParserT s (ParseError InputError) m b
 takeExact n = do
     m <- get >>= \ xs -> lift (offset xs)
-    prefix <- first absurd $ take n
+    prefix <- mapError absurd $ take n
     if monolength prefix /= n
         then throw $ ParseError m (InputError n)
         else pure prefix
@@ -99,10 +99,10 @@ note(s):
 match
     :: (HasOffset m s, Splittable m a b s, Eq b, MonoFoldable a b)
     => b                                -- ^ Matching prefix.
-    -> ParserT m s (ParseError ((ValidationError b) :+: InputError)) b
+    -> ParserT s (ParseError ((ValidationError b) :+: InputError)) m b
 match xs = do
     m <- get >>= \ ys -> lift (offset ys)
-    prefix <- first (fmap Right) $ takeExact (monolength xs)
+    prefix <- mapError (fmap Right) $ takeExact (monolength xs)
     if xs == prefix
         then pure xs
         else throw $ ParseError m (Left (ValidationError xs))
@@ -112,12 +112,12 @@ match xs = do
 takeWith1
     :: (Splittable m a b s, HasOffset m s)
     => (a -> Bool)                      -- ^ Predicate on @a@.
-    -> ParserT m s (ParseError (ValidationError a :+: InputError)) b
+    -> ParserT s (ParseError (ValidationError a :+: InputError)) m b
 takeWith1 p = do
-    x <- first absurd $ lookAhead (satisfy p)
+    x <- mapError absurd $ lookAhead (satisfy p)
     case x of
         Left e  -> throw e
-        Right _ -> first absurd $ takeWith p
+        Right _ -> mapError absurd $ takeWith p
 
 {- | Run a parser isolated to a fixed size prefix of the stream.
 
@@ -128,10 +128,10 @@ in the stream. Any unconsumed input in the prefix is returned along with the res
 isolate
     :: Splittable m a b s
     => Word                             -- ^ Prefix size.
-    -> ParserT m b e a                  -- ^ Parser to run on the prefix.
-    -> ParserT m s e (a, b)
+    -> ParserT b e m a                  -- ^ Parser to run on the prefix.
+    -> ParserT s e m (a, b)
 isolate n p = do
-    prefix <- first absurd $ take n
+    prefix <- mapError absurd $ take n
     r <- lift (parse p prefix)
     case r of
         Left e  -> throw e
@@ -145,12 +145,12 @@ note(s):
     normality of @p@.
 -}
 {-# INLINE consumed #-}
-consumed :: (HasOffset m s, Splittable m a b s) => ParserT m s e a -> ParserT m s e (b, a)
+consumed :: (HasOffset m s, Splittable m a b s) => ParserT s e m a -> ParserT s e m (b, a)
 consumed p = do
     xs <- get
     start <- lift (offset xs)
     x  <- p
     end <- get >>= \ ys -> lift (offset ys)
     -- Implicitly relies on the parser @p@ being normal, for positivity of @end - start@.
-    ys <- first absurd $ lift (fst <$> splitAtM (end - start) xs)
+    ys <- mapError absurd $ lift (fst <$> splitAtM (end - start) xs)
     pure (ys, x)
