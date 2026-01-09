@@ -18,7 +18,7 @@ import Data.Kind (Type)
 type ParseError :: Type -> Type
 data ParseError e
     = Failure
-    | ParseError !Word e
+    | ParseError {-# UNPACK #-} !Word e
     deriving stock (Eq, Show, Functor)
 
 

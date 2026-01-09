@@ -30,6 +30,7 @@ module Trisagion.ParserT (
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Void (Void)
@@ -42,7 +43,6 @@ import Control.Monad.Trans (MonadTrans (..))
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
-import Data.Bifunctor (Bifunctor(first))
 
 
 {- | The parsing monad transformer @ParserT s e m a@.
