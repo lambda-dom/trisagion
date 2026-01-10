@@ -12,7 +12,7 @@ module Trisagion.Parsers.Streamable (
     skipOne,
     peek,
     satisfy,
-    matchOne,
+    single,
     oneOf,
 ) where
 
@@ -59,12 +59,12 @@ satisfy p = validate v one
         v x = if p x then Left (ValidationError x) else Right x
 
 {- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
-{-# INLINE matchOne #-}
-matchOne
+{-# INLINE single #-}
+single
     :: (HasOffset m s, Streamable m a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
     -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
-matchOne x = satisfy (== x)
+single x = satisfy (== x)
 
 {- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
 {-# INLINE oneOf #-}

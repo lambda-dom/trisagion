@@ -17,10 +17,9 @@ module Trisagion.Typeclasses.Streamable (
 import Data.Void (Void)
 
 -- Non-hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor)
+import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError)
 import Trisagion.ParserT (ParserT, lookAhead)
 
 
@@ -28,13 +27,19 @@ import Trisagion.ParserT (ParserT, lookAhead)
 newtype InputError = InputError Word
     deriving stock (Eq, Show)
 
+{- | Monofunctoriality of t'InputError'. -}
+instance MonoFunctor Word InputError where
+    {-# INLINE monomap #-}
+    monomap :: (Word -> Word) -> InputError -> InputError
+    monomap f (InputError n) = InputError (f n)
+
 
 {- | The @Streamable@ typeclass of input streams. -}
 class (Monad m, MonoFunctor a s) => Streamable m a s | s -> a where
     {-# MINIMAL one #-}
 
     {- | Get the first element from the stream. -}
-    one :: ParserT s (ParseError InputError) m a
+    one :: ParserT s InputError m a
 
     {- | Monadic check for nullity of the input stream. -}
     {-# INLINE eoi #-}

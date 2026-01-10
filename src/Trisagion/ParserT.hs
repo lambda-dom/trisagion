@@ -41,7 +41,7 @@ import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
-import Data.Void (Void, absurd)
+import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
@@ -214,7 +214,7 @@ embed = ParserT
 run :: ParserT s e m a -> s ->  m (Result s e a)
 run (ParserT f) = f
 
-{- | Parse the input and return the results. -}
+{- | Parse the input and return the result as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Functor m => ParserT s e m a -> s -> m (e :+: (a, s))
 parse p = fmap toEither . run p
@@ -303,12 +303,12 @@ getOffset = get >>= lift . offset
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
 {-# INLINE withParseError #-}
 withParseError
-    :: (Monad m, HasOffset m s)
+    :: Monad m
     => ParserT s e m a
-    -> ParserT s (ParseError e) m a
+    -> ParserT s (ParseError s e) m a
 withParseError p = do
-    n <- mapError absurd getOffset
-    mapError (ParseError n) p
+    xs <- get
+    mapError (ParseError xs) p
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
 
@@ -325,18 +325,18 @@ can now be written as:
 
 @
 parser = capture $ do
-    -- Capture the offset @n@ of the input stream here.
+    -- Capture the input stream @xs@ here.
     ...
-    x <- p -- Can throw here. If it throws, the error's offset will be @n@.
+    x <- p -- Can throw here. If it throws, the error's input stream will be @xs@.
     ...
 @
 -}
 {-# INLINE capture #-}
-capture :: (Monad m, HasOffset m s) => ParserT s (ParseError e) m a -> ParserT s (ParseError e) m a
+capture :: Monad m => ParserT s (ParseError s e) m a -> ParserT s (ParseError s e) m a
 capture p = do
-        n  <- mapError absurd getOffset
-        mapError (set n) p
+        xs  <- get
+        mapError (set xs) p
     where
-        set :: Word -> ParseError e -> ParseError e
+        set :: s -> ParseError s e -> ParseError s e
         set _ Failure          = Failure
-        set n (ParseError _ e) = ParseError n e
+        set xs (ParseError _ e) = ParseError xs e
