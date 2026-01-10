@@ -31,7 +31,7 @@ module Trisagion.ParserT (
     getOffset,
 
     -- * Parsers throwing t'ParseError'-errors.
-    withParseError,
+    throwParseError,
     capture,
 ) where
 
@@ -124,6 +124,8 @@ backtrack and run @q@ on the same input.
 note(s):
 
   * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+  * The default way to get a monoid structure on @e@ is to embed @e@ in @t'ParseError' s e@ -- see
+  'throwParseError'.
 -}
 instance (Monad m, Monoid e) => Alternative (ParserT s e m) where
     {-# INLINE empty #-}
@@ -301,12 +303,12 @@ getOffset = get >>= lift . offset
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
-{-# INLINE withParseError #-}
-withParseError
+{-# INLINE throwParseError #-}
+throwParseError
     :: Monad m
     => ParserT s e m a
     -> ParserT s (ParseError s e) m a
-withParseError p = do
+throwParseError p = do
     xs <- get
     mapError (ParseError xs) p
 
