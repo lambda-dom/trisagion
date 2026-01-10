@@ -31,7 +31,7 @@ module Trisagion.ParserT (
     getOffset,
 
     -- * Parsers throwing t'ParseError'-errors.
-    parseError,
+    withParseError,
     capture,
 ) where
 
@@ -301,12 +301,12 @@ getOffset = get >>= lift . offset
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
-{-# INLINE parseError #-}
-parseError
+{-# INLINE withParseError #-}
+withParseError
     :: (Monad m, HasOffset m s)
     => ParserT s e m a
     -> ParserT s (ParseError e) m a
-parseError p = do
+withParseError p = do
     n <- mapError absurd getOffset
     mapError (ParseError n) p
 
