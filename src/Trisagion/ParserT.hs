@@ -302,7 +302,7 @@ getOffset :: (Monad m, HasOffset m s) => ParserT s Void m Word
 getOffset = get >>= lift . offset
 
 
-{- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
+{- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' s e@)-errors. -}
 {-# INLINE throwParseError #-}
 throwParseError
     :: Monad m

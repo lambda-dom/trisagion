@@ -33,10 +33,10 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
-import Trisagion.ParserT (ParserT, lookAhead, try, validate, throw)
+import Trisagion.ParserT (ParserT, validate, throw)
 
 
-{- | The t'InputError' error type. -}
+{- | The @InputError@ error type. -}
 newtype InputError = InputError Word
     deriving stock (Eq, Show)
 
@@ -47,7 +47,7 @@ instance MonoFunctor Word InputError where
     monomap f (InputError n) = InputError (f n)
 
 
-{- | The t'ValidationError' error tag type thrown on failed validations. -}
+{- | The @ValidationError@ error tag type thrown on failed validations. -}
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
     deriving (Applicative, Monad) via Identity
@@ -64,12 +64,20 @@ one = do
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable m a s => ParserT s Void m ()
-skipOne = try one $> ()
+skipOne = do
+    r <- get >>= lift . unconsM
+    case r of
+        Nothing      -> pure ()
+        Just (_, xs) -> put xs $> ()
 
 {- | Parse one element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
 peek :: Streamable m a s => ParserT s Void m (Maybe a)
-peek = either (const Nothing) Just <$> lookAhead one
+peek = do
+    r <- get >>= lift . unconsM
+    case r of
+        Nothing     -> pure $ Nothing
+        Just (x, _) -> pure $ Just x
 
 {- | Parse one element from the input stream satisfying a predicate. -}
 {-# INLINE satisfy #-}
@@ -82,7 +90,7 @@ satisfy p = validate v one
         v :: a -> ValidationError a :+: a
         v x = if p x then Left (ValidationError x) else Right x
 
-{- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
+{- | Parse one element from the input stream matching an @x :: a@. -}
 {-# INLINE single #-}
 single
     :: (Streamable m a s, Eq a)
@@ -90,10 +98,10 @@ single
     -> ParserT s (ValidationError a :+: InputError) m a
 single x = satisfy (== x)
 
-{- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
+{- | Parse one element from the input stream that is an element of a foldable. -}
 {-# INLINE oneOf #-}
 oneOf
     :: (Streamable m a s, Eq a, Foldable t)
-    => t a                              -- ^ Foldable of @x :: a@ against which to test inclusion.
+    => t a                              -- ^ Foldable of @a@'s against which to test inclusion.
     -> ParserT s (ValidationError a :+: InputError) m a
 oneOf xs = satisfy (`elem` xs)
