@@ -10,7 +10,7 @@ module Trisagion.Parsers.Streamable (
     ValidationError (..),
 
     -- * Parsers @'Streamable' m a s => 'ParserT' m s e a@.
-    one,
+    headP,
     skipOne,
     peek,
     satisfy,
@@ -54,9 +54,10 @@ newtype ValidationError e = ValidationError e
     deriving (Applicative, Monad) via Identity
 
 
-{- | Parse one element from the input stream. -}
-one :: (Monad m, Streamable m a s) => ParserT s InputError m a
-one = do
+{- | Parse the first element from the input stream. -}
+{-# INLINE headP #-}
+headP :: (Monad m, Streamable m a s) => ParserT s InputError m a
+headP = do
     r <- get >>= lift . unconsM
     case r of
         Nothing      -> throw (InputError 1)
@@ -86,7 +87,7 @@ satisfy
     :: forall m a s . (Monad m, Streamable m a s)
     => (a -> Bool)                      -- ^ Predicate on @a@.
     -> ParserT s (ValidationError a :+: InputError) m a
-satisfy p = validate v one
+satisfy p = validate v headP
     where
         v :: a -> ValidationError a :+: a
         v x = if p x then Left (ValidationError x) else Right x

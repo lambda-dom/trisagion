@@ -6,12 +6,12 @@ Parsers with @Splittable m a b s@ constraints on the input stream @s@.
 
 module Trisagion.Parsers.Splittable (
     -- * Parsers.
-    take,
-    drop,
-    takeWith,
-    dropWith,
+    takeP,
+    dropP,
+    takeWhileP,
+    takeWhile1,
+    dropWhileP,
     takeExact,
-    takeWith1,
     isolate,
     match,
     consumed,
@@ -45,9 +45,9 @@ import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), sati
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 -}
-{-# INLINE take #-}
-take :: Splittable m a b s => Word -> ParserT s Void m b
-take n = do
+{-# INLINE takeP #-}
+takeP :: Splittable m a b s => Word -> ParserT s Void m b
+takeP n = do
     (prefix, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> prefix
 
