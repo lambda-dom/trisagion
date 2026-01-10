@@ -24,12 +24,21 @@ module Trisagion.ParserT (
     throw,
     catch,
     try,
+    validate,
     lookAhead,
+
+    -- * Parsers with @'HasOffset' m s@ constraints.
+    getOffset,
+
+    -- * Parsers throwing t'ParseError'-errors.
+    throwParseError,
+    capture,
 ) where
 
 -- Imports.
 -- Base.
 import Control.Applicative (Alternative (..))
+import Data.Bifunctor (Bifunctor (first))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
 import Data.Void (Void)
@@ -42,7 +51,8 @@ import Control.Monad.Trans (MonadTrans (..))
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
-import Data.Bifunctor (Bifunctor(first))
+import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The parsing monad transformer @ParserT s e m a@.
@@ -114,6 +124,8 @@ backtrack and run @q@ on the same input.
 note(s):
 
   * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+  * The default way to get a monoid structure on @e@ is to embed @e@ in @t'ParseError' s e@ -- see
+  'throwParseError'.
 -}
 instance (Monad m, Monoid e) => Alternative (ParserT s e m) where
     {-# INLINE empty #-}
@@ -186,7 +198,7 @@ instance Monad m => MonadError e (ParserT s e m) where
 
 {- | Lift a monadic action to the t'ParserT' monad. -}
 instance MonadTrans (ParserT s e) where
-    {- | The @'lift' h@ parser does not consume input and does not throw an  error.-}
+    {- | The @'lift' h@ parser does not consume input and does not throw an error.-}
     {-# INLINE lift #-}
     lift :: Monad m => m a -> ParserT s e m a
     lift h = embed $ \ xs -> do
@@ -204,7 +216,7 @@ embed = ParserT
 run :: ParserT s e m a -> s ->  m (Result s e a)
 run (ParserT f) = f
 
-{- | Parse the input and return the results. -}
+{- | Parse the input and return the result as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Functor m => ParserT s e m a -> s -> m (e :+: (a, s))
 parse p = fmap toEither . run p
@@ -265,7 +277,68 @@ try p = embed $ \ xs -> do
         Error e      -> pure $ Success (Left e) xs
         Success x ys -> pure $ Success (Right x) ys
 
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: Monad m
+    => (a -> d :+: b)                   -- ^ Validator.
+    -> ParserT s e m a                  -- ^ Parser to run.
+    -> ParserT s (d :+: e) m b
+validate v p = do
+    x <- mapError Right p
+    case v x of
+        Left d  -> throw (Left d)
+        Right y -> pure y
+
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT s e m a -> ParserT s Void m (e :+: a)
 lookAhead p = get >>= lift . eval p
+
+
+{- | Parser returning the current stream offset. -}
+{-# INLINE getOffset #-}
+getOffset :: (Monad m, HasOffset m s) => ParserT s Void m Word
+getOffset = get >>= lift . offset
+
+
+{- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' s e@)-errors. -}
+{-# INLINE throwParseError #-}
+throwParseError
+    :: Monad m
+    => ParserT s e m a
+    -> ParserT s (ParseError s e) m a
+throwParseError p = do
+    xs <- get
+    mapError (ParseError xs) p
+
+{- | Capture the offset of the input stream at the entry point in case of an error.
+
+A parser,
+
+@
+parser = do
+    ...
+    x <- p -- Can throw here.
+    ...
+@
+
+can now be written as:
+
+@
+parser = capture $ do
+    -- Capture the input stream @xs@ here.
+    ...
+    x <- p -- Can throw here. If it throws, the error's input stream will be @xs@.
+    ...
+@
+-}
+{-# INLINE capture #-}
+capture :: Monad m => ParserT s (ParseError s e) m a -> ParserT s (ParseError s e) m a
+capture p = do
+        xs  <- get
+        mapError (set xs) p
+    where
+        set :: s -> ParseError s e -> ParseError s e
+        set _ Failure          = Failure
+        set xs (ParseError _ e) = ParseError xs e

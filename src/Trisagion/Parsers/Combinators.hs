@@ -38,12 +38,9 @@ import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError(..))
-
 -- Package.
 import Trisagion.Types.Either ((:+:))
-import Trisagion.ParserT (ParserT, try, lookAhead, mapError)
+import Trisagion.ParserT (ParserT, try, lookAhead, mapError, throw)
 
 
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
@@ -65,7 +62,7 @@ failIff p = do
     r <- mapError absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
-        Right _ -> throwError mempty
+        Right _ -> throw mempty
 
 {- | Run the parser and discard the result. -}
 {-# INLINE skip #-}

@@ -54,11 +54,10 @@ library
         Trisagion.Types.Either
         Trisagion.Types.Result
         Trisagion.Types.ParseError
-        Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
+        Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
-        Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
