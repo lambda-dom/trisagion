@@ -42,7 +42,7 @@ newtype ValidationError e = ValidationError e
 skipOne :: Streamable m a s => ParserT s Void m ()
 skipOne = try one $> ()
 
-{- | Extract the first element from the input stream but without consuming input. -}
+{- | Parse one element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
 peek :: Streamable m a s => ParserT s Void m (Maybe a)
 peek = either (const Nothing) Just <$> lookAhead one

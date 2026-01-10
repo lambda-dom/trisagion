@@ -14,11 +14,11 @@ module Trisagion.Types.ParseError (
 import Data.Kind (Type)
 
 
-{- | The t'ParseError' type. -}
+{- | The @ParseError@ type. -}
 type ParseError :: Type -> Type
 data ParseError e
     = Failure
-    | ParseError {-# UNPACK #-} !Word e
+    | ParseError !Word e
     deriving stock (Eq, Show, Functor)
 
 

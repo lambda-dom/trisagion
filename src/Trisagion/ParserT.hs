@@ -24,7 +24,15 @@ module Trisagion.ParserT (
     throw,
     catch,
     try,
+    validate,
     lookAhead,
+
+    -- * Parsers with @'HasOffset' m s@ constraints.
+    getOffset,
+
+    -- * Parsers throwing t'ParseError'-errors.
+    parseError,
+    capture,
 ) where
 
 -- Imports.
@@ -33,7 +41,7 @@ import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (first))
 import Data.Functor.Identity (Identity)
 import Data.Kind (Type)
-import Data.Void (Void)
+import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
@@ -43,6 +51,8 @@ import Control.Monad.Trans (MonadTrans (..))
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
+import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The parsing monad transformer @ParserT s e m a@.
@@ -186,7 +196,7 @@ instance Monad m => MonadError e (ParserT s e m) where
 
 {- | Lift a monadic action to the t'ParserT' monad. -}
 instance MonadTrans (ParserT s e) where
-    {- | The @'lift' h@ parser does not consume input and does not throw an  error.-}
+    {- | The @'lift' h@ parser does not consume input and does not throw an error.-}
     {-# INLINE lift #-}
     lift :: Monad m => m a -> ParserT s e m a
     lift h = embed $ \ xs -> do
@@ -265,7 +275,68 @@ try p = embed $ \ xs -> do
         Error e      -> pure $ Success (Left e) xs
         Success x ys -> pure $ Success (Right x) ys
 
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: Monad m
+    => (a -> d :+: b)                   -- ^ Validator.
+    -> ParserT s e m a                  -- ^ Parser to run.
+    -> ParserT s (d :+: e) m b
+validate v p = do
+    x <- mapError Right p
+    case v x of
+        Left d  -> throw (Left d)
+        Right y -> pure y
+
 {- | Run the parser and return the result, but do not consume any input. -}
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT s e m a -> ParserT s Void m (e :+: a)
 lookAhead p = get >>= lift . eval p
+
+
+{- | Parser returning the current stream offset. -}
+{-# INLINE getOffset #-}
+getOffset :: (Monad m, HasOffset m s) => ParserT s Void m Word
+getOffset = get >>= lift . offset
+
+
+{- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
+{-# INLINE parseError #-}
+parseError
+    :: (Monad m, HasOffset m s)
+    => ParserT s e m a
+    -> ParserT s (ParseError e) m a
+parseError p = do
+    n <- mapError absurd getOffset
+    mapError (ParseError n) p
+
+{- | Capture the offset of the input stream at the entry point in case of an error.
+
+A parser,
+
+@
+parser = do
+    ...
+    x <- p -- Can throw here.
+    ...
+@
+
+can now be written as:
+
+@
+parser = capture $ do
+    -- Capture the offset @n@ of the input stream here.
+    ...
+    x <- p -- Can throw here. If it throws, the error's offset will be @n@.
+    ...
+@
+-}
+{-# INLINE capture #-}
+capture :: (Monad m, HasOffset m s) => ParserT s (ParseError e) m a -> ParserT s (ParseError e) m a
+capture p = do
+        n  <- mapError absurd getOffset
+        mapError (set n) p
+    where
+        set :: Word -> ParseError e -> ParseError e
+        set _ Failure          = Failure
+        set n (ParseError _ e) = ParseError n e

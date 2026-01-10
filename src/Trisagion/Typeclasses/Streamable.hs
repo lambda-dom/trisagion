@@ -20,7 +20,7 @@ import Data.Void (Void)
 import Mono.Typeclasses.MonoFunctor (MonoFunctor)
 
 -- Package.
-import Trisagion.Types.ParseError (ParseError (..))
+import Trisagion.Types.ParseError (ParseError)
 import Trisagion.ParserT (ParserT, lookAhead)
 
 
