@@ -24,11 +24,8 @@ import Data.Void (Void)
 
 -- Package.
 import Trisagion.Types.Either ((:+:))
-import Trisagion.Types.ParseError (ParseError (..))
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Streamable (Streamable (..), InputError (..))
-import Trisagion.ParserT (ParserT, lookAhead, try)
-import Trisagion.Parsers.ParseError (validate)
+import Trisagion.ParserT (ParserT, lookAhead, try, validate)
 
 
 {- | The t'ValidationError' error tag type thrown on failed validations. -}
@@ -50,9 +47,9 @@ peek = either (const Nothing) Just <$> lookAhead one
 {- | Parse one element from the input stream satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
-    :: forall m a s . (HasOffset m s, Streamable m a s)
+    :: forall m a s . Streamable m a s
     => (a -> Bool)                      -- ^ Predicate on @a@.
-    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
+    -> ParserT s ((ValidationError a) :+: InputError) m a
 satisfy p = validate v one
     where
         v :: a -> ValidationError a :+: a
@@ -61,15 +58,15 @@ satisfy p = validate v one
 {- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
 {-# INLINE single #-}
 single
-    :: (HasOffset m s, Streamable m a s, Eq a)
-    => a                                -- ^ Matching @x :: a@.
-    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
+    :: (Streamable m a s, Eq a)
+    =>a                                -- ^ Matching @x :: a@.
+    -> ParserT s ((ValidationError a) :+: InputError) m a
 single x = satisfy (== x)
 
 {- | Parse one element from the input stream @'Streamable' m a s@ matching an @x :: a@. -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (HasOffset m s, Streamable m a s, Eq a, Foldable t)
-    => t a                              -- ^ Foldable of @x :: a@ against which to test inclusion.
-    -> ParserT s (ParseError ((ValidationError a) :+: InputError)) m a
+    :: (Streamable m a s, Eq a, Foldable t)
+    =>t a                              -- ^ Foldable of @x :: a@ against which to test inclusion.
+    -> ParserT s ((ValidationError a) :+: InputError) m a
 oneOf xs = satisfy (`elem` xs)
