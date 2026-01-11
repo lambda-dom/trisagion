@@ -56,7 +56,7 @@ newtype ValidationError e = ValidationError e
 
 {- | Parse the first element from the input stream. -}
 {-# INLINE headP #-}
-headP :: (Monad m, Streamable m a s) => ParserT s InputError m a
+headP :: Streamable m a s =>ParserT s InputError m a
 headP = do
     r <- get >>= lift . unconsM
     case r of
@@ -65,7 +65,7 @@ headP = do
 
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
-skipOne :: (Monad m, Streamable m a s) => ParserT s Void m ()
+skipOne :: Streamable m a s =>ParserT s Void m ()
 skipOne = do
     r <- get >>= lift . unconsM
     case r of
@@ -74,7 +74,7 @@ skipOne = do
 
 {- | Parse one element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
-peek :: (Monad m, Streamable m a s) => ParserT s Void m (Maybe a)
+peek :: Streamable m a s =>ParserT s Void m (Maybe a)
 peek = do
     r <- get >>= lift . unconsM
     case r of
@@ -84,7 +84,7 @@ peek = do
 {- | Parse one element from the input stream satisfying a predicate. -}
 {-# INLINE satisfy #-}
 satisfy
-    :: forall m a s . (Monad m, Streamable m a s)
+    :: forall m a s . Streamable m a s
     => (a -> Bool)                      -- ^ Predicate on @a@.
     -> ParserT s (ValidationError a :+: InputError) m a
 satisfy p = validate v headP
@@ -95,7 +95,7 @@ satisfy p = validate v headP
 {- | Parse one element from the input stream matching an @x :: a@. -}
 {-# INLINE single #-}
 single
-    :: (Monad m, Streamable m a s, Eq a)
+    :: (Streamable m a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
     -> ParserT s (ValidationError a :+: InputError) m a
 single x = satisfy (== x)
@@ -103,7 +103,7 @@ single x = satisfy (== x)
 {- | Parse one element from the input stream that is an element of a foldable. -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (Monad m, Streamable m a s, Eq a, Foldable t)
+    :: (Streamable m a s, Eq a, Foldable t)
     => t a                              -- ^ Foldable of @a@'s against which to test inclusion.
     -> ParserT s (ValidationError a :+: InputError) m a
 oneOf xs = satisfy (`elem` xs)

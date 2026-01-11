@@ -42,28 +42,28 @@ import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), sati
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 -}
 {-# INLINE takeP #-}
-takeP :: (Monad m, Splittable m a b s) => Word -> ParserT s Void m b
+takeP :: Splittable m a b s =>Word -> ParserT s Void m b
 takeP n = do
     (prefix, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> prefix
 
 {- | Drop a fixed size prefix from the stream. -}
 {-# INLINE dropP #-}
-dropP :: (Monad m, Splittable m a b s) => Word -> ParserT s Void m ()
+dropP :: Splittable m a b s =>Word -> ParserT s Void m ()
 dropP n = do
     (_, remainder) <- get >>= \xs ->  lift (splitAtM n xs)
     put remainder $> ()
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE takeWhileP #-}
-takeWhileP :: (Monad m, Splittable m a b s) => (a -> Bool) -> ParserT s Void m b
+takeWhileP :: Splittable m a b s =>(a -> Bool) -> ParserT s Void m b
 takeWhileP p = do
     (prefix, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> prefix
 
 {- | Parse the longest prefix whose elements satisfy a predicate. -}
 {-# INLINE dropWhileP #-}
-dropWhileP :: (Monad m, Splittable m a b s) => (a -> Bool) -> ParserT s Void m ()
+dropWhileP :: Splittable m a b s =>(a -> Bool) -> ParserT s Void m ()
 dropWhileP p = do
     (_, remainder) <- get >>= \xs ->  lift (splitWithM p xs)
     put remainder $> ()
@@ -71,7 +71,7 @@ dropWhileP p = do
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
 {-# INLINE takeWhile1 #-}
 takeWhile1
-    :: (Monad m, Splittable m a b s)
+    :: Splittable m a b s
     => (a -> Bool)                      -- ^ Predicate on @a@.
     -> ParserT s (ValidationError a :+: InputError) m b
 takeWhile1 p = do
@@ -88,8 +88,9 @@ note(s):
 -}
 {-# INLINE takeExact #-}
 takeExact
-    :: (Monad m, Splittable m a b s, MonoFoldable a b)
-    => Word -> ParserT s InputError m b
+    :: (Splittable m a b s, MonoFoldable a b)
+    => Word                             -- ^ Length of prefix.
+    -> ParserT s InputError m b
 takeExact n = do
     prefix <- mapError absurd $ takeP n
     if monolength prefix /= n
@@ -104,7 +105,7 @@ note(s):
 -}
 {-# INLINE match #-}
 match
-    :: (Monad m, Splittable m a b s, Eq b, MonoFoldable a b)
+    :: (Splittable m a b s, Eq b, MonoFoldable a b)
     => b                                -- ^ Matching prefix.
     -> ParserT s (ValidationError b :+: InputError) m b
 match xs = do
@@ -120,7 +121,7 @@ in the stream. Any unconsumed input in the prefix is returned along with the res
 -}
 {-# INLINE isolate #-}
 isolate
-    :: (Monad m, Splittable m a b s)
+    :: Splittable m a b s
     => Word                             -- ^ Prefix size.
     -> ParserT b e m a                  -- ^ Parser to run on the prefix.
     -> ParserT s e m (a, b)
@@ -139,7 +140,10 @@ note(s):
     normality of @p@.
 -}
 {-# INLINE consumed #-}
-consumed :: (Monad m, HasOffset m s, Splittable m a b s) => ParserT s e m a -> ParserT s e m (b, a)
+consumed
+    :: (HasOffset m s, Splittable m a b s)
+    => ParserT s e m a                  -- ^ Parser to run.
+    -> ParserT s e m (b, a)
 consumed p = do
     xs    <- get
     start <- lift (offset xs)
