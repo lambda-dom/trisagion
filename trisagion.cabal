@@ -54,6 +54,7 @@ library
         Trisagion.Types.Either
         Trisagion.Types.Result
         Trisagion.Types.ParseError
+        Trisagion.Utils.Integral
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.Splittable
@@ -61,3 +62,4 @@ library
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
+        Trisagion.Parsers.Word8
