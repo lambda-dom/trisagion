@@ -12,20 +12,27 @@ module Trisagion.Parsers.Char (
     lf,
     cr,
     newline,
-    line,
+
+    -- * Whitespace parsers.
+    spaces,
+    notSpaces,
+
+    -- * Numeric parsers.
+    digit,
 ) where
 
 -- Imports.
+-- Base.
+import Data.Char (isSpace, isDigit)
+import Data.Void (Void)
+
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.ParserT (ParserT, mapError, throw, catch)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, eoi)
 import Trisagion.Typeclasses.Splittable (Splittable)
-import Trisagion.Parsers.Combinators (optional)
-import Data.Void (absurd, Void)
+import Trisagion.ParserT (ParserT, mapError, throw, catch)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
 import Trisagion.Parsers.Splittable (takeWhileP)
-import Data.Foldable (Foldable(..))
 
 
 {- | The universal newline type. -}
@@ -56,18 +63,18 @@ newline = do
         else throw $ Left (ValidationError c)
 
 
-{- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
-line :: forall m b s . (Splittable m Char b s, Monoid b) => ParserT s InputError m b 
-line = do
-        b <- mapError absurd eoi
-        if b
-            then throw $ InputError 1
-            else fmap fold $ mapError absurd go
-    where
-        go :: ParserT s Void m [b] 
-        go = do
-            xs      <- takeWhileP (\ c -> c /= '\n' && c /= '\r')
-            endline <- optional newline
-            case endline of
-                Just CR -> fmap (xs :) go
-                _       -> pure [xs]
+{- | Parse a, possibly null, prefix of whitespace. -}
+{-# INLINE spaces #-}
+spaces :: Splittable m Char b s => ParserT s Void m b
+spaces = takeWhileP isSpace
+
+{- | Parse a, possibly null, prefix of non-whitespace characters. -}
+{-# INLINE notSpaces #-}
+notSpaces :: Splittable m Char b s => ParserT s Void m b
+notSpaces = takeWhileP (not . isSpace)
+
+
+{- | Parse a decimal digit. -}
+{-# INLINE digit #-}
+digit :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Char
+digit = satisfy isDigit
