@@ -12,6 +12,7 @@ module Trisagion.Parsers.Char (
     lf,
     cr,
     newline,
+    line,
 ) where
 
 -- Imports.
@@ -19,7 +20,12 @@ module Trisagion.Parsers.Char (
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.ParserT (ParserT, mapError, throw, catch)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError, single, headP)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, eoi)
+import Trisagion.Typeclasses.Splittable (Splittable)
+import Trisagion.Parsers.Combinators (optional)
+import Data.Void (absurd, Void)
+import Trisagion.Parsers.Splittable (takeWhileP)
+import Data.Foldable (Foldable(..))
 
 
 {- | The universal newline type. -}
@@ -48,3 +54,20 @@ newline = do
         if c == '\r'
         then catch (fmap (const CRLF) lf) (const $ pure LF)
         else throw $ Left (ValidationError c)
+
+
+{- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
+line :: forall m b s . (Splittable m Char b s, Monoid b) => ParserT s InputError m b 
+line = do
+        b <- mapError absurd eoi
+        if b
+            then throw $ InputError 1
+            else fmap fold $ mapError absurd go
+    where
+        go :: ParserT s Void m [b] 
+        go = do
+            xs      <- takeWhileP (\ c -> c /= '\n' && c /= '\r')
+            endline <- optional newline
+            case endline of
+                Just CR -> fmap (xs :) go
+                _       -> pure [xs]
