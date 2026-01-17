@@ -5,6 +5,9 @@ Some utilities for integral types.
 -}
 
 module Trisagion.Utils.Integral (
+    -- * Enumerations.
+    enumDown,
+
     -- * Bitwise functions.
     bitCount,
 

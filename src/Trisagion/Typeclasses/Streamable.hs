@@ -34,8 +34,8 @@ class (Monad m, MonoFunctor a s) => Streamable m a s | s -> a where
             Just (y, ys) -> (y :) <$> toListM ys
 
     {- | Monadic check for the end of the input stream. -}
-    eoi :: s -> m Bool
-    eoi = fmap (maybe True (const False)) . unconsM
+    nullM :: s -> m Bool
+    nullM = fmap (maybe True (const False)) . unconsM
 
 
 -- Instances.
@@ -50,9 +50,9 @@ instance Monad m => Streamable m a (Maybe a) where
     toListM :: Maybe a -> m [a]
     toListM = pure . maybe [] singleton
 
-    {-# INLINE eoi #-}
-    eoi :: Maybe a -> m Bool
-    eoi = pure . isNothing
+    {-# INLINE nullM #-}
+    nullM :: Maybe a -> m Bool
+    nullM = pure . isNothing
 
 instance Monad m => Streamable m a [a] where
     {-# INLINE unconsM #-}
@@ -63,6 +63,6 @@ instance Monad m => Streamable m a [a] where
     toListM :: [a] -> m [a]
     toListM = pure
 
-    {-# INLINE eoi #-}
-    eoi :: [a] -> m Bool
-    eoi = pure . null
+    {-# INLINE nullM #-}
+    nullM :: [a] -> m Bool
+    nullM = pure . null

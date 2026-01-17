@@ -11,6 +11,7 @@ module Trisagion.Parsers.Streamable (
 
     -- * Parsers @'Streamable' m a s => 'ParserT' m s e a@.
     headP,
+    eoi,
     skipOne,
     peek,
     satisfy,
@@ -54,9 +55,14 @@ newtype ValidationError e = ValidationError e
     deriving (Applicative, Monad) via Identity
 
 
+{- | Monadic check for the end of the input stream. -}
+{-# INLINE eoi #-}
+eoi :: Streamable m a s => ParserT s Void m Bool
+eoi = get >>= lift . nullM
+
 {- | Parse the first element from the input stream. -}
 {-# INLINE headP #-}
-headP :: Streamable m a s =>ParserT s InputError m a
+headP :: Streamable m a s => ParserT s InputError m a
 headP = do
     r <- get >>= lift . unconsM
     case r of
@@ -65,7 +71,7 @@ headP = do
 
 {- | Skip one element from the input stream. -}
 {-# INLINE skipOne #-}
-skipOne :: Streamable m a s =>ParserT s Void m ()
+skipOne :: Streamable m a s => ParserT s Void m ()
 skipOne = do
     r <- get >>= lift . unconsM
     case r of
@@ -74,7 +80,7 @@ skipOne = do
 
 {- | Parse one element from the input stream but without consuming input. -}
 {-# INLINE peek #-}
-peek :: Streamable m a s =>ParserT s Void m (Maybe a)
+peek :: Streamable m a s => ParserT s Void m (Maybe a)
 peek = do
     r <- get >>= lift . unconsM
     case r of
