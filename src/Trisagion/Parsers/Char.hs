@@ -7,6 +7,7 @@ Parsers with constraints @'Streamable' m Char s@.
 module Trisagion.Parsers.Char (
     -- * Types.
     Newline (..),
+    Sign (..),
 
     -- * Newline parsers.
     lf,
@@ -19,6 +20,7 @@ module Trisagion.Parsers.Char (
 
     -- * Numeric parsers.
     digit,
+    sign,
 ) where
 
 -- Imports.
@@ -30,13 +32,17 @@ import Data.Void (Void)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable)
-import Trisagion.ParserT (ParserT, mapError, throw, catch)
+import Trisagion.ParserT (ParserT, mapError, throw, catch, validate)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
 import Trisagion.Parsers.Splittable (takeWhileP)
 
 
 {- | The universal newline type. -}
 data Newline = LF | CR | CRLF
+    deriving stock (Eq, Ord, Bounded, Enum, Show)
+
+{- | The sign of a number. -}
+data Sign = Negative | Positive
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
 
@@ -78,3 +84,14 @@ notSpaces = takeWhileP (not . isSpace)
 {-# INLINE digit #-}
 digit :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Char
 digit = satisfy isDigit
+
+{- | Parse a number sign. -}
+{-# INLINE sign #-}
+sign :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Sign
+sign = validate v headP
+    where
+        v :: Char -> ValidationError Char :+: Sign
+        v x = case x of
+            '-' -> Right Negative
+            '+' -> Right Positive
+            _   -> Left $ ValidationError x
