@@ -23,11 +23,16 @@ module Trisagion.Parsers.Char (
     sign,
     positive,
     integer,
+
+    -- * Alphanumeric.
+    letter,
+    word,
+    identifier,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Char (isSpace, isDigit, ord)
+import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
@@ -39,7 +44,7 @@ import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable)
-import Trisagion.ParserT (ParserT, mapError, throw, catch, validate)
+import Trisagion.ParserT (ParserT, mapError, throw, catch, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
 import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
@@ -128,3 +133,30 @@ integer = do
     case sgn of
         Positive -> positive
         Negative -> ((-1) *) <$> positive
+
+
+{- | Parse a single (unicode) letter. -}
+{-# INLINE letter #-}
+letter :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Char
+letter = satisfy isLetter
+
+{- | Parse a word. -}
+{-# INLINE word #-}
+word :: Splittable m Char b s => ParserT s (ValidationError Char :+: InputError) m b
+word = takeWhile1 isLetter
+
+{- | Parse an identifier.
+
+An identifier is a letter followed by any combination of letters, digits and the characters @\'-\'@
+or @\'_\'@.
+-}
+{-# INLINE identifier #-}
+identifier :: Splittable m Char b s => ParserT s (ValidationError Char :+: InputError) m b
+identifier = do
+        x <- mapError absurd $ lookAhead letter
+        case x of
+            Left e  -> throw e
+            Right _ -> mapError absurd $ takeWhileP p
+    where
+        p :: Char -> Bool
+        p c = isLetter c || isDigit c || '-' == c || '_' == c
