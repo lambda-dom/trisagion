@@ -125,7 +125,6 @@ integer
     => ParserT s (ValidationError Char :+: InputError) m Integer
 integer = do
     sgn <- mapError absurd (fromMaybe Positive <$> optional sign)
-    number <- positive
     case sgn of
-        Positive -> pure number
-        Negative -> pure (-number)
+        Positive -> positive
+        Negative -> ((-1) *) <$> positive
