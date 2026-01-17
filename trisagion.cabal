@@ -27,6 +27,7 @@ library
         DerivingStrategies
         DerivingVia
         FunctionalDependencies
+        RequiredTypeArguments
     ghc-options:
         -Wall
         -Wcompat

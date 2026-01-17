@@ -21,20 +21,28 @@ module Trisagion.Parsers.Char (
     -- * Numeric parsers.
     digit,
     sign,
+    positive,
+    integer,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Char (isSpace, isDigit)
-import Data.Void (Void)
+import Data.Char (isSpace, isDigit, ord)
+import Data.Maybe (fromMaybe)
+import Data.Void (Void, absurd)
+
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
+import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable)
 import Trisagion.ParserT (ParserT, mapError, throw, catch, validate)
+import Trisagion.Parsers.Combinators (optional)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
-import Trisagion.Parsers.Splittable (takeWhileP)
+import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
 
 
 {- | The universal newline type. -}
@@ -95,3 +103,29 @@ sign = validate v headP
             '-' -> Right Negative
             '+' -> Right Positive
             _   -> Left $ ValidationError x
+
+{- | Parse a positive 'Integer' in decimal format. -}
+{-# INLINEABLE positive #-}
+positive
+    :: (Splittable m Char b s, MonoFoldable Char b)
+    => ParserT s (ValidationError Char :+: InputError) m Integer
+positive = do
+        digits <- takeWhile1 isDigit
+        let xs = enumDown (pred (monolength digits)) (monotoList digits)
+        pure $ foldl' (+) 0 $ uncurry value <$> xs
+    where
+        value :: Word -> Char -> Integer
+        -- Returns implementation-dependent garbage for non-decimal digits.
+        value n c = fromIntegral (ord c - ord '0') * 10 ^ n
+
+{- | Parse a signed 'Integer' in decimal format. -}
+{-# INLINE integer #-}
+integer
+    :: (Splittable m Char b s, MonoFoldable Char b)
+    => ParserT s (ValidationError Char :+: InputError) m Integer
+integer = do
+    sgn <- mapError absurd (fromMaybe Positive <$> optional sign)
+    number <- positive
+    case sgn of
+        Positive -> pure number
+        Negative -> pure (-number)
