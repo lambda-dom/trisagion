@@ -11,6 +11,7 @@ module Trisagion.Parsers.Char (
 
     -- * Error types.
     EscapeError (..),
+    StringError (..),
 
     -- * Newline parsers.
     lf,
@@ -32,10 +33,12 @@ module Trisagion.Parsers.Char (
     word,
     identifier,
     escape,
+    string,
 ) where
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
@@ -48,10 +51,12 @@ import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, mapError, throw, catch, validate, lookAhead)
-import Trisagion.Parsers.Combinators (optional)
+import Trisagion.ParserT (ParserT, mapError, throw, catch, validate, lookAhead, throwParseError)
+import Trisagion.Parsers.Combinators (optional, manyTill)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
 import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
+import Trisagion.Types.ParseError (ParseError)
+import Control.Applicative (Alternative(..))
 
 
 {- | The universal newline type. -}
@@ -65,8 +70,15 @@ data Sign = Negative | Positive
 
 {- | The @EscapeError@ error type thrown by the 'escape' parser. -}
 data EscapeError
-    = EscapeCharError     !Char         -- ^ Error thrown on incorrect escape character.
-    | EscapeSequenceError !Char         -- ^ Error thrown on incorrect escape sequence.
+    = EscapeCharError     !Char         -- ^ Error thrown on invalid escape character.
+    | EscapeSequenceError !Char         -- ^ Error thrown on invalid escape sequence.
+    deriving stock (Eq, Ord, Show)
+
+{- | The @StringError@ error type thrown by the 'string' parser. -}
+data StringError
+    = StartQuoteError   !Char           -- ^ Error thrown on invalid opening quote.
+    | EndQuoteError     !Char           -- ^ Error thrown on invalid ending quote.
+    | StringEscapeError !EscapeError    -- ^ Error thrown on invalid escape sequence.
     deriving stock (Eq, Ord, Show)
 
 
@@ -217,3 +229,46 @@ escape = do
             '"'  -> Right (singleton m s '"')
             '\\' -> Right (singleton m s '\\')
             _    -> Left (EscapeSequenceError c)
+
+{- | Parse a quoted string with escape sequences.
+
+The quote characters are @\'\\\'\'@ and @\'\"\'@. The available escape sequences are the ones
+accepted by the 'escape' parser.
+
+note(s):
+
+  * A quoted string does /not/ span multiple lines.
+-}
+{-# INLINEABLE string #-}
+string
+    :: (Splittable m Char b s, Monoid b)
+    => ParserT s (ParseError s (StringError :+: InputError)) m b
+string = do
+        c      <- throwParseError startQuote
+        blocks <- manyTill (throwParseError $ endQuote c) (escapeSequence <|> block c)
+        pure $ foldl' (<>) mempty blocks
+    where
+        startQuote :: Streamable m Char s => ParserT s (StringError :+: InputError) m Char
+        startQuote = validate v headP
+            where
+                v :: Char -> StringError :+: Char
+                v c = if '\'' == c || '\"' == c
+                    then Right c
+                    else Left $ StartQuoteError c
+
+        endQuote :: Streamable m Char s => Char -> ParserT s (StringError :+: InputError) m Char
+        endQuote c = validate v headP
+            where
+                v :: Char -> StringError :+: Char
+                v d = if c == d
+                    then Right c
+                    else Left $ EndQuoteError c
+
+        escapeSequence :: Splittable m Char b s => ParserT s (ParseError s (StringError :+: InputError)) m b
+        escapeSequence = throwParseError $ mapError (bimap StringEscapeError id) escape
+
+        block :: Splittable m Char b s => Char -> ParserT s (ParseError s (StringError :+: InputError)) m b
+        block c = throwParseError . mapError (bimap f id) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+            where
+                f :: ValidationError Char -> StringError
+                f (ValidationError d) = EndQuoteError d
