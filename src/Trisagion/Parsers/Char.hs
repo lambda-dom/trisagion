@@ -109,9 +109,7 @@ newline = do
 
 {- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
 {-# INLINEABLE line #-}
-line
-    :: forall m b s . (Splittable m Char b s, Monoid b)
-    => ParserT s InputError m b
+line :: forall m b s . (Splittable m Char b s, Monoid b) => ParserT s InputError m b
 line = (fold . intersperse (singleton m s '\r')) <$> do
         b <- mapError absurd eoi
         if b
