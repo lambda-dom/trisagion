@@ -52,16 +52,16 @@ import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, mapError, throw, catch, validate, lookAhead, throwParseError)
+import Trisagion.ParserT (ParserT, mapError, throw, validate, lookAhead, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
 import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
-import Trisagion.Types.ParseError (ParseError)
-import Control.Applicative (Alternative(..))
 
 
 {- | The universal newline type. -}
-data Newline = LF | CR | CRLF
+data Newline
+    = LF                                -- ^ Unix end of line.
+    | CRLF                              -- ^ Windows end of line.
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
 {- | The sign of a number. -}
@@ -98,11 +98,10 @@ cr = single '\r'
 newline :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Newline
 newline = do
     c <- mapError Right headP
-    if c == '\n'
-        then pure LF
-        else if c == '\r'
-            then catch (fmap (const CRLF) lf) (const $ pure LF)
-            else throw $ Left (ValidationError c)
+    case c of
+        '\n' -> pure LF
+        '\r' -> fmap (const CRLF) lf
+        _    -> throw $ Left (ValidationError c)
 
 
 {- | Parse a, possibly null, prefix of whitespace. -}
@@ -243,10 +242,10 @@ note(s):
 {-# INLINEABLE string #-}
 string
     :: (Splittable m Char b s, Monoid b)
-    => ParserT s (ParseError s (StringError :+: InputError)) m b
+    => ParserT s (StringError :+: InputError) m b
 string = do
-        c      <- throwParseError startQuote
-        blocks <- manyTill (throwParseError $ endQuote c) (escapeSequence <|> block c)
+        c      <- startQuote
+        blocks <- manyTill (endQuote c) (catch escapeSequence (const $ block c))
         pure $ foldl' (<>) mempty blocks
     where
         startQuote :: Streamable m Char s => ParserT s (StringError :+: InputError) m Char
@@ -265,11 +264,11 @@ string = do
                     then Right c
                     else Left $ EndQuoteError c
 
-        escapeSequence :: Splittable m Char b s => ParserT s (ParseError s (StringError :+: InputError)) m b
-        escapeSequence = throwParseError $ mapError (bimap StringEscapeError id) escape
+        escapeSequence :: Splittable m Char b s => ParserT s (StringError :+: InputError) m b
+        escapeSequence = mapError (bimap StringEscapeError id) escape
 
-        block :: Splittable m Char b s => Char -> ParserT s (ParseError s (StringError :+: InputError)) m b
-        block c = throwParseError . mapError (bimap f id) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+        block :: Splittable m Char b s => Char -> ParserT s (StringError :+: InputError) m b
+        block c = mapError (bimap f id) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d
