@@ -61,6 +61,7 @@ import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
 {- | The universal newline type. -}
 data Newline
     = LF                                -- ^ Unix end of line.
+    | CR                                -- ^ MacOS end of line.
     | CRLF                              -- ^ Windows end of line.
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
@@ -100,7 +101,7 @@ newline = do
     c <- mapError Right headP
     case c of
         '\n' -> pure LF
-        '\r' -> fmap (const CRLF) lf
+        '\r' -> catch (fmap (const CRLF) lf) (const (pure CR))
         _    -> throw $ Left (ValidationError c)
 
 
