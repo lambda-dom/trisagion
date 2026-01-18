@@ -34,6 +34,7 @@ module Trisagion.Parsers.Char (
     identifier,
     escape,
     string,
+    comment,
 ) where
 
 -- Imports.
@@ -272,3 +273,21 @@ string = do
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d
+
+{- | Parse a line comment.
+
+A line comment starts with @p@ and runs to the end of the line (character @'\\n'@), returning the
+prefix in-between.
+
+note(s):
+
+    * If the input stream contains Windows end of lines, then the comment text will contain an
+    ending @'\\r'@. This can only be stripped by assuming more about the prefix @b@ (the practical
+    solution) or complicating the implementation.
+-}
+{-# INLINE comment #-}
+comment
+    :: Splittable m Char b s
+    => ParserT s e m ()                 -- ^ Parser for start of line comment.
+    -> ParserT s e m b
+comment p = p *> mapError absurd (takeWhileP (/= '\n') <* optional lf)
