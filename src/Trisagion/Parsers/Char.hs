@@ -17,6 +17,7 @@ module Trisagion.Parsers.Char (
     lf,
     cr,
     newline,
+    line,
 
     -- * Whitespace parsers.
     spaces,
@@ -39,8 +40,10 @@ module Trisagion.Parsers.Char (
 
 -- Imports.
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
+import Data.Bifunctor (bimap)
 import Data.Char (isSpace, isDigit, ord, isLetter)
+import Data.Foldable (fold)
+import Data.List (intersperse)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
@@ -51,10 +54,10 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.Splittable (Splittable (singleton))
 import Trisagion.ParserT (ParserT, mapError, throw, validate, lookAhead, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy, eoi)
 import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
 
 
@@ -103,6 +106,25 @@ newline = do
         '\n' -> pure LF
         '\r' -> catch (fmap (const CRLF) lf) (const (pure CR))
         _    -> throw $ Left (ValidationError c)
+
+{- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
+{-# INLINEABLE line #-}
+line
+    :: forall m b s . (Splittable m Char b s, Monoid b)
+    => ParserT s InputError m b
+line = (fold . intersperse (singleton m s '\r')) <$> do
+        b <- mapError absurd eoi
+        if b
+            then throw (InputError 1)
+            else mapError absurd go
+    where
+        go :: ParserT s Void m [b] 
+        go = do
+            xs      <- takeWhileP (\ c -> c /= '\n' && c /= '\r')
+            endline <- optional newline
+            case endline of
+                Just CR -> fmap (xs :) go
+                _       -> pure [xs]
 
 
 {- | Parse a, possibly null, prefix of whitespace. -}
