@@ -9,6 +9,9 @@ module Trisagion.Parsers.Char (
     Newline (..),
     Sign (..),
 
+    -- * Error types.
+    EscapeError (..),
+
     -- * Newline parsers.
     lf,
     cr,
@@ -28,6 +31,7 @@ module Trisagion.Parsers.Char (
     letter,
     word,
     identifier,
+    escape,
 ) where
 
 -- Imports.
@@ -43,7 +47,7 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Utils.Integral (enumDown)
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.Typeclasses.Splittable (Splittable)
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.ParserT (ParserT, mapError, throw, catch, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy)
@@ -57,6 +61,13 @@ data Newline = LF | CR | CRLF
 {- | The sign of a number. -}
 data Sign = Negative | Positive
     deriving stock (Eq, Ord, Bounded, Enum, Show)
+
+
+{- | The @EscapeError@ error type thrown by the 'escape' parser. -}
+data EscapeError
+    = EscapeCharError     !Char         -- ^ Error thrown on incorrect escape character.
+    | EscapeSequenceError !Char         -- ^ Error thrown on incorrect escape sequence.
+    deriving stock (Eq, Ord, Show)
 
 
 {- | Parse a line feed (character @'\\n'@). -}
@@ -75,11 +86,10 @@ newline :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError
 newline = do
     c <- mapError Right headP
     if c == '\n'
-    then pure LF
-    else
-        if c == '\r'
-        then catch (fmap (const CRLF) lf) (const $ pure LF)
-        else throw $ Left (ValidationError c)
+        then pure LF
+        else if c == '\r'
+            then catch (fmap (const CRLF) lf) (const $ pure LF)
+            else throw $ Left (ValidationError c)
 
 
 {- | Parse a, possibly null, prefix of whitespace. -}
@@ -160,3 +170,50 @@ identifier = do
     where
         p :: Char -> Bool
         p c = isLetter c || isDigit c || '-' == c || '_' == c
+
+{- | Parse an escape sequence.
+
+The escape sequences currently supported are:
+
++----------+-----+---------------------------+
+| Escape   | Ord | Meaning                   |
++==========+=====+===========================+
+| @\\t@    | 9   | horizontal tab            |
++----------+-----+---------------------------+
+| @\\n@    | 10  | new line                  |
++----------+-----+---------------------------+
+| @\\v@    | 11  | vertical tab              |
++----------+-----+---------------------------+
+| @\\f@    | 12  | form feed                 |
++----------+-----+---------------------------+
+| @\\r@    | 13  | carriage return           |
++----------+-----+---------------------------+
+| @\\s@    | 32  | space                     |
++----------+-----+---------------------------+
+| @\\\'@   | 39  | single quote              |
++----------+-----+---------------------------+
+| @\\\"@   | 34  | double quote              |
++----------+-----+---------------------------+
+| @\\\\@   | 92  | character @\'\\\'@        |
++----------+-----+---------------------------+
+-}
+{-# INLINE escape #-}
+escape :: forall m b s . Splittable m Char b s => ParserT s (EscapeError :+: InputError) m b
+escape = do
+        c <- mapError Right headP
+        if '\\' /= c
+            then throw (Left $ EscapeCharError c)
+            else validate v headP
+    where
+        v :: Char -> EscapeError :+: b
+        v c = case c of
+            't'  -> Right (singleton m s '\t')
+            'n'  -> Right (singleton m s '\n')
+            'v'  -> Right (singleton m s '\v')
+            'f'  -> Right (singleton m s '\f')
+            'r'  -> Right (singleton m s '\r')
+            's'  -> Right (singleton m s ' ')
+            '\'' -> Right (singleton m s '\'')
+            '"'  -> Right (singleton m s '"')
+            '\\' -> Right (singleton m s '\\')
+            _    -> Left (EscapeSequenceError c)
