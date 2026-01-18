@@ -40,7 +40,7 @@ import Data.Void (Void, absurd)
 
 -- Package.
 import Trisagion.Types.Either ((:+:))
-import Trisagion.ParserT (ParserT, try, lookAhead, mapError, throw)
+import Trisagion.ParserT (ParserT, try, lookAhead, mapError, throw, catch)
 
 
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
@@ -168,7 +168,8 @@ skipSome p = p *> mapError absurd (skipMany p)
 
 note(s):
 
-  * The difference with 'manyTill' is that the @end@ parser will not consume any input.
+  * The difference with 'manyTill' is the need for the monoid constraint and the fact that the
+  @end@ parser will not consume any input.
 -}
 {-# INLINE untilEnd #-}
 untilEnd
@@ -180,11 +181,11 @@ untilEnd end p = many $ failIff end *> p
 
 {- | @'manyTill' end p@ runs @p@ until @end@ succeeds, returning the results of @p@. -}
 {-# INLINEABLE manyTill #-}
-manyTill :: (Monad m, Monoid e) => ParserT s e m a -> ParserT s e m b -> ParserT s e m [b]
+manyTill :: Monad m => ParserT s e m a -> ParserT s e m b -> ParserT s e m [b]
 manyTill end p = go
     where
         go = do
-            r <- choose end p
+            r <- catch (fmap Left end) (const (fmap Right p))
             case r of
                 Left _  -> pure []
                 Right x -> (x :) <$> go
@@ -192,14 +193,14 @@ manyTill end p = go
 {- | @'manyTillEnd' end p@ runs @p@ until @end@ succeeds, returning the results of @p@ and @end@. -}
 {-# INLINEABLE manyTillEnd #-}
 manyTillEnd
-    :: (Monad m, Monoid e)
+    :: Monad m
     => ParserT s e m a                  -- ^ Closing parser.
     -> ParserT s e m a                  -- ^ Parser to run.
     -> ParserT s e m (NonEmpty a)
 manyTillEnd end p = go
     where
         go = do
-            r <- choose end p
+            r <- catch (fmap Left end) (const (fmap Right p))
             case r of
                 Left e  -> pure $ e :| []
                 Right x -> (x <|) <$> go
