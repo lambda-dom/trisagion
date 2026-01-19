@@ -5,9 +5,6 @@ Parsers with t'ParseError' errors.
 -}
 
 module Trisagion.Parsers.ParseError (
-    -- * Parsers with @'HasOffset' m s@ constraints.
-    getOffset,
-
     -- * Parsers throwing t'ParseError'-errors.
     throwParseError,
     capture,
@@ -15,17 +12,12 @@ module Trisagion.Parsers.ParseError (
 
 -- Imports.
 -- Base.
-import Data.Void (Void, absurd)
-
--- Libraries.
-import Control.Monad.State (MonadState (..))
-import Control.Monad.Trans (MonadTrans (..))
+import Data.Void (absurd)
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.ParserT (ParserT, mapError)
-
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
@@ -35,7 +27,7 @@ throwParseError
     => ParserT s e m a
     -> ParserT s (ParseError e) m a
 throwParseError p = do
-    n <- mapError absurd getOffset
+    n <- mapError absurd offset
     mapError (ParseError n) p
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
@@ -65,7 +57,7 @@ capture
     => ParserT s (ParseError e) m a     -- ^ Parser to run.
     -> ParserT s (ParseError e) m a
 capture p = do
-        n  <- mapError absurd getOffset
+        n  <- mapError absurd offset
         mapError (set n) p
     where
         set :: Word -> ParseError e -> ParseError e

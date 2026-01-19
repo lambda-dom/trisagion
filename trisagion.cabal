@@ -61,6 +61,6 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable
-        -- Trisagion.Parsers.ParseError
+        Trisagion.Parsers.ParseError
         -- Trisagion.Parsers.Word8
         -- Trisagion.Parsers.Char
