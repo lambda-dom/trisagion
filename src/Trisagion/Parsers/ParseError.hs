@@ -27,11 +27,6 @@ import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.ParserT (ParserT, mapError)
 
 
-{- | Parser returning the current stream offset. -}
-{-# INLINE getOffset #-}
-getOffset :: (Monad m, HasOffset m s) => ParserT s Void m Word
-getOffset = get >>= lift . offset
-
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
 {-# INLINE throwParseError #-}

@@ -21,6 +21,7 @@ module Trisagion.Typeclasses.Streamable (
 -- Imports.
 -- Base.
 import Data.Functor.Identity (Identity (..))
+import Data.Kind (Type)
 import Data.Void (Void)
 
 -- Libraries.
@@ -36,6 +37,7 @@ import Trisagion.Types.Either ((:+:))
 
 
 {- | The @InputError@ error type. -}
+type InputError :: Type
 newtype InputError = InputError Word
     deriving stock (Eq, Show)
 
@@ -48,6 +50,7 @@ instance MonoFunctor Word InputError where
 
 
 {- | The @ValidationError@ error tag type thrown on failed validations. -}
+type ValidationError :: Type -> Type
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
     deriving (Applicative, Monad) via Identity

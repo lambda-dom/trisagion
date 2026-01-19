@@ -26,7 +26,6 @@ module Trisagion.ParserT (
     try,
     validate,
     lookAhead,
-
 ) where
 
 -- Imports.
