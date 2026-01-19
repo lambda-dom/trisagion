@@ -56,13 +56,12 @@ library
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Utils.Integral
+        Trisagion.ParserT
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Streamable
-        Trisagion.Typeclasses.Splittable
-        Trisagion.ParserT
+        -- Trisagion.Typeclasses.Splittable
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.ParseError
-        Trisagion.Parsers.Streamable
-        Trisagion.Parsers.Splittable
-        Trisagion.Parsers.Word8
-        Trisagion.Parsers.Char
+        -- Trisagion.Parsers.Splittable
+        -- Trisagion.Parsers.Word8
+        -- Trisagion.Parsers.Char
