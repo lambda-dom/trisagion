@@ -33,7 +33,8 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.ParserT (ParserT, parse, lookAhead, throw, mapError, getOffset)
+import Trisagion.ParserT (ParserT, parse, lookAhead, throw, mapError)
+import Trisagion.Parsers.ParseError (getOffset)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), satisfy)
 
 
