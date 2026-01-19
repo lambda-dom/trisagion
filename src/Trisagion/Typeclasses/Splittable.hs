@@ -18,26 +18,25 @@ module Trisagion.Typeclasses.Splittable (
 import Prelude hiding (take, drop, takeWhile, dropWhile)
 
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
+import qualified Data.List as List (drop, dropWhile, splitAt, span)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
 import Control.Monad.Trans (MonadTrans (..))
 
--- non-Hackage libraries.
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
-
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.ParserT (ParserT, mapError, lookAhead, throw, parse, eval)
-import Trisagion.Typeclasses.Streamable (Streamable, ValidationError (..), InputError (..), satisfy)
+import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The @Splittable@ typeclass. -}
 class Streamable m a s => Splittable m a b s | s -> b where
-    {-# MINIMAL take, takeWhile, singleton #-}
+    {-# MINIMAL take, takeWhile, singleton, takeExact, match #-}
 
     {- | Parse a fixed size prefix from the stream. -}
     take :: Word -> ParserT s Void m b
@@ -49,6 +48,12 @@ class Streamable m a s => Splittable m a b s | s -> b where
     singleton :: forall n -> forall t -> (s ~ t, m ~ n) => a -> b
 
     {- | Drop a fixed size prefix from the stream. -}
+    {- | Parse a prefix of exact size. -}
+    takeExact :: Word -> ParserT s InputError m b
+
+    {- | Parse a matching prefix. -}
+    match :: b -> ParserT s (ValidationError b) m b
+
     drop :: Word -> ParserT s Void m ()
     drop n = take n $> ()
 
@@ -64,32 +69,77 @@ class Streamable m a s => Splittable m a b s | s -> b where
             Left e  -> throw e
             Right _ -> mapError absurd $ takeWhile p
 
-    {- | Parse an exact, fixed size prefix. -}
-    takeExact :: MonoFoldable a b => Word -> ParserT s InputError m b
-    takeExact n = do
-        prefix <- mapError absurd $ take n
-        if monolength prefix /= n
-            then throw $ InputError n
-            else pure prefix
-
-    {- | Parse a matching prefix. -}
-    match :: (Eq b, MonoFoldable a b) => b -> ParserT s (ValidationError b :+: InputError) m b
-    match xs = do
-        prefix <- mapError Right $ takeExact (monolength xs)
-        if xs == prefix
-            then pure xs
-            else throw $ Left (ValidationError xs)
-
 
 -- Instances.
--- instance Monad m => Splittable m a [a] [a] where
---     splitAtM :: Word -> [a] -> m ([a], [a])
---     splitAtM n = pure . splitAt (fromIntegral n)
+instance (Eq a, Monad m) => Splittable m a [a] [a] where
+    {-# INLINE take #-}
+    take :: Word -> ParserT [a] Void m [a]
+    take n = do
+        xs <- get
+        let (x, ys) = List.splitAt (fromIntegral n) xs
+        put ys $> x
 
---     splitWithM :: (a -> Bool) -> [a] -> m ([a], [a])
---     splitWithM p = pure . span p
+    {-# INLINE takeWhile #-}
+    takeWhile :: (a -> Bool) -> ParserT [a] Void m [a]
+    takeWhile p = do
+        xs <- get
+        let (x, ys) = List.span p xs
+        put ys $> x
 
---     singleton _ _ x = [x]
+    {-# INLINE takeExact #-}
+    takeExact :: Word -> ParserT [a] InputError m [a]
+    takeExact n = do
+        xs <- get
+        case takeExactList n xs of
+            Nothing       -> throw $ InputError n
+            Just (ys, zs) -> put zs $> ys
+        where
+            takeExactList :: Word -> [a] -> Maybe ([a], [a])
+            takeExactList 0 xs       = Just ([], xs)
+            takeExactList _ []       = Nothing
+            takeExactList m (x : xs) = fmap (first (x :)) $ takeExactList (pred m) xs
+
+    {-# INLINE match #-}
+    match :: [a] -> ParserT [a] (ValidationError [a]) m [a]
+    match xs = do
+            ys <- get
+            case matchList xs ys of
+                Nothing -> throw $ ValidationError xs
+                Just zs -> put zs $> xs
+        where
+            matchList :: Eq b => [b] -> [b] -> Maybe [b]
+            matchList []       x        = Just x
+            matchList (_ : _)  []       = Nothing
+            matchList (y : ys) (z : zs) = if y == z then matchList ys zs else Nothing
+
+    {-# INLINE singleton #-}
+    singleton _ _ x = [x]
+
+    {-# INLINE drop #-}
+    drop :: Word -> ParserT [a] Void m ()
+    drop n = do
+        xs <- get
+        let ys = List.drop (fromIntegral n) xs
+        put ys $> ()
+
+    {-# INLINE dropWhile #-}
+    dropWhile :: (a -> Bool) -> ParserT [a] Void m ()
+    dropWhile p = do
+        xs <- get
+        let ys = List.dropWhile p xs
+        put ys $> ()
+
+    {-# INLINE takeWhile1 #-}
+    takeWhile1 :: (a -> Bool) -> ParserT [a] (ValidationError a :+: InputError) m [a]
+    takeWhile1 p = do
+        xs <- get
+        case xs of
+            []       -> throw $ Right (InputError 1)
+            (x : ys) -> if p x
+                then do
+                    let (z, zs) = List.span p ys
+                    put zs $> (x : z)
+                else throw $ Left (ValidationError x)
 
 
 {- | Run a parser isolated to a fixed size prefix of the stream.
