@@ -27,12 +27,6 @@ module Trisagion.ParserT (
     validate,
     lookAhead,
 
-    -- * Parsers with @'HasOffset' m s@ constraints.
-    getOffset,
-
-    -- * Parsers throwing t'ParseError'-errors.
-    throwParseError,
-    capture,
 ) where
 
 -- Imports.
@@ -51,8 +45,6 @@ import Control.Monad.Trans (MonadTrans (..))
 -- Package.
 import Trisagion.Types.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
-import Trisagion.Types.ParseError (ParseError (..))
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
 
 {- | The parsing monad transformer @ParserT s e m a@.
@@ -124,8 +116,8 @@ backtrack and run @q@ on the same input.
 note(s):
 
   * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
-  * The default way to get a monoid structure on @e@ is to embed @e@ in @t'ParseError' s e@ -- see
-  'throwParseError'.
+  * The default way to get a monoid structure on @e@ is to embed @e@ in @ParseError e@ -- see
+  'Trisagion.Parsers.ParseError.throwParseError'.
 -}
 instance (Monad m, Monoid e) => Alternative (ParserT s e m) where
     {-# INLINE empty #-}
@@ -294,51 +286,3 @@ validate v p = do
 {-# INLINE lookAhead #-}
 lookAhead :: Monad m => ParserT s e m a -> ParserT s Void m (e :+: a)
 lookAhead p = get >>= lift . eval p
-
-
-{- | Parser returning the current stream offset. -}
-{-# INLINE getOffset #-}
-getOffset :: (Monad m, HasOffset m s) => ParserT s Void m Word
-getOffset = get >>= lift . offset
-
-
-{- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' s e@)-errors. -}
-{-# INLINE throwParseError #-}
-throwParseError
-    :: Monad m
-    => ParserT s e m a
-    -> ParserT s (ParseError s e) m a
-throwParseError p = do
-    xs <- get
-    mapError (ParseError xs) p
-
-{- | Capture the offset of the input stream at the entry point in case of an error.
-
-A parser,
-
-@
-parser = do
-    ...
-    x <- p -- Can throw here.
-    ...
-@
-
-can now be written as:
-
-@
-parser = capture $ do
-    -- Capture the input stream @xs@ here.
-    ...
-    x <- p -- Can throw here. If it throws, the error's input stream will be @xs@.
-    ...
-@
--}
-{-# INLINE capture #-}
-capture :: Monad m => ParserT s (ParseError s e) m a -> ParserT s (ParseError s e) m a
-capture p = do
-        xs  <- get
-        mapError (set xs) p
-    where
-        set :: s -> ParseError s e -> ParseError s e
-        set _ Failure          = Failure
-        set xs (ParseError _ e) = ParseError xs e

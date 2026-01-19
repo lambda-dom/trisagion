@@ -61,6 +61,7 @@ library
         Trisagion.Typeclasses.Splittable
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.ParseError
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Word8
