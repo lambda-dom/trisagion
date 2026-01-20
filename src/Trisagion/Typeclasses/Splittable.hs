@@ -18,7 +18,6 @@ module Trisagion.Typeclasses.Splittable (
 import Prelude hiding (take, drop, takeWhile, dropWhile)
 
 -- Base.
-import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
 import qualified Data.List as List (drop, dropWhile, splitAt, span)
@@ -29,6 +28,7 @@ import Control.Monad.Trans (MonadTrans (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
+import Trisagion.Utils.List (splitAtExact, matchPrefix)
 import Trisagion.ParserT (ParserT, mapError, lookAhead, throw, parse, eval)
 import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
@@ -90,27 +90,17 @@ instance (Eq a, Monad m) => Splittable m a [a] [a] where
     takeExact :: Word -> ParserT [a] InputError m [a]
     takeExact n = do
         xs <- get
-        case takeExactList n xs of
+        case splitAtExact n xs of
             Nothing       -> throw $ InputError n
             Just (ys, zs) -> put zs $> ys
-        where
-            takeExactList :: Word -> [a] -> Maybe ([a], [a])
-            takeExactList 0 xs       = Just ([], xs)
-            takeExactList _ []       = Nothing
-            takeExactList m (x : xs) = fmap (first (x :)) $ takeExactList (pred m) xs
 
     {-# INLINE match #-}
     match :: [a] -> ParserT [a] (ValidationError [a]) m [a]
     match xs = do
             ys <- get
-            case matchList xs ys of
+            case matchPrefix xs ys of
                 Nothing -> throw $ ValidationError xs
                 Just zs -> put zs $> xs
-        where
-            matchList :: Eq b => [b] -> [b] -> Maybe [b]
-            matchList []       x        = Just x
-            matchList (_ : _)  []       = Nothing
-            matchList (y : ys) (z : zs) = if y == z then matchList ys zs else Nothing
 
     {-# INLINE singleton #-}
     singleton _ _ x = [x]
