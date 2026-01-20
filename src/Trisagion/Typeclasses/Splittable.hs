@@ -51,8 +51,8 @@ class Streamable m a s => Splittable m a b s | s -> b where
     {- | Parse a prefix of exact size. -}
     takeExact :: Word -> ParserT s InputError m b
 
-    {- | Parse a matching prefix. -}
-    match :: b -> ParserT s (ValidationError b) m b
+    {- | Parse and drop a matching prefix. -}
+    match :: b -> ParserT s (ValidationError b) m ()
 
     {- | Drop a fixed size prefix from the stream. -}
     drop :: Word -> ParserT s Void m ()
@@ -96,12 +96,12 @@ instance (Eq a, Monad m) => Splittable m a [a] [a] where
             Just (ys, zs) -> put zs $> ys
 
     {-# INLINE match #-}
-    match :: [a] -> ParserT [a] (ValidationError [a]) m [a]
+    match :: [a] -> ParserT [a] (ValidationError [a]) m ()
     match xs = do
             ys <- get
             case matchPrefix xs ys of
                 Nothing -> throw $ ValidationError xs
-                Just zs -> put zs $> xs
+                Just zs -> put zs $> ()
 
     {-# INLINE singleton #-}
     singleton _ _ x = [x]
