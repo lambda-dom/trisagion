@@ -125,8 +125,7 @@ instance (Eq a, Monad m) => Splittable m a [a] [a] where
         xs <- get
         case xs of
             []       -> throw $ Right (InputError 1)
-            (x : ys) -> if p x
-                then do
+            (x : ys) -> if p x then do
                     let (z, zs) = List.span p ys
                     put zs $> (x : z)
                 else throw $ Left (ValidationError x)

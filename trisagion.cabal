@@ -64,4 +64,4 @@ library
         Trisagion.Typeclasses.Splittable
         Trisagion.Typeclasses.Binary
         Trisagion.Parsers.ParseError
-        -- Trisagion.Parsers.Char
+        Trisagion.Parsers.Char
