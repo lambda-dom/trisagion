@@ -18,7 +18,7 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
 
 -- Package.
-import Trisagion.Types.Either ((:+:))
+import Trisagion.Utils.Either ((:+:))
 
 
 {- | The 'Result' type of a parsing function, isomorphic to @'Either' e (a, s)@. -}

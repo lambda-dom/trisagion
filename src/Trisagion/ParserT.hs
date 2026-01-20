@@ -42,7 +42,7 @@ import Control.Monad.State (MonadState (..))
 import Control.Monad.Trans (MonadTrans (..))
 
 -- Package.
-import Trisagion.Types.Either ((:+:))
+import Trisagion.Utils.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
 
 

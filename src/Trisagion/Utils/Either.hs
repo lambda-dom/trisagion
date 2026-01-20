@@ -1,10 +1,10 @@
 {- |
-Module: Trisagion.Types.Either
+Module: Trisagion.Utils.Either
 
 Some utilities for the `Either` coproduct bifunctor.
 -}
 
-module Trisagion.Types.Either (
+module Trisagion.Utils.Either (
     -- * Type operators.
     (:+:),
 

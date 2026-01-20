@@ -1,13 +1,10 @@
 {- |
-Module: Trisagion.Utils.Integral
+Module: Trisagion.Utils.Bits
 
-Some utilities for integral types.
+Bit utilities for integral types.
 -}
 
-module Trisagion.Utils.Integral (
-    -- * Enumerations.
-    enumDown,
-
+module Trisagion.Utils.Bits (
     -- * Bitwise functions.
     bitCount,
 
@@ -22,18 +19,9 @@ module Trisagion.Utils.Integral (
 import Data.Bits (FiniteBits (..), Bits (..))
 import Data.Word (Word8)
 
+-- Package.
+import Trisagion.Utils.List (enumDown)
 
-{- | Enumerate the elements of a list downwards from @n@ to @0@.
-
-note(s):
-
-  * The resulting list has at most @n + 1@ elements.
--}
-{-# INLINE enumDown #-}
-enumDown :: Word -> [a] -> [(Word, a)]
-enumDown n = zip ns
-    where
-        ns = if n == 0 then [0] else [n, pred n .. 0]
 
 {- | Return the number of bits in the integral type.
 
@@ -67,11 +55,11 @@ note(s):
   * Argument list is truncated to a list of 'byteCount' length.
 -}
 {-# INLINEABLE pack #-}
-pack :: forall w . (Integral w, FiniteBits w) => [Word8] -> w
+pack :: forall w . (FiniteBits w, Integral w) => [Word8] -> w
 pack
-    = foldl' (.|.) 0
+    = foldl' (.|.) zeroBits
     . fmap (uncurry shiftByteL)
-    . zip [0 .. pred $ byteCount @w 0]
+    . zip [0 .. pred $ byteCount @w zeroBits]
     . fmap fromIntegral
 
 {- | Pack a list of bytes into an integral value in reverse order.
@@ -83,9 +71,9 @@ note(s)
   * Argument list is truncated to a list of 'byteCount' length.
 -}
 {-# INLINEABLE packReverse #-}
-packReverse :: forall w . (Integral w, FiniteBits w) => [Word8] -> w
+packReverse :: forall w . (FiniteBits w, Integral w) => [Word8] -> w
 packReverse
-        = foldl' (.|.) 0
+        = foldl' (.|.) zeroBits
         . fmap (uncurry shiftByteL)
-        . enumDown (pred $ byteCount @w 0)
+        . enumDown (pred $ byteCount @w zeroBits)
         . fmap fromIntegral

@@ -28,7 +28,7 @@ import Control.Monad.State (MonadState (..))
 import Control.Monad.Trans (MonadTrans (..))
 
 -- Package.
-import Trisagion.Types.Either ((:+:))
+import Trisagion.Utils.Either ((:+:))
 import Trisagion.ParserT (ParserT, mapError, lookAhead, throw, parse, eval)
 import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))

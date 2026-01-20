@@ -31,9 +31,9 @@ import Control.Monad.State (MonadState (..))
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
+import Trisagion.Utils.Either ((:+:))
 import Trisagion.ParserT (ParserT, throw, lookAhead, validate)
 import Trisagion.Parsers.Combinators (skip)
-import Trisagion.Types.Either ((:+:))
 
 
 {- | The @InputError@ error type. -}
