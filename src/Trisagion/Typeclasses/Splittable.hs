@@ -30,6 +30,7 @@ import Control.Monad.Trans (MonadTrans (..))
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (splitAtExact, matchPrefix)
 import Trisagion.ParserT (ParserT, mapError, lookAhead, throw, parse, eval)
+import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 
@@ -47,7 +48,6 @@ class Streamable m a s => Splittable m a b s | s -> b where
     {- | Pure function to convert a stream element to a prefix. -}
     singleton :: forall n -> forall t -> (s ~ t, m ~ n) => a -> b
 
-    {- | Drop a fixed size prefix from the stream. -}
     {- | Parse a prefix of exact size. -}
     takeExact :: Word -> ParserT s InputError m b
 
@@ -55,11 +55,11 @@ class Streamable m a s => Splittable m a b s | s -> b where
     match :: b -> ParserT s (ValidationError b) m b
 
     drop :: Word -> ParserT s Void m ()
-    drop n = take n $> ()
+    drop = skip . take
 
     {- | Drop the longest prefix from the stream whose elements satisfy a predicate. -}
     dropWhile :: (a -> Bool) -> ParserT s Void m ()
-    dropWhile p = takeWhile p $> ()
+    dropWhile = skip . takeWhile
 
     {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate. -}
     takeWhile1 :: (a -> Bool) -> ParserT s (ValidationError a :+: InputError) m b
