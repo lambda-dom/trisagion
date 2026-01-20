@@ -39,6 +39,9 @@ module Trisagion.Parsers.Char (
 ) where
 
 -- Imports.
+-- Prelude hiding.
+import Prelude hiding (takeWhile)
+
 -- Base.
 import Data.Bifunctor (bimap)
 import Data.Char (isSpace, isDigit, ord, isLetter)
@@ -51,14 +54,12 @@ import Data.Void (Void, absurd)
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Utils.Integral (enumDown)
-import Trisagion.Types.Either ((:+:))
-import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.Typeclasses.Splittable (Splittable (singleton))
+import Trisagion.Utils.Either ((:+:))
+import Trisagion.Utils.List (enumDown)
 import Trisagion.ParserT (ParserT, mapError, throw, validate, lookAhead, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, headP, satisfy, eoi)
-import Trisagion.Parsers.Splittable (takeWhileP, takeWhile1)
+import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy, single)
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 
 
 {- | The universal newline type. -}
@@ -101,7 +102,7 @@ cr = single '\r'
 {-# INLINE newline #-}
 newline :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Newline
 newline = do
-    c <- mapError Right headP
+    c <- mapError Right one
     case c of
         '\n' -> pure LF
         '\r' -> catch (fmap (const CRLF) lf) (const (pure CR))
@@ -118,7 +119,7 @@ line = (fold . intersperse (singleton m s '\r')) <$> do
     where
         go :: ParserT s Void m [b] 
         go = do
-            xs      <- takeWhileP (\ c -> c /= '\n' && c /= '\r')
+            xs      <- takeWhile (\ c -> c /= '\n' && c /= '\r')
             endline <- optional newline
             case endline of
                 Just CR -> fmap (xs :) go
@@ -128,12 +129,12 @@ line = (fold . intersperse (singleton m s '\r')) <$> do
 {- | Parse a, possibly null, prefix of whitespace. -}
 {-# INLINE spaces #-}
 spaces :: Splittable m Char b s => ParserT s Void m b
-spaces = takeWhileP isSpace
+spaces = takeWhile isSpace
 
 {- | Parse a, possibly null, prefix of non-whitespace characters. -}
 {-# INLINE notSpaces #-}
 notSpaces :: Splittable m Char b s => ParserT s Void m b
-notSpaces = takeWhileP (not . isSpace)
+notSpaces = takeWhile (not . isSpace)
 
 
 {- | Parse a decimal digit. -}
@@ -144,7 +145,7 @@ digit = satisfy isDigit
 {- | Parse a number sign. -}
 {-# INLINE sign #-}
 sign :: Streamable m Char s => ParserT s (ValidationError Char :+: InputError) m Sign
-sign = validate v headP
+sign = validate v one
     where
         v :: Char -> ValidationError Char :+: Sign
         v x = case x of
@@ -199,7 +200,7 @@ identifier = do
         x <- mapError absurd $ lookAhead letter
         case x of
             Left e  -> throw e
-            Right _ -> mapError absurd $ takeWhileP p
+            Right _ -> mapError absurd $ takeWhile p
     where
         p :: Char -> Bool
         p c = isLetter c || isDigit c || '-' == c || '_' == c
@@ -233,10 +234,10 @@ The escape sequences currently supported are:
 {-# INLINE escape #-}
 escape :: forall m b s . Splittable m Char b s => ParserT s (EscapeError :+: InputError) m b
 escape = do
-        c <- mapError Right headP
+        c <- mapError Right one
         if '\\' /= c
             then throw (Left $ EscapeCharError c)
-            else validate v headP
+            else validate v one
     where
         v :: Char -> EscapeError :+: b
         v c = case c of
@@ -270,7 +271,7 @@ string = do
         pure $ foldl' (<>) mempty blocks
     where
         startQuote :: Streamable m Char s => ParserT s (StringError :+: InputError) m Char
-        startQuote = validate v headP
+        startQuote = validate v one
             where
                 v :: Char -> StringError :+: Char
                 v c = if '\'' == c || '\"' == c
@@ -278,7 +279,7 @@ string = do
                     else Left $ StartQuoteError c
 
         endQuote :: Streamable m Char s => Char -> ParserT s (StringError :+: InputError) m Char
-        endQuote c = validate v headP
+        endQuote c = validate v one
             where
                 v :: Char -> StringError :+: Char
                 v d = if c == d
@@ -310,4 +311,4 @@ comment
     :: Splittable m Char b s
     => ParserT s e m ()                 -- ^ Parser for start of line comment.
     -> ParserT s e m b
-comment p = p *> mapError absurd (takeWhileP (/= '\n') <* optional lf)
+comment p = p *> mapError absurd (takeWhile (/= '\n') <* optional lf)

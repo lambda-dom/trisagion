@@ -52,17 +52,16 @@ library
     build-depends:
     other-modules:
     exposed-modules:
-        Trisagion.Types.Either
+        Trisagion.Utils.Bits
+        Trisagion.Utils.List
+        Trisagion.Utils.Either
         Trisagion.Types.Result
         Trisagion.Types.ParseError
-        Trisagion.Utils.Integral
-        Trisagion.Typeclasses.HasOffset
-        Trisagion.Typeclasses.Streamable
-        Trisagion.Typeclasses.Splittable
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
+        Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.HasOffset
+        Trisagion.Typeclasses.Splittable
+        Trisagion.Typeclasses.Binary
         Trisagion.Parsers.ParseError
-        Trisagion.Parsers.Streamable
-        Trisagion.Parsers.Splittable
-        Trisagion.Parsers.Word8
         Trisagion.Parsers.Char

@@ -39,7 +39,7 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
 -- Package.
-import Trisagion.Types.Either ((:+:))
+import Trisagion.Utils.Either ((:+:))
 import Trisagion.ParserT (ParserT, try, lookAhead, mapError, throw, catch)
 
 
