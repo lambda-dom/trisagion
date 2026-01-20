@@ -54,6 +54,7 @@ class Streamable m a s => Splittable m a b s | s -> b where
     {- | Parse a matching prefix. -}
     match :: b -> ParserT s (ValidationError b) m b
 
+    {- | Drop a fixed size prefix from the stream. -}
     drop :: Word -> ParserT s Void m ()
     drop = skip . take
 
