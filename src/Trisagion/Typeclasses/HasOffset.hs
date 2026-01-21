@@ -12,15 +12,11 @@ module Trisagion.Typeclasses.HasOffset (
 -- Imports.
 -- Base.
 import Data.Kind (Type)
-import Data.Void (Void)
-
--- Package.
-import Trisagion.ParserT (ParserT)
 
 
 {- | The typeclass for input streams with a notion of current offset. -}
 class HasOffset (m :: Type -> Type) (s :: Type) where
     {-# MINIMAL offset #-}
 
-    {- | Parser returning the current stream offset. -}
-    offset :: ParserT s Void m Word
+    {- | Monadic getter fetching the current stream offset. -}
+    offset :: s -> m Word
