@@ -59,11 +59,12 @@ library
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
+        Trisagion.Typeclasses.Splittable
+        -- Trisagion.Typeclasses.Binary
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.HasOffset
         Trisagion.Parsers.ParseError
-        -- Trisagion.Typeclasses.Splittable
-        -- Trisagion.Typeclasses.Binary
+        -- Trisagion.Parsers.Splittable
         -- Trisagion.Parsers.Char
