@@ -43,7 +43,7 @@ module Trisagion.Parsers.Char (
 import Prelude hiding (takeWhile)
 
 -- Base.
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (fold)
 import Data.List (intersperse)
@@ -56,10 +56,12 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (enumDown)
+import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.ParserT (ParserT, mapError, throw, validate, lookAhead, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy, single)
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
+import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
 
 {- | The universal newline type. -}
@@ -287,10 +289,10 @@ string = do
                     else Left $ EndQuoteError c
 
         escapeSequence :: Splittable m Char b s => ParserT s (StringError :+: InputError) m b
-        escapeSequence = mapError (bimap StringEscapeError id) escape
+        escapeSequence = mapError (first StringEscapeError) escape
 
         block :: Splittable m Char b s => Char -> ParserT s (StringError :+: InputError) m b
-        block c = mapError (bimap f id) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+        block c = mapError (first f) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d

@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Typeclasses.Binary
 
-The @Binary@ for parsers with constraints @'Streamable' m Word8 s@.
+The @Binary@ for parsers with constraints @'Splittable' m Word8 b s@.
 -}
 
 module Trisagion.Typeclasses.Binary (
@@ -24,9 +24,10 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Utils.Bits (byteCount, pack, packReverse)
-import Trisagion.ParserT (ParserT)
-import Trisagion.Typeclasses.Streamable (InputError, Streamable (..))
 import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.ParserT (ParserT)
+import Trisagion.Parsers.Streamable (InputError, one)
+import Trisagion.Parsers.Splittable (takeExact)
 
 
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}

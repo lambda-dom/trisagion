@@ -16,8 +16,9 @@ import Data.Void (absurd)
 
 -- Package.
 import Trisagion.Types.ParseError (ParseError (..))
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
+import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.ParserT (ParserT, mapError)
+import Trisagion.Parsers.HasOffset (offset)
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
