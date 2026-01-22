@@ -56,10 +56,12 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (enumDown)
+import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.ParserT (ParserT, mapError, throw, validate, lookAhead, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Typeclasses.Streamable (Streamable (..), ValidationError (..), InputError (..), satisfy, single)
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
+import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
 
 {- | The universal newline type. -}
