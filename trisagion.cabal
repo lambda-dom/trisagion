@@ -60,7 +60,7 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable
-        -- Trisagion.Typeclasses.Binary
+        Trisagion.Typeclasses.Binary
         Trisagion.ParserT
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable

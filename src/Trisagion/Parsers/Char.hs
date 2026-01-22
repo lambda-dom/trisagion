@@ -43,7 +43,7 @@ module Trisagion.Parsers.Char (
 import Prelude hiding (takeWhile)
 
 -- Base.
-import Data.Bifunctor (bimap)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (fold)
 import Data.List (intersperse)
@@ -289,10 +289,10 @@ string = do
                     else Left $ EndQuoteError c
 
         escapeSequence :: Splittable m Char b s => ParserT s (StringError :+: InputError) m b
-        escapeSequence = mapError (bimap StringEscapeError id) escape
+        escapeSequence = mapError (first StringEscapeError) escape
 
         block :: Splittable m Char b s => Char -> ParserT s (StringError :+: InputError) m b
-        block c = mapError (bimap f id) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+        block c = mapError (first f) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d
