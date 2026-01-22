@@ -19,7 +19,7 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 
 {- | The @Splittable@ typeclass. -}
 class Streamable m a s => Splittable m a b s | s -> b where
-    {-# MINIMAL splitAtM, spanM, singleton, splitAtExactM, match #-}
+    {-# MINIMAL splitAtM, spanM, singleton, splitAtExactM, matchM #-}
 
     {- | Split a fixed size prefix from the stream. -}
     splitAtM :: Word -> s -> m (b, s)
@@ -34,7 +34,7 @@ class Streamable m a s => Splittable m a b s | s -> b where
     splitAtExactM :: Word -> s -> m (Maybe (b, s))
 
     {- | Parse and drop a matching prefix. -}
-    match :: b -> s -> m (Maybe s)
+    matchM :: b -> s -> m (Maybe s)
 
 
 -- Instances.
@@ -51,9 +51,9 @@ instance (Eq a, Monad m) => Splittable m a [a] [a] where
     splitAtExactM :: Word -> [a] -> m (Maybe ([a], [a]))
     splitAtExactM n = pure . List.splitAtExact n
 
-    {-# INLINE match #-}
-    match :: [a] -> [a] -> m (Maybe [a])
-    match xs = pure . List.matchPrefix xs
+    {-# INLINE matchM #-}
+    matchM :: [a] -> [a] -> m (Maybe [a])
+    matchM xs = pure . List.matchPrefix xs
 
     {-# INLINE singleton #-}
     singleton _ _ x = [x]
