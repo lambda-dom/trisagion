@@ -37,10 +37,34 @@ newtype Parser s e a = Parser (s -> Result s e a)
 
 
 -- Instances.
-{- | Provides functoriality on the error type. -}
+{- | The 'Bifunctor' instance provides functoriality on the error type. -}
 instance Bifunctor (Parser s) where
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
-    bimap f g (Parser h) = embed $ bimap f g . h
+    bimap f g p = embed $ bimap f g . run p
+
+{- | The 'Applicative' instance.
+
+Allows sequencing of parsers and combine their results. With @'pure' x@ values can be embedded in a
+parser. The parser @p \<*\> q@ first runs @p@ then @q@, and returns the result of @p@ applied to
+the result of @q@.
+
+note(s):
+
+  * The parser @p \<*\> q@ short-circuits on @p@ erroring out, that is, @q@ never runs.
+-}
+instance Applicative (Parser s e) where
+    {-# INLINE pure #-}
+    pure :: a -> Parser s e a
+    pure x = embed $ \ xs -> Success x xs
+
+    {-# INLINE (<*>) #-}
+    (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
+    (<*>) p q = embed $ \ xs ->
+        case run p xs of
+            Error d      -> Error d
+            Success f ys -> case run q ys of
+                    Error e      -> Error e
+                    Success x zs -> Success (f x) zs
 
 
 {- | Embed a parsing function in the t'Parser' monad. -}
