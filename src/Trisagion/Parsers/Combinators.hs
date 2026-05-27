@@ -37,9 +37,12 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
+
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Parser (Parser, try, lookAhead, throw, catch)
+import Trisagion.Parser (Parser, try, lookAhead, throw)
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 
 
@@ -101,7 +104,6 @@ count n p = go n
 {-# INLINE chain #-}
 chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 chain = sequenceA
-
 
 
 {- | Choose between two parsers.
@@ -178,7 +180,7 @@ manyTill :: Parser s e a -> Parser s e b -> Parser s e [b]
 manyTill end p = go
     where
         go = do
-            r <- catch (fmap Left end) (const (fmap Right p))
+            r <- catchError (fmap Left end) (const (fmap Right p))
             case r of
                 Left _  -> pure []
                 Right x -> (x :) <$> go
@@ -192,7 +194,7 @@ manyTillEnd
 manyTillEnd end p = go
     where
         go = do
-            r <- catch (fmap Left end) (const (fmap Right p))
+            r <- catchError (fmap Left end) (const (fmap Right p))
             case r of
                 Left e  -> pure $ e :| []
                 Right x -> (x <|) <$> go
