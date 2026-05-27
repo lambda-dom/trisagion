@@ -48,3 +48,6 @@ library
     build-depends:
     other-modules:
     exposed-modules:
+        Trisagion.Utils.Either
+        Trisagion.Types.Result
+        Trisagion.Parser
