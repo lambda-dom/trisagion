@@ -37,7 +37,7 @@ newtype Parser s e a = Parser (s -> Result s e a)
 
 
 -- Instances.
-{- | The 'Bifunctor' instance provides functoriality on the error type. -}
+{- | The 'Bifunctor' instance provides functoriality in the error type. -}
 instance Bifunctor (Parser s) where
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
     bimap f g p = embed $ bimap f g . run p
@@ -78,7 +78,8 @@ note(s):
 instance Monad (Parser s e) where
     {-# INLINE (>>=) #-}
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
-    (>>=) p h = embed $ \ xs -> case run p xs of
+    (>>=) p h = embed $ \ xs ->
+        case run p xs of
             Error e      -> Error e
             Success x ys -> run (h x) ys
 
