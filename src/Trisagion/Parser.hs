@@ -32,6 +32,7 @@ import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
+import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
@@ -141,6 +142,35 @@ instance MonadState s (Parser s e) where
     {-# INLINE put #-}
     put :: s -> Parser s e ()
     put xs = embed $ const (Success () xs)
+
+{- | The 'MonadError' instance.
+
+The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
+unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
+the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
+returned by @p@.
+
+The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
+difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
+continuation to depend on the specific error that was thrown.
+
+note(s):
+
+  * The monad analogy is not precise, because even if we make the obvious generalization of
+  @'catchError'@ to a type-changing version (see 'catch'), it does not satisfy associativity.
+-}
+instance MonadError e (Parser s e) where
+    {-# INLINE throwError #-}
+    throwError :: e -> Parser s e a
+    throwError = throw
+
+    {-# INLINE catchError #-}
+    catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
+    catchError p h = embed $ \ s ->
+        -- Case statement instead of 'catch' to make use of sharing in the Success branch.
+        case run p s of
+            x@(Success _ _) -> x
+            Error e         -> run (h e) s
 
 
 {- | Embed a parsing function in the t'Parser' monad. -}
