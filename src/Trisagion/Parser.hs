@@ -18,6 +18,7 @@ module Trisagion.Parser (
 
 -- Imports.
 -- Base.
+import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
 
 -- Package.
@@ -35,12 +36,22 @@ newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
 
 
+-- Instances.
+{- | Provides functoriality on the error type. -}
+instance Bifunctor (Parser s) where
+    bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
+    bimap f g (Parser h) = embed $ bimap f g . h
+
+
 {- | Embed a parsing function in the t'Parser' monad. -}
 {-# INLINE embed #-}
 embed ::  (s ->  Result s e a) -> Parser s e a
 embed = Parser
 
-{- | Run the parser on the input and return the results. -}
+{- | Run the parser on the input and return the results.
+
+The inverse of @'embed'@.
+-}
 {-# INLINE run #-}
 run :: Parser s e a -> s ->  Result s e a
 run (Parser f) = f
