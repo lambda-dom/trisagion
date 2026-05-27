@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parser
 
-The @Parser@ monad transformer.
+The @Parser@ monad.
 -}
 
 module Trisagion.Parser (
@@ -18,8 +18,12 @@ module Trisagion.Parser (
 
 -- Imports.
 -- Base.
+import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
+
+-- Libraries.
+import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
@@ -82,6 +86,53 @@ instance Monad (Parser s e) where
         case run p xs of
             Error e      -> Error e
             Success x ys -> run (h x) ys
+
+{- | The 'Alternative' instance.
+
+The @'empty'@ parser fails unconditionally with the monoid unit for @e@. The parser  @p \<|\> q@
+represents choice. First run @p@ and if successful return the result. If it throws an error,
+backtrack and run @q@ on the same input.
+
+note(s):
+
+  * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+-}
+instance Monoid e => Alternative (Parser s e) where
+    {-# INLINE empty #-}
+    empty :: Parser s e a
+    empty = embed $ const (Error mempty)
+
+    {-# INLINE (<|>) #-}
+    (<|>) :: Parser s e a -> Parser s e a -> Parser s e a
+    (<|>) p q = embed $ \ xs ->
+        case run p xs of
+            x@(Success _ _) -> x
+            Error e         ->
+                case run q xs of
+                    x'@(Success _ _) -> x'
+                    Error e'         -> Error (e <> e')
+
+{- | The 'MonadState' instance.
+
+The @'get'@ parser allows probing the t'ParserT' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
+the t'ParserT' state.
+-}
+instance MonadState s (Parser s e) where
+    {-# INLINE get #-}
+    get :: Parser s e s
+    get = embed $ \ xs -> Success xs xs
+
+    {-# INLINE put #-}
+    put :: s -> Parser s e ()
+    put xs = embed $ const (Success () xs)
 
 
 {- | Embed a parsing function in the t'Parser' monad. -}
