@@ -14,6 +14,13 @@ module Trisagion.Parser (
     parse,
     eval,
     remainder,
+
+    -- * Error parsers.
+    throw,
+    catch,
+    try,
+    validate,
+    lookAhead,
 ) where
 
 -- Imports.
@@ -21,6 +28,7 @@ module Trisagion.Parser (
 import Control.Applicative (Alternative (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
+import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..))
@@ -114,7 +122,7 @@ instance Monoid e => Alternative (Parser s e) where
 
 {- | The 'MonadState' instance.
 
-The @'get'@ parser allows probing the t'ParserT' state, e.g.:
+The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 @
     do
@@ -123,7 +131,7 @@ The @'get'@ parser allows probing the t'ParserT' state, e.g.:
 @
 
 The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
-the t'ParserT' state.
+the t'Parser' state.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}
@@ -162,3 +170,52 @@ eval p = fmap fst . parse p
 {-# INLINE remainder #-}
 remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
+
+
+{- | Parser that fails unconditionally with error @e@. -}
+{-# INLINE throw #-}
+throw :: e -> Parser s e a
+throw e = embed $ const (Error e)
+
+{- | The type-changing version of 'catchError'.
+
+The parser @'catch' p h@ runs @p@ and if it throws an error @e@, backtracks and runs @h e@.
+-}
+{-# INLINE catch #-}
+catch
+    :: Parser s d a                     -- ^ Parser to try.
+    -> (d -> Parser s e a)              -- ^ Error handler.
+    -> Parser s e a
+catch p h = embed $ \ xs ->
+    case run p xs of
+        Error e      -> run (h e) xs
+        Success x ys -> Success x ys
+
+{- | Parser implementing backtracking.
+
+The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
+backtracks and returns the error as a 'Left'.
+-}
+{-# INLINE try #-}
+try :: Parser s e a -> Parser s Void (e :+: a)
+try p = embed $ \ xs ->
+    case run p xs of
+        Error e      -> Success (Left e) xs
+        Success x ys -> Success (Right x) ys
+
+{- | Run the parser and return the result, validating it. -}
+{-# INLINE validate #-}
+validate
+    :: (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) b
+validate v p = do
+    x <- first Right p
+    case v x of
+        Left d  -> throw (Left d)
+        Right y -> pure y
+
+{- | Run the parser and return the result, but do not consume any input. -}
+{-# INLINE lookAhead #-}
+lookAhead :: Parser s e a -> Parser s Void (e :+: a)
+lookAhead p = fmap (eval p) get
