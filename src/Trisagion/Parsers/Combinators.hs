@@ -11,6 +11,11 @@ module Trisagion.Parsers.Combinators (
 
     -- * 'Applicative' parsers.
     skip,
+    between,
+    pair,
+    pairWith,
+    count,
+    chain,
 ) where
 
 -- Imports.
@@ -49,4 +54,36 @@ failIff p = do
 {-# INLINE skip #-}
 skip :: Parser s e a -> Parser s e ()
 skip = ($> ())
+
+{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
+{-# INLINE between #-}
+between
+    :: Parser s e b                     -- ^ Opening parser.
+    -> Parser s e c                     -- ^ Closing parser.
+    -> Parser s e a                     -- ^ Parser to run in-between.
+    -> Parser s e a
+between open close p = open *> p <* close
+
+{- | Sequence two parsers and pair up the results. -}
+{-# INLINE pair #-}
+pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
+pair = pairWith (,)
+
+{- | Sequence two parsers and pair the results with a binary function. -}
+{-# INLINE pairWith #-}
+pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
+pairWith = liftA2
+
+{- | Run the parser @n@ times and return the list of results. -}
+{-# INLINEABLE count #-}
+count :: Word -> Parser s e a -> Parser s e [a]
+count n p = go n
+    where
+        go 0 = pure []
+        go m = (:) <$> p <*> go (pred m)
+
+{- | Chain together a traversable of parsers and return the traversable of results. -}
+{-# INLINE chain #-}
+chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
+chain = sequenceA
 
