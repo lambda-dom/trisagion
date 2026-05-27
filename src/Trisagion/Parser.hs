@@ -52,6 +52,7 @@ newtype Parser s e a = Parser (s -> Result s e a)
 -- Instances.
 {- | The 'Bifunctor' instance provides functoriality in the error type. -}
 instance Bifunctor (Parser s) where
+    {-# INLINE bimap #-}
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
     bimap f g p = embed $ bimap f g . run p
 

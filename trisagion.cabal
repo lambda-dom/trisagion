@@ -53,3 +53,4 @@ library
         Trisagion.Utils.Either
         Trisagion.Types.Result
         Trisagion.Parser
+        Trisagion.Parsers.Combinators
