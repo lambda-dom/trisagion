@@ -50,6 +50,14 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
 more precise type signature.
+
+=== __Examples:__
+
+>>> parse (optional $ matchOne '0') "0123"
+
+>>> parse (optional $ matchOne '1') "0123"
+
+>>> parse (optional $ matchOne '0') ""
 -}
 {-# INLINE optional #-}
 optional :: Parser s e a -> Parser s Void (Maybe a)

@@ -298,6 +298,10 @@ validate v p = do
 === __Examples:__
 
 >>> parse (lookAhead one) "0123"
+
+>>> parse (lookAhead $ matchOne '1') "0123"
+
+>>> parse (lookAhead one) ""
 -}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
