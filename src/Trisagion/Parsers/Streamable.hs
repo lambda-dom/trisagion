@@ -131,7 +131,7 @@ peek = either (const Nothing) Just <$> lookAhead one
 >>> parse (satisfy ('0' ==)) "0123"
 Right ('0',"123")
 
->>> parse (satisfy ('1' /=)) "0123"
+>>> parse (satisfy ('1' ==)) "0123"
 Left (Left (ValidationError '0'))
 
 >>> parse (satisfy ('0' /=)) ""
