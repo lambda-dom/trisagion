@@ -134,7 +134,7 @@ Right ('0',"123")
 >>> parse (satisfy ('1' ==)) "0123"
 Left (Left (ValidationError '0'))
 
->>> parse (satisfy ('0' /=)) ""
+>>> parse (satisfy ('0' ==)) ""
 Left (Right (InputError 1))
 -}
 {-# INLINE satisfy #-}

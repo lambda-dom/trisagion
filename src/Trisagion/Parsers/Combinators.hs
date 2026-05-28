@@ -85,8 +85,6 @@ note(s):
 
   * This parser can be used to implement the longest match rule -- see 'untilEnd'.
 
-TODO: need stream with HasOffset.
-
 === __Examples:__
 
 >>> parse (failIff (throwParseError $ matchOne '1')) "0123"
