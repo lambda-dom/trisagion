@@ -39,8 +39,6 @@ import Trisagion.Types.Result (Result (..), toEither)
 
 
 -- $setup
--- >>> import Data.Bifunctor
--- >>> import Data.Void
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
 
@@ -271,8 +269,10 @@ backtracks and returns the error as a 'Left'.
 === __Examples:__
 
 >>> parse (try one) "0123"
+Right (Right '0',"123")
 
 >>> parse (try one) ""
+Right (Left (InputError 1),"")
 -}
 {-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
@@ -290,7 +290,7 @@ validate
 validate v p = do
     x <- first Right p
     case v x of
-        Left d  -> throwError (Left d)
+        Left d  -> throwError $ Left d
         Right y -> pure y
 
 {- | Run the parser and return the result, but do not consume any input.
@@ -298,6 +298,7 @@ validate v p = do
 === __Examples:__
 
 >>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
 
 >>> parse (lookAhead $ matchOne '1') "0123"
 
