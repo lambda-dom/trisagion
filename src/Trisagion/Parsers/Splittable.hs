@@ -18,9 +18,6 @@ module Trisagion.Parsers.Splittable (
 ) where
 
 -- Imports.
--- Prelude hiding.
-import Prelude hiding (splitAt, span)
-
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
@@ -31,9 +28,9 @@ import Control.Monad.State (MonadState (..), gets)
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Typeclasses.Splittable (Splittable (splitAt, span, splitAtExact) )
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import qualified Trisagion.Typeclasses.Splittable as Splittable (Splittable (match))
+import Trisagion.Typeclasses.Splittable (Splittable (splitPrefix, splitWith, splitPrefixExact))
+import qualified Trisagion.Typeclasses.Splittable as Splittable (matchPrefix)
 import Trisagion.Parser (Parser, lookAhead, parse, eval)
 import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
@@ -63,7 +60,7 @@ Right ("0123","")
 {-# INLINE takePrefix #-}
 takePrefix :: Splittable a b s => Word -> Parser s Void b
 takePrefix n = do
-    (xs, ys) <- gets $ splitAt n
+    (xs, ys) <- gets $ splitPrefix n
     put ys $> xs
 
 {- | Parse the longest prefix from the stream whose elements satisfy a predicate.
@@ -79,7 +76,7 @@ Right ("","")
 {-# INLINE takeWith #-}
 takeWith :: Splittable a b s => (a -> Bool) -> Parser s Void b
 takeWith p = do
-    (xs, ys) <- gets $ span p
+    (xs, ys) <- gets $ splitWith p
     put ys $> xs
 
 {- | Skip a fixed size prefix from the stream.
@@ -147,7 +144,7 @@ Left (InputError 10)
 {-# INLINE takeExact #-}
 takeExact :: Splittable a b s => Word -> Parser s InputError b
 takeExact n = do
-    r <- gets $ splitAtExact n
+    r <- gets $ splitPrefixExact n
     case r of
         Just (xs, ys) -> put ys $> xs
         Nothing       -> throwError $ InputError n
@@ -168,7 +165,7 @@ Left (ValidationError "{}")
 {-# INLINE matchPrefix #-}
 matchPrefix :: Splittable a b s => b -> Parser s (ValidationError b) ()
 matchPrefix xs = do
-    r <- gets $ Splittable.match xs
+    r <- gets $ Splittable.matchPrefix xs
     case r of
         Just ys -> put ys $> ()
         Nothing -> throwError $ ValidationError xs

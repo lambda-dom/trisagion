@@ -29,6 +29,7 @@ library
         DerivingVia
         FunctionalDependencies
         RequiredTypeArguments
+        ExplicitNamespaces
     ghc-options:
         -Wall
         -Wcompat
