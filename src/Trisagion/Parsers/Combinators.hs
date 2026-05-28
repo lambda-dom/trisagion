@@ -51,6 +51,7 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 -- >>> import Data.Bifunctor
 -- >>> import Data.NonEmpty
 -- >>> import Data.Void
+-- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parsers.Combinators
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
@@ -87,11 +88,14 @@ note(s):
 
 === __Examples:__
 
->>> parse (failIff (throwParseError $ matchOne '1')) "0123"
+>>> parse (failIff (throwParseError $ matchOne '1')) (initialize "0123")
+Right ((),Counter 0 "0123")
 
->>> parse (failIff (throwParseError $ matchOne '0')) "0123"
+>>> parse (failIff (throwParseError $ matchOne '0')) (initialize "0123")
+Left Failure
 
->>> parse (failIff (throwParseError $ matchOne '0')) ""
+>>> parse (failIff (throwParseError $ matchOne '0')) (initialize "")
+Right ((),Counter 0 "")
 -}
 {-# INLINE failIff #-}
 failIff :: Monoid e => Parser s e a -> Parser s e ()
@@ -194,6 +198,17 @@ chain = sequenceA
 {- | Choose between two parsers.
 
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
+
+=== __Examples:__
+
+>>> parse (choose (throwParseError one) (throwParseError one)) (initialize "0123")
+Right (Left '0',Counter 1 "123")
+
+>>> parse (choose (throwParseError $ matchOne '1') (throwParseError $ first Right one)) (initialize "0123")
+Right (Right '0',Counter 1 "123")
+
+>>> parse (choose (throwParseError $ matchOne '1') (throwParseError $ matchOne '2')) (initialize "0123")
+Left (ParseError 0 (Left (ValidationError '0')))
 -}
 {-# INLINE choose #-}
 choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
@@ -284,6 +299,17 @@ note(s):
 
   * The difference with 'manyTill' is the need for the monoid constraint and the fact that the
   @end@ parser will not consume any input.
+
+=== __Examples:__
+
+>>> parse (untilEnd (throwParseError $ matchOne '}') (throwParseError $ first Right one)) (initialize "01}3")
+Right ("01",Counter 2 "}3")
+
+>>> parse (untilEnd (throwParseError $ matchOne '}') (throwParseError $ first Right one)) (initialize "}123")
+Right ("",Counter 0 "}123")
+
+>>> parse (untilEnd (throwParseError $ matchOne '}') (throwParseError $ first Right one)) (initialize "")
+Right ("",Counter 0 "")
 -}
 {-# INLINE untilEnd #-}
 untilEnd
