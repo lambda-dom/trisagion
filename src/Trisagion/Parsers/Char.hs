@@ -22,6 +22,18 @@ module Trisagion.Parsers.Char (
     -- * Whitespace parsers.
     spaces,
     notSpaces,
+
+    -- * Numeric parsers.
+    digit,
+    sign,
+    positive,
+    integer,
+
+    -- * Alphanumeric.
+    letter,
+    word,
+    identifier,
+    escape,
 ) where
 
 -- Imports.
@@ -30,22 +42,27 @@ import Prelude hiding (takeWhile)
 
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Char (isSpace)
+import Data.Char (isSpace, isDigit, ord, isLetter)
 import Data.Foldable (fold)
 import Data.List (intersperse)
+import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
 
+-- non-Hackage libraries.
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+
 -- Package.
 import Trisagion.Utils.Either ((:+:))
+import Trisagion.Utils.List (enumDown)
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, throw)
+import Trisagion.Parser (Parser, throw, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi)
-import Trisagion.Parsers.Splittable (takeWhile)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
+import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
 
 {- | The universal newline type. -}
@@ -111,6 +128,7 @@ line = (fold . intersperse (singleton s '\r')) <$> do
                 Just CR -> fmap (xs :) go
                 _       -> pure [xs]
 
+
 {- | Parse a, possibly null, prefix of whitespace. -}
 {-# INLINE spaces #-}
 spaces :: Splittable Char b s => Parser s Void b
@@ -120,4 +138,120 @@ spaces = takeWhile isSpace
 {-# INLINE notSpaces #-}
 notSpaces :: Splittable Char b s => Parser s Void b
 notSpaces = takeWhile (not . isSpace)
+
+
+{- | Parse a decimal digit. -}
+{-# INLINE digit #-}
+digit :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+digit = satisfy isDigit
+
+{- | Parse a number sign. -}
+{-# INLINE sign #-}
+sign :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Sign
+sign = validate v one
+    where
+        v :: Char -> ValidationError Char :+: Sign
+        v x = case x of
+            '-' -> Right Negative
+            '+' -> Right Positive
+            _   -> Left $ ValidationError x
+
+{- | Parse a positive 'Integer' in decimal format. -}
+{-# INLINEABLE positive #-}
+positive
+    :: (Splittable Char b s, MonoFoldable Char b)
+    => Parser s (ValidationError Char :+: InputError) Integer
+positive = do
+        digits <- takeWhile1 isDigit
+        let xs = enumDown (pred (monolength digits)) (monotoList digits)
+        pure $ foldl' (+) 0 $ uncurry value <$> xs
+    where
+        value :: Word -> Char -> Integer
+        -- Returns implementation-dependent garbage for non-decimal digits.
+        value n c = fromIntegral (ord c - ord '0') * 10 ^ n
+
+{- | Parse a signed 'Integer' in decimal format. -}
+{-# INLINE integer #-}
+integer
+    :: (Splittable Char b s, MonoFoldable Char b)
+    => Parser s (ValidationError Char :+: InputError) Integer
+integer = do
+    sgn <- first absurd (fromMaybe Positive <$> optional sign)
+    case sgn of
+        Positive -> positive
+        Negative -> ((-1) *) <$> positive
+
+
+{- | Parse a single (unicode) letter. -}
+{-# INLINE letter #-}
+letter :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+letter = satisfy isLetter
+
+{- | Parse a word. -}
+{-# INLINE word #-}
+word :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
+word = takeWhile1 isLetter
+
+{- | Parse an identifier.
+
+An identifier is a letter followed by any combination of letters, digits and the characters @\'-\'@
+or @\'_\'@.
+-}
+{-# INLINE identifier #-}
+identifier :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
+identifier = do
+        x <- first absurd $ lookAhead letter
+        case x of
+            Left e  -> throw e
+            Right _ -> first absurd $ takeWhile p
+    where
+        p :: Char -> Bool
+        p c = isLetter c || isDigit c || '-' == c || '_' == c
+
+{- | Parse an escape sequence.
+
+The escape sequences currently supported are:
+
++----------+-----+---------------------------+
+| Escape   | Ord | Meaning                   |
++==========+=====+===========================+
+| @\\t@    | 9   | horizontal tab            |
++----------+-----+---------------------------+
+| @\\n@    | 10  | new line                  |
++----------+-----+---------------------------+
+| @\\v@    | 11  | vertical tab              |
++----------+-----+---------------------------+
+| @\\f@    | 12  | form feed                 |
++----------+-----+---------------------------+
+| @\\r@    | 13  | carriage return           |
++----------+-----+---------------------------+
+| @\\s@    | 32  | space                     |
++----------+-----+---------------------------+
+| @\\\'@   | 39  | single quote              |
++----------+-----+---------------------------+
+| @\\\"@   | 34  | double quote              |
++----------+-----+---------------------------+
+| @\\\\@   | 92  | character @\'\\\'@        |
++----------+-----+---------------------------+
+-}
+{-# INLINE escape #-}
+escape :: forall b s . Splittable Char b s => Parser s (EscapeError :+: InputError) b
+escape = do
+        c <- first Right one
+        if '\\' /= c
+            then throw (Left $ EscapeCharError c)
+            else validate v one
+    where
+        v :: Char -> EscapeError :+: b
+        v c = case c of
+            't'  -> Right (singleton s '\t')
+            'n'  -> Right (singleton s '\n')
+            'v'  -> Right (singleton s '\v')
+            'f'  -> Right (singleton s '\f')
+            'r'  -> Right (singleton s '\r')
+            's'  -> Right (singleton s ' ')
+            '\'' -> Right (singleton s '\'')
+            '"'  -> Right (singleton s '"')
+            '\\' -> Right (singleton s '\\')
+            _    -> Left (EscapeSequenceError c)
 
