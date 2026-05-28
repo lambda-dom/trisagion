@@ -46,6 +46,15 @@ import Trisagion.Parser (Parser, try, lookAhead)
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Data.Void
+-- >>> import Trisagion.Parsers.Combinators
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
+-- >>> import Trisagion.Parsers.ParseError
+
+
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
@@ -54,10 +63,13 @@ more precise type signature.
 === __Examples:__
 
 >>> parse (optional $ matchOne '0') "0123"
+Right (Just '0',"123")
 
 >>> parse (optional $ matchOne '1') "0123"
+Right (Nothing,"0123")
 
 >>> parse (optional $ matchOne '0') ""
+Right (Nothing,"")
 -}
 {-# INLINE optional #-}
 optional :: Parser s e a -> Parser s Void (Maybe a)
@@ -66,6 +78,20 @@ optional p = either (const Nothing) Just <$> try p
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
 
 The parser does not consume input and throws the monoid unit for @e@ if @p@ succeeds.
+
+note(s):
+
+  * This parser can be used to implement the longest match rule.
+
+TODO: need stream with HasOffset.
+
+=== __Examples:__
+
+>>> parse (failIff (throwParseError $ matchOne '1')) "0123"
+
+>>> parse (failIff (throwParseError $ matchOne '0')) "0123"
+
+>>> parse (failIff (throwParseError $ matchOne '0')) ""
 -}
 {-# INLINE failIff #-}
 failIff :: Monoid e => Parser s e a -> Parser s e ()
@@ -81,7 +107,28 @@ failIff p = do
 skip :: Parser s e a -> Parser s e ()
 skip = ($> ())
 
-{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@. -}
+{- | The parser @'between' o c p@ runs @o@, @p@ and @c@, returning the result of @p@.
+
+=== __Examples:__
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{1}3"
+Right ('1',"3")
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "11}3"
+Left (Left (ValidationError '1'))
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{123"
+Left (Left (ValidationError '2'))
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) ""
+Left (Right (InputError 1))
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{"
+Left (Right (InputError 1))
+
+>>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{1"
+Left (Right (InputError 1))
+-}
 {-# INLINE between #-}
 between
     :: Parser s e b                     -- ^ Opening parser.
