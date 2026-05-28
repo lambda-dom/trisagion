@@ -56,7 +56,7 @@ parser = capture $ do
 {-# INLINE capture #-}
 capture
     :: HasOffset s
-    => Parser s (ParseError e) a     -- ^ Parser to run.
+    => Parser s (ParseError e) a        -- ^ Parser to run.
     -> Parser s (ParseError e) a
 capture p = do
         n  <- first absurd offset
