@@ -21,6 +21,7 @@ module Trisagion.Parsers.Combinators (
     choose,
     pick,
     many,
+    some,
     skipMany,
     skipSome,
     untilEnd,
@@ -81,7 +82,7 @@ The parser does not consume input and throws the monoid unit for @e@ if @p@ succ
 
 note(s):
 
-  * This parser can be used to implement the longest match rule.
+  * This parser can be used to implement the longest match rule -- see 'untilEnd'.
 
 TODO: need stream with HasOffset.
 
@@ -137,7 +138,19 @@ between
     -> Parser s e a
 between open close p = open *> p <* close
 
-{- | Sequence two parsers and pair up the results. -}
+{- | Sequence two parsers and pair up the results.
+
+=== __Examples:__
+
+>>> parse (pair one one) "0123"
+Right (('0','1'),"23")
+
+>>> parse (pair (matchOne '1') (matchOne '1')) "0123"
+Left (Left (ValidationError '0'))
+
+>>> parse (pair (matchOne '0') (matchOne '2')) "0123"
+Left (Left (ValidationError '1'))
+-}
 {-# INLINE pair #-}
 pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
 pair = pairWith (,)
@@ -147,7 +160,19 @@ pair = pairWith (,)
 pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
 pairWith = liftA2
 
-{- | Run the parser @n@ times and return the list of results. -}
+{- | Run the parser @n@ times and return the list of results.
+
+=== __Examples:__
+
+>>> parse (count 2 one) "0123"
+Right ("01","23")
+
+>>> parse (count 10 one) "0123"
+Left (InputError 1)
+
+>>> parse (count 2 (matchOne '0')) "0123"
+Left (Left (ValidationError '1'))
+-}
 {-# INLINEABLE count #-}
 count :: Word -> Parser s e a -> Parser s e [a]
 count n p = go n
@@ -197,6 +222,15 @@ many p = go
             case r of
                 Left _  -> pure []
                 Right x -> (x :) <$> go
+
+{- | Run the parser one or more times until it fails and discard the results.
+
+The difference with @'Control.Applicative.some'@ from 'Control.Applicative.Alternative' is the more
+precise type signature.
+-}
+{-# INLINE some #-}
+some :: Parser s e a -> Parser s e (NonEmpty a)
+some p = pairWith (:|) p (first absurd (many p))
 
 {- | Run the parser zero or more times until it fails and discard the results. -}
 {-# INLINEABLE skipMany #-}
