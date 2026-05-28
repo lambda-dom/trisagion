@@ -131,6 +131,19 @@ backtrack and run @q@ on the same input.
 note(s):
 
   * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+
+The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
+
+prop> pure x <|> p == pure x
+prop> empty <*> p == empty
+prop> empty >>= h == empty
+
+but /not/ their right-sided versions because of short-circuiting.
+
+Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
+'Alternative' instance also satisfies /left distributivity/:
+
+prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
