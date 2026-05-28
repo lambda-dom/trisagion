@@ -53,12 +53,15 @@ library
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either
+        Trisagion.Utils.List
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
+        Trisagion.Typeclasses.Splittable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.HasOffset
         Trisagion.Parsers.ParseError
+        Trisagion.Parsers.Splittable
