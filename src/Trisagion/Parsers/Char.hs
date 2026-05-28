@@ -64,7 +64,7 @@ import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional, manyTill)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
-import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
+import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 
 
 {- | The universal newline type. -}
@@ -124,7 +124,7 @@ line = (fold . intersperse (singleton s '\r')) <$> do
     where
         go :: Parser s Void [b] 
         go = do
-            xs      <- takeWhile (\ c -> c /= '\n' && c /= '\r')
+            xs      <- takeWith (\ c -> c /= '\n' && c /= '\r')
             endline <- optional newline
             case endline of
                 Just CR -> fmap (xs :) go
@@ -134,12 +134,12 @@ line = (fold . intersperse (singleton s '\r')) <$> do
 {- | Parse a, possibly null, prefix of whitespace. -}
 {-# INLINE spaces #-}
 spaces :: Splittable Char b s => Parser s Void b
-spaces = takeWhile isSpace
+spaces = takeWith isSpace
 
 {- | Parse a, possibly null, prefix of non-whitespace characters. -}
 {-# INLINE notSpaces #-}
 notSpaces :: Splittable Char b s => Parser s Void b
-notSpaces = takeWhile (not . isSpace)
+notSpaces = takeWith (not . isSpace)
 
 
 {- | Parse a decimal digit. -}
@@ -164,7 +164,7 @@ positive
     :: (Splittable Char b s, MonoFoldable Char b)
     => Parser s (ValidationError Char :+: InputError) Integer
 positive = do
-        digits <- takeWhile1 isDigit
+        digits <- takeWith1 isDigit
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
         pure $ foldl' (+) 0 $ uncurry value <$> xs
     where
@@ -192,7 +192,7 @@ letter = satisfy isLetter
 {- | Parse a word. -}
 {-# INLINE word #-}
 word :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
-word = takeWhile1 isLetter
+word = takeWith1 isLetter
 
 {- | Parse an identifier.
 
@@ -205,7 +205,7 @@ identifier = do
         x <- first absurd $ lookAhead letter
         case x of
             Left e  -> throwError e
-            Right _ -> first absurd $ takeWhile p
+            Right _ -> first absurd $ takeWith p
     where
         p :: Char -> Bool
         p c = isLetter c || isDigit c || '-' == c || '_' == c
@@ -295,7 +295,7 @@ string = do
         escapeSequence = first (first StringEscapeError) escape
 
         block :: Splittable Char b s => Char -> Parser s (StringError :+: InputError) b
-        block c = first (first f) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+        block c = first (first f) $ takeWith1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d
@@ -316,4 +316,4 @@ comment
     :: Splittable Char b s
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e b
-comment p = p *> first absurd (takeWhile (/= '\n') <* optional lf)
+comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)
