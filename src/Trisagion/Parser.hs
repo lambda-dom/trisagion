@@ -16,7 +16,6 @@ module Trisagion.Parser (
     remainder,
 
     -- * Error parsers.
-    throw,
     catch,
     try,
     validate,
@@ -39,15 +38,6 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
 
 
--- $setup
--- >>> import Data.Bifunctor
--- >>> import Control.Applicative ((<|>))
--- >>> import Trisagion.Types.ParseError
--- >>> import Trisagion.Streams.Counter
--- >>> import Trisagion.Parsers.Combinators
--- >>> import Trisagion.Parsers.Streamable
-
-
 {- | The parsing monad @Parser s e a@.
 
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
@@ -58,7 +48,6 @@ newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
 
 
--- Instances.
 {- | The 'Bifunctor' instance, providing functoriality in the error type.
 
 For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. Specifically,
@@ -213,7 +202,7 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError = throw
+    throwError e = embed $ const (Error e)
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
@@ -253,11 +242,6 @@ remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
 
 
-{- | Parser that fails unconditionally with error @e@. -}
-{-# INLINE throw #-}
-throw :: e -> Parser s e a
-throw e = embed $ const (Error e)
-
 {- | The type-changing version of 'catchError'.
 
 The parser @'catch' p h@ runs @p@ and if it throws an error @e@, backtracks and runs @h e@.
@@ -293,7 +277,7 @@ validate
 validate v p = do
     x <- first Right p
     case v x of
-        Left d  -> throw (Left d)
+        Left d  -> throwError (Left d)
         Right y -> pure y
 
 {- | Run the parser and return the result, but do not consume any input. -}

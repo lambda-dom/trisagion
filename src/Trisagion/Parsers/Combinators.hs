@@ -42,7 +42,7 @@ import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Parser (Parser, try, lookAhead, throw)
+import Trisagion.Parser (Parser, try, lookAhead)
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 
 
@@ -65,7 +65,7 @@ failIff p = do
     r <- first absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
-        Right _ -> throw mempty
+        Right _ -> throwError mempty
 
 
 {- | Run the parser and discard the result. -}

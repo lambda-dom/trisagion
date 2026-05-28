@@ -28,6 +28,7 @@ import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..), gets)
+import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
@@ -36,7 +37,7 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
-import Trisagion.Parser (Parser, throw, lookAhead, validate)
+import Trisagion.Parser (Parser, lookAhead, validate)
 import Trisagion.Parsers.Combinators (skip)
 
 
@@ -66,7 +67,7 @@ one = do
     r <- gets uncons
     case r of
         Just (x, xs) -> put xs $> x
-        _            -> throw $ InputError 1
+        _            -> throwError $ InputError 1
 
 {- | Parser returning 'True' if there are no more elements in the stream. -}
 {-# INLINE eoi #-}
