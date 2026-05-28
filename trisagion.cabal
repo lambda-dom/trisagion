@@ -47,10 +47,14 @@ library
         base >=4.20 && <4.21,
         -- Libraries.
         mtl >=2.3 && <2.4,
+        -- Non-hackage libraries.
+        mono >=0.1 && <0.2,
     build-depends:
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either
         Trisagion.Types.Result
+        Trisagion.Typeclasses.Streamable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.Streamable
