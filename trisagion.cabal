@@ -57,3 +57,4 @@ library
         Trisagion.Typeclasses.Streamable
         Trisagion.Parser
         Trisagion.Parsers.Combinators
+        Trisagion.Parsers.Streamable
