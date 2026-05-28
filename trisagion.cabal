@@ -53,6 +53,7 @@ library
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either
+        Trisagion.Utils.List
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable
