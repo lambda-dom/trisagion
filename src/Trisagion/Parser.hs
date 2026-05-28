@@ -301,8 +301,10 @@ validate v p = do
 Right (Right '0',"0123")
 
 >>> parse (lookAhead $ matchOne '1') "0123"
+Right (Left (Left (ValidationError '0')),"0123")
 
 >>> parse (lookAhead one) ""
+Right (Left (InputError 1),"")
 -}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
