@@ -166,6 +166,11 @@ possibly improper, suffix of @xs@.
 All the parsers in the library are provably normal, and all parser combinators return normal
 parsers on the assumption that the arguments are normal, but the 'MonadState' typeclass,
 specifically the 'put' method, allows the construction of non-normal parsers.
+
+note(s):
+
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffix'.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}
