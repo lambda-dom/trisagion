@@ -39,6 +39,15 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
 
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Control.Applicative ((<|>))
+-- >>> import Trisagion.Types.ParseError
+-- >>> import Trisagion.Streams.Counter
+-- >>> import Trisagion.Parsers.Combinators
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | The parsing monad @Parser s e a@.
 
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
@@ -50,7 +59,23 @@ newtype Parser s e a = Parser (s -> Result s e a)
 
 
 -- Instances.
-{- | The 'Bifunctor' instance provides functoriality in the error type. -}
+{- | The 'Bifunctor' instance, providing functoriality in the error type.
+
+For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. Specifically,
+@'first' f@ preserves the 'Applicative' structure,
+
+prop> first f . pure == pure
+prop> (first f p) <*> (first f q) == first f (p <*> q)
+
+the 'Monad' structure,
+
+prop> (first f p) >>= (first f .  h) == first f (p >>= h)
+
+and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
+
+prop> first f empty == empty
+prop> (first f p) <|> (first f q) == first f (p <|> q)
+-}
 instance Bifunctor (Parser s) where
     {-# INLINE bimap #-}
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
@@ -134,6 +159,13 @@ The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
 the t'Parser' state.
+
+__Definition__: a parser @p@ is /normal/ if for every input @xs@, on success, the 'remainder' is a,
+possibly improper, suffix of @xs@.
+
+All the parsers in the library are provably normal, and all parser combinators return normal
+parsers on the assumption that the arguments are normal, but the 'MonadState' typeclass,
+specifically the 'put' method, allows the construction of non-normal parsers.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}
