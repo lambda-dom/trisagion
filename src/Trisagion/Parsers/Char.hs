@@ -34,6 +34,8 @@ module Trisagion.Parsers.Char (
     word,
     identifier,
     escape,
+    string,
+    comment,
 ) where
 
 -- Imports.
@@ -60,7 +62,7 @@ import Trisagion.Utils.List (enumDown)
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser, throw, validate, lookAhead)
-import Trisagion.Parsers.Combinators (optional)
+import Trisagion.Parsers.Combinators (optional, manyTill)
 import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
 import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
@@ -255,3 +257,63 @@ escape = do
             '\\' -> Right (singleton s '\\')
             _    -> Left (EscapeSequenceError c)
 
+{- | Parse a quoted string with escape sequences.
+
+The quote characters are @\'\\\'\'@ and @\'\"\'@. The available escape sequences are the ones
+accepted by the 'escape' parser.
+
+note(s):
+
+  * A quoted string does /not/ span multiple lines.
+-}
+{-# INLINEABLE string #-}
+string
+    :: (Splittable Char b s, Monoid b)
+    => Parser s (StringError :+: InputError) b
+string = do
+        c      <- startQuote
+        blocks <- manyTill (endQuote c) (catchError escapeSequence (const $ block c))
+        pure $ foldl' (<>) mempty blocks
+    where
+        startQuote :: Streamable Char s => Parser s (StringError :+: InputError) Char
+        startQuote = validate v one
+            where
+                v :: Char -> StringError :+: Char
+                v c = if '\'' == c || '\"' == c
+                    then Right c
+                    else Left $ StartQuoteError c
+
+        endQuote :: Streamable Char s => Char -> Parser s (StringError :+: InputError) Char
+        endQuote c = validate v one
+            where
+                v :: Char -> StringError :+: Char
+                v d = if c == d
+                    then Right c
+                    else Left $ EndQuoteError c
+
+        escapeSequence :: Splittable Char b s => Parser s (StringError :+: InputError) b
+        escapeSequence = first (first StringEscapeError) escape
+
+        block :: Splittable Char b s => Char -> Parser s (StringError :+: InputError) b
+        block c = first (first f) $ takeWhile1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+            where
+                f :: ValidationError Char -> StringError
+                f (ValidationError d) = EndQuoteError d
+
+{- | Parse a line comment.
+
+A line comment starts with @p@ and runs to the end of the line (character @'\\n'@), returning the
+prefix in-between.
+
+note(s):
+
+    * If the input stream contains Windows end of lines, then the comment text will contain an
+    ending @'\\r'@. This can only be stripped by assuming more about the prefix @b@ (the practical
+    solution) or complicating the implementation.
+-}
+{-# INLINE comment #-}
+comment
+    :: Splittable Char b s
+    => Parser s e ()                    -- ^ Parser for start of line comment.
+    -> Parser s e b
+comment p = p *> first absurd (takeWhile (/= '\n') <* optional lf)
