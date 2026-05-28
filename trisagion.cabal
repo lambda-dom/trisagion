@@ -64,3 +64,4 @@ library
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.HasOffset
         Trisagion.Parsers.ParseError
+        Trisagion.Parsers.Splittable
