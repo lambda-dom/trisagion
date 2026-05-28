@@ -34,10 +34,11 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Splittable (Splittable (splitAt, span, splitAtExact) )
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import qualified Trisagion.Typeclasses.Splittable as Splittable (Splittable (match))
-import Trisagion.Parser (Parser, lookAhead, throw, parse, eval)
+import Trisagion.Parser (Parser, lookAhead, parse, eval)
 import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
 import Trisagion.Parsers.HasOffset (offset)
+import Control.Monad.Except (MonadError(..))
 
 
 {- | Parse a fixed size prefix from the stream. -}
@@ -70,7 +71,7 @@ takeWhile1 :: Splittable a b s => (a -> Bool) -> Parser s (ValidationError a :+:
 takeWhile1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
-        Left e  -> throw e
+        Left e  -> throwError e
         Right _ -> first absurd $ takeWhile p
 
 {- | Parse an exact, fixed size prefix from the stream. -}
@@ -80,7 +81,7 @@ takeExact n = do
     r <- gets $ splitAtExact n
     case r of
         Just (xs, ys) -> put ys $> xs
-        Nothing       -> throw $ InputError n
+        Nothing       -> throwError $ InputError n
 
 {- | Parse a matching prefix from the stream. -}
 {-# INLINE match #-}
@@ -89,7 +90,7 @@ match xs = do
     r <- gets $ Splittable.match xs
     case r of
         Just ys -> put ys $> ()
-        Nothing -> throw $ ValidationError xs
+        Nothing -> throwError $ ValidationError xs
 
 {- | Run a parser isolated to a fixed size prefix of the stream.
 
@@ -105,7 +106,7 @@ isolate
 isolate n p = do
     prefix <- first absurd $ take n
     case parse p prefix of
-        Left e  -> throw e
+        Left e  -> throwError e
         Right x -> pure x
 
 {- | Run the parser and return its result along with the prefix of consumed input.

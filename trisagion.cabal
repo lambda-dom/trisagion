@@ -12,6 +12,7 @@ maintainer:         grodrigues.math@gmail.com
 copyright:          2025 G. Rodrigues
 build-type:         Simple
 tested-with:
+    GHC == {9.10.3}
 extra-doc-files:
     LICENSE
     README.md

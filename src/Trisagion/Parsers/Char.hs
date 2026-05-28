@@ -61,9 +61,9 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (enumDown)
 import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
-import Trisagion.Parser (Parser, throw, validate, lookAhead)
+import Trisagion.Parser (Parser, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
 import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
 
@@ -96,12 +96,12 @@ data StringError
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
 lf :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
-lf = single '\n'
+lf = matchOne '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
-cr = single '\r'
+cr = matchOne '\r'
 
 {- | Parse a universal newline from the stream. -}
 {-# INLINE newline #-}
@@ -111,7 +111,7 @@ newline = do
     case c of
         '\n' -> pure LF
         '\r' -> catchError (fmap (const CRLF) lf) (const (pure CR))
-        _    -> throw $ Left (ValidationError c)
+        _    -> throwError $ Left (ValidationError c)
 
 {- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
 {-# INLINEABLE line #-}
@@ -119,7 +119,7 @@ line :: forall b s . (Splittable Char b s, Monoid b) => Parser s InputError b
 line = (fold . intersperse (singleton s '\r')) <$> do
         b <- first absurd eoi
         if b
-            then throw (InputError 1)
+            then throwError $ InputError 1
             else first absurd go
     where
         go :: Parser s Void [b] 
@@ -204,7 +204,7 @@ identifier :: Splittable Char b s => Parser s (ValidationError Char :+: InputErr
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
-            Left e  -> throw e
+            Left e  -> throwError e
             Right _ -> first absurd $ takeWhile p
     where
         p :: Char -> Bool
@@ -241,7 +241,7 @@ escape :: forall b s . Splittable Char b s => Parser s (EscapeError :+: InputErr
 escape = do
         c <- first Right one
         if '\\' /= c
-            then throw (Left $ EscapeCharError c)
+            then throwError . Left $ EscapeCharError c
             else validate v one
     where
         v :: Char -> EscapeError :+: b

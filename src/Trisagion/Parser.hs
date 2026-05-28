@@ -16,7 +16,6 @@ module Trisagion.Parser (
     remainder,
 
     -- * Error parsers.
-    throw,
     catch,
     try,
     validate,
@@ -39,6 +38,11 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
 
 
+-- $setup
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | The parsing monad @Parser s e a@.
 
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
@@ -49,8 +53,23 @@ newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
 
 
--- Instances.
-{- | The 'Bifunctor' instance provides functoriality in the error type. -}
+{- | The 'Bifunctor' instance, providing functoriality in the error type.
+
+For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. Specifically,
+@'first' f@ preserves the 'Applicative' structure,
+
+prop> first f . pure == pure
+prop> (first f p) <*> (first f q) == first f (p <*> q)
+
+the 'Monad' structure,
+
+prop> (first f p) >>= (first f .  h) == first f (p >>= h)
+
+and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
+
+prop> first f empty == empty
+prop> (first f p) <|> (first f q) == first f (p <|> q)
+-}
 instance Bifunctor (Parser s) where
     {-# INLINE bimap #-}
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
@@ -106,6 +125,19 @@ backtrack and run @q@ on the same input.
 note(s):
 
   * The parser  @p \<|\> q@ is first, or left, biased; if @p@ succeeds, @q@ never runs.
+
+The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
+
+prop> pure x <|> p == pure x
+prop> empty <*> p == empty
+prop> empty >>= h == empty
+
+but /not/ their right-sided versions because of short-circuiting.
+
+Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
+'Alternative' instance also satisfies /left distributivity/:
+
+prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
@@ -134,6 +166,18 @@ The @'get'@ parser allows probing the t'Parser' state, e.g.:
 
 The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
 the t'Parser' state.
+
+__Definition__: a parser @p@ is /normal/ if for every input @xs@, on success, the 'remainder' is a,
+possibly improper, suffix of @xs@.
+
+All the parsers in the library are provably normal, and all parser combinators return normal
+parsers on the assumption that the arguments are normal, but the 'MonadState' typeclass,
+specifically the 'put' method, allows the construction of non-normal parsers.
+
+note(s):
+
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffix'.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}
@@ -163,7 +207,7 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError = throw
+    throwError e = embed $ const (Error e)
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
@@ -203,11 +247,6 @@ remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
 
 
-{- | Parser that fails unconditionally with error @e@. -}
-{-# INLINE throw #-}
-throw :: e -> Parser s e a
-throw e = embed $ const (Error e)
-
 {- | The type-changing version of 'catchError'.
 
 The parser @'catch' p h@ runs @p@ and if it throws an error @e@, backtracks and runs @h e@.
@@ -226,6 +265,14 @@ catch p h = embed $ \ xs ->
 
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
 backtracks and returns the error as a 'Left'.
+
+=== __Examples:__
+
+>>> parse (try one) "0123"
+Right (Right '0',"123")
+
+>>> parse (try one) ""
+Right (Left (InputError 1),"")
 -}
 {-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
@@ -243,10 +290,22 @@ validate
 validate v p = do
     x <- first Right p
     case v x of
-        Left d  -> throw (Left d)
+        Left d  -> throwError $ Left d
         Right y -> pure y
 
-{- | Run the parser and return the result, but do not consume any input. -}
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
+
+>>> parse (lookAhead $ matchOne '1') "0123"
+Right (Left (Left (ValidationError '0')),"0123")
+
+>>> parse (lookAhead one) ""
+Right (Left (InputError 1),"")
+-}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = fmap (eval p) get
