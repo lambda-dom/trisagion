@@ -63,7 +63,7 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser, validate, lookAhead)
 import Trisagion.Parsers.Combinators (optional, manyTill)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), single, one, eoi, satisfy)
+import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
 import Trisagion.Parsers.Splittable (takeWhile, takeWhile1)
 
 
@@ -96,12 +96,12 @@ data StringError
 {- | Parse a line feed (character @'\\n'@). -}
 {-# INLINE lf #-}
 lf :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
-lf = single '\n'
+lf = matchOne '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
 cr :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
-cr = single '\r'
+cr = matchOne '\r'
 
 {- | Parse a universal newline from the stream. -}
 {-# INLINE newline #-}

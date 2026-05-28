@@ -38,6 +38,13 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Types.Result (Result (..), toEither)
 
 
+-- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Data.Void
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | The parsing monad @Parser s e a@.
 
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
@@ -260,6 +267,12 @@ catch p h = embed $ \ xs ->
 
 The parser @'try' p@ runs @p@ and returns the result as a 'Right'; on @p@ throwing an error, it
 backtracks and returns the error as a 'Left'.
+
+=== __Examples:__
+
+>>> parse (try one) "0123"
+
+>>> parse (try one) ""
 -}
 {-# INLINE try #-}
 try :: Parser s e a -> Parser s Void (e :+: a)
@@ -280,7 +293,12 @@ validate v p = do
         Left d  -> throwError (Left d)
         Right y -> pure y
 
-{- | Run the parser and return the result, but do not consume any input. -}
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+-}
 {-# INLINE lookAhead #-}
 lookAhead :: Parser s e a -> Parser s Void (e :+: a)
 lookAhead p = fmap (eval p) get

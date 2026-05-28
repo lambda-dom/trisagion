@@ -15,7 +15,7 @@ module Trisagion.Parsers.Streamable (
     skipOne,
     peek,
     satisfy,
-    single,
+    matchOne,
     oneOf,
 ) where
 
@@ -96,12 +96,12 @@ satisfy p = validate v one
         v x = if p x then Left (ValidationError x) else Right x
 
 {- | Parse one element from the input stream matching an @x :: a@. -}
-{-# INLINE single #-}
-single
+{-# INLINE matchOne #-}
+matchOne
     :: (Streamable a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
     -> Parser s (ValidationError a :+: InputError) a
-single x = satisfy (== x)
+matchOne x = satisfy (== x)
 
 {- | Parse one element from the input stream that is an element of a foldable. -}
 {-# INLINE oneOf #-}
