@@ -1,5 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ExplicitNamespaces #-}
 
 {- |
 Module: Trisagion.Streams.Counter
