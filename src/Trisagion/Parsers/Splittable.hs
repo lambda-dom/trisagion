@@ -211,14 +211,16 @@ note(s):
 === __Examples:__
 
 >>> parse (consumed one) (initialize "0123")
+Right (('0',"0"),Counter 1 "123")
 
 >>> parse (consumed one) (initialize "")
+Left (InputError 1)
 -}
 {-# INLINE consumed #-}
 consumed
     :: (HasOffset s, Splittable a b s)
     => Parser s e a                     -- ^ Parser to run.
-    -> Parser s e (b, a)
+    -> Parser s e (a, b)
 consumed p = do
     xs    <- get
     start <- first absurd offset
@@ -226,4 +228,4 @@ consumed p = do
     end   <- first absurd offset
     -- Implicitly relies on the parser @p@ being normal, for positivity of @end - start@.
     let ys = either absurd id $ eval (takePrefix (end - start)) xs
-    pure (ys, x)
+    pure (x, ys)
