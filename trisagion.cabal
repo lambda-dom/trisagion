@@ -55,6 +55,8 @@ library
         Trisagion.Utils.Either
         Trisagion.Types.Result
         Trisagion.Typeclasses.Streamable
+        Trisagion.Typeclasses.HasOffset
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable
+        Trisagion.Parsers.HasOffset
