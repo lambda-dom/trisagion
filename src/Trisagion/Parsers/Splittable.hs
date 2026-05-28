@@ -42,8 +42,10 @@ import Control.Monad.Except (MonadError(..))
 
 
 -- $setup
--- >>> import Trisagion.Splittable
+-- >>> import Trisagion.Parsers.Splittable
+-- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Streamable
 
 
 {- | Parse a fixed size prefix from the stream.
@@ -99,8 +101,10 @@ skipPrefix = skip . takePrefix
 === __Examples:__
 
 >>> parse (skipWith ('3' /=)) "0123"
+Right ((),"3")
 
 >>> parse (skipWith ('3' /=)) ""
+Right ((),"")
  -}
 {-# INLINE skipWith #-}
 skipWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
@@ -111,12 +115,16 @@ skipWith = skip . takeWith
 === __Examples:__
 
 >>> parse (takeWith1 ('0' ==)) "0123"
+Right ("0","123")
 
 >>> parse (takeWith1 ('0' ==)) "0003"
+Right ("000","3")
 
 >>> parse (takeWith1 ('1' ==)) "0123"
+Left (Left (ValidationError '0'))
 
 >>> parse (takeWith1 ('0' ==)) ""
+Left (Right (InputError 1))
 -}
 {-# INLINE takeWith1 #-}
 takeWith1 :: Splittable a b s => (a -> Bool) -> Parser s (ValidationError a :+: InputError) b
@@ -131,8 +139,10 @@ takeWith1 p = do
 === __Examples:__
 
 >>> parse (takeExact 2) "0123"
+Right ("01","23")
 
 >>> parse (takeExact 10) "0123"
+Left (InputError 10)
 -}
 {-# INLINE takeExact #-}
 takeExact :: Splittable a b s => Word -> Parser s InputError b
@@ -146,11 +156,14 @@ takeExact n = do
 
 === __Examples:__
 
->>> parse (match "01") "0123"
+>>> parse (matchPrefix "01") "0123"
+Right ((),"23")
 
->>> parse (match "012345") "0123"
+>>> parse (matchPrefix "012345") "0123"
+Left (ValidationError "012345")
 
->>> parse (match "{}") "0123"
+>>> parse (matchPrefix "{}") "0123"
+Left (ValidationError "{}")
 -}
 {-# INLINE matchPrefix #-}
 matchPrefix :: Splittable a b s => b -> Parser s (ValidationError b) ()
@@ -168,10 +181,16 @@ in the stream. Any unconsumed input in the prefix is returned along with the res
 === __Examples:__
 
 >>> parse (isolate 2 one) "0123"
+Right (('0',"1"),"23")
 
 >>> parse (isolate 2 one) "0"
+Right (('0',""),"")
 
 >>> parse (isolate 2 one) ""
+Left (InputError 1)
+
+>>> parse (isolate 2 (matchOne '1')) "0123"
+Left (Left (ValidationError '0'))
 -}
 {-# INLINE isolate #-}
 isolate
@@ -194,9 +213,9 @@ note(s):
 
 === __Examples:__
 
->>> parse (consumed one) "0123"
+>>> parse (consumed one) (initialize "0123")
 
->>> parse (consumed one) ""
+>>> parse (consumed one) (initialize "")
 -}
 {-# INLINE consumed #-}
 consumed
