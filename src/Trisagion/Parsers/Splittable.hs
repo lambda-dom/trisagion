@@ -8,8 +8,8 @@ module Trisagion.Parsers.Splittable (
     -- * Parsers @'Splittable' a b s => 'Parser' s e a@.
     takePrefix,
     takeWith,
-    dropPrefix,
-    dropWith,
+    skipPrefix,
+    skipWith,
     takeWith1,
     takeExact,
     matchPrefix,
@@ -41,6 +41,11 @@ import Trisagion.Parsers.HasOffset (offset)
 import Control.Monad.Except (MonadError(..))
 
 
+-- $setup
+-- >>> import Trisagion.Splittable
+-- >>> import Trisagion.Parser
+
+
 {- | Parse a fixed size prefix from the stream.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
@@ -48,8 +53,10 @@ The parser does not error and it is guaranteed that the prefix has length equal 
 === __Examples:__
 
 >>> parse (takePrefix 2) "0123"
+Right ("01","23")
 
 >>> parse (takePrefix 10) "0123"
+Right ("0123","")
 -}
 {-# INLINE takePrefix #-}
 takePrefix :: Splittable a b s => Word -> Parser s Void b
@@ -62,8 +69,10 @@ takePrefix n = do
 === __Examples:__
 
 >>> parse (takeWith ('3' /=)) "0123"
+Right ("012","3")
 
 >>> parse (takeWith ('3' /=)) ""
+Right ("","")
 -}
 {-# INLINE takeWith #-}
 takeWith :: Splittable a b s => (a -> Bool) -> Parser s Void b
@@ -71,19 +80,21 @@ takeWith p = do
     (xs, ys) <- gets $ span p
     put ys $> xs
 
-{- | Drop a fixed size prefix from the stream.
+{- | Skip a fixed size prefix from the stream.
 
 === __Examples:__
 
->>> parse (dropPrefix 2) "0123"
+>>> parse (skipPrefix 2) "0123"
+Right ((),"23")
 
->>> parse (dropPrefix 10) "0123"
+>>> parse (skipPrefix 10) "0123"
+Right ((),"")
 -}
-{-# INLINE dropPrefix #-}
-dropPrefix :: Splittable a b s => Word -> Parser s Void ()
-dropPrefix = skip . takePrefix
+{-# INLINE skipPrefix #-}
+skipPrefix :: Splittable a b s => Word -> Parser s Void ()
+skipPrefix = skip . takePrefix
 
-{- | Drop the longest prefix from the stream whose elements satisfy a predicate.
+{- | Skip the longest prefix from the stream whose elements satisfy a predicate.
 
 === __Examples:__
 
@@ -91,9 +102,9 @@ dropPrefix = skip . takePrefix
 
 >>> parse (skipWith ('3' /=)) ""
  -}
-{-# INLINE dropWith #-}
-dropWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
-dropWith = skip . takeWith
+{-# INLINE skipWith #-}
+skipWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
+skipWith = skip . takeWith
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate.
 

@@ -42,6 +42,7 @@ import Trisagion.Parsers.Combinators (skip)
 
 
 -- $setup
+-- >>> import Trisagion.Streamable
 -- >>> import Trisagion.Parser
 
 
