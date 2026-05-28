@@ -54,9 +54,11 @@ library
     exposed-modules:
         Trisagion.Utils.Either
         Trisagion.Types.Result
+        Trisagion.Types.ParseError
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Streamable
         Trisagion.Parsers.HasOffset
+        Trisagion.Parsers.ParseError
