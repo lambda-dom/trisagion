@@ -29,6 +29,7 @@ library
         DerivingVia
         FunctionalDependencies
         RequiredTypeArguments
+        ExplicitNamespaces
     ghc-options:
         -Wall
         -Wcompat
@@ -58,6 +59,7 @@ library
         Trisagion.Utils.Bits
         Trisagion.Types.Result
         Trisagion.Types.ParseError
+        Trisagion.Streams.Counter
         Trisagion.Typeclasses.Streamable
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Splittable

@@ -42,6 +42,7 @@ import Trisagion.Parsers.Combinators (skip)
 
 
 -- $setup
+-- >>> import Trisagion.Streamable
 -- >>> import Trisagion.Parser
 
 
@@ -131,10 +132,10 @@ peek = either (const Nothing) Just <$> lookAhead one
 >>> parse (satisfy ('0' ==)) "0123"
 Right ('0',"123")
 
->>> parse (satisfy ('1' /=)) "0123"
+>>> parse (satisfy ('1' ==)) "0123"
 Left (Left (ValidationError '0'))
 
->>> parse (satisfy ('0' /=)) ""
+>>> parse (satisfy ('0' ==)) ""
 Left (Right (InputError 1))
 -}
 {-# INLINE satisfy #-}

@@ -271,6 +271,9 @@ backtracks and returns the error as a 'Left'.
 >>> parse (try one) "0123"
 Right (Right '0',"123")
 
+>>> parse (try $ matchOne '1') "0123"
+Right (Left (Left (ValidationError '0')),"0123")
+
 >>> parse (try one) ""
 Right (Left (InputError 1),"")
 -}
@@ -281,7 +284,19 @@ try p = embed $ \ xs ->
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
 
-{- | Run the parser and return the result, validating it. -}
+{- | Run the parser and return the result, validating it.
+
+=== __Examples:__
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "0123"
+Right ('0',"123")
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "123"
+Left (Left ())
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) ""
+Left (Right (InputError 1))
+-}
 {-# INLINE validate #-}
 validate
     :: (a -> d :+: b)                   -- ^ Validator.
