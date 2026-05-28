@@ -271,6 +271,9 @@ backtracks and returns the error as a 'Left'.
 >>> parse (try one) "0123"
 Right (Right '0',"123")
 
+>>> parse (try $ matchOne '1') "0123"
+Right (Left (Left (ValidationError '0')),"0123")
+
 >>> parse (try one) ""
 Right (Left (InputError 1),"")
 -}
