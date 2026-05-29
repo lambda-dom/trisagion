@@ -6,7 +6,7 @@ Parsers with t'ParseError' errors.
 
 module Trisagion.Parsers.ParseError (
     -- * Parsers throwing t'ParseError'-errors.
-    throwParseError,
+    withParseError,
     capture,
 ) where
 
@@ -23,12 +23,12 @@ import Trisagion.Parsers.HasOffset (offset)
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
-{-# INLINE throwParseError #-}
-throwParseError
+{-# INLINE withParseError #-}
+withParseError
     :: HasOffset s
     => Parser s e a
     -> Parser s (ParseError e) a
-throwParseError p = do
+withParseError p = do
     n <- first absurd offset
     first (ParseError n) p
 
