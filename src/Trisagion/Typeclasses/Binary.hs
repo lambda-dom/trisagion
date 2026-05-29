@@ -3,6 +3,7 @@ Module: Trisagion.Typeclasses.Binary
 
 The @Binary@ for parsers with constraints @'Splittable' m Word8 b s@.
 -}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Trisagion.Typeclasses.Binary (
     -- * Typeclasses.
@@ -30,13 +31,39 @@ import Trisagion.Parsers.Streamable (InputError, one)
 import Trisagion.Parsers.Splittable (takeExact)
 
 
+-- $setup
+-- >>> import Trisagion.Typeclasses.Binary
+-- >>> import Trisagion.Parser
+
+
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}
 class (Splittable Word8 b s, MonoFoldable Word8 b) => Binary b s where
-    {- | Parse a single 'Word8'. -}
+    {- | Parse a single 'Word8'.
+
+    === __Examples:__
+
+    >>> parse word8 [0xff, 0, 0, 0]
+    Right (255,[0,0,0])
+
+    >>> parse word8 [1, 0, 0, 0]
+    Right (1,[0,0,0])
+
+    >>> parse word8 []
+    Left (InputError 1)
+    -}
     word8 :: Parser s InputError Word8
     word8 = one
 
-    {- | Parse a single 'Int8'. -}
+    {- | Parse a single 'Int8'.
+
+    === __Examples:__
+
+    >>> parse int8 [1, 0, 0, 0]
+    Right (1,[0,0,0])
+
+    >>> parse int8 [fromIntegral (-1 :: Int), 0, 0, 0]
+    Right (-1,[0,0,0])
+    -}
     int8 :: Parser s InputError Int8
     int8 = fromIntegral <$> word8
 
@@ -44,7 +71,22 @@ class (Splittable Word8 b s, MonoFoldable Word8 b) => Binary b s where
     word16Le :: Parser s InputError Word16
     word16Le = integralLe
 
-    {- | Parse a 'Word32' in little-endian format. -}
+    {- | Parse a 'Word32' in little-endian format.
+
+    === __Examples:__
+
+    >>> parse word32Le [1, 0, 0, 0, 0, 0, 0, 0]
+    Right (1,[0,0,0,0])
+
+    >>> parse word32Le [0, 1, 0, 0, 0, 0, 0, 0]
+    Right (256,[0,0,0,0])
+
+    >>> parse word32Le [0, 0, 1, 0, 0, 0, 0, 0]
+    Right (65536,[0,0,0,0])
+
+    >>> parse word32Le [0, 0, 0, 1, 0, 0, 0, 0]
+    Right (16777216,[0,0,0,0])
+    -}
     word32Le :: Parser s InputError Word32
     word32Le = integralLe
 
@@ -56,13 +98,32 @@ class (Splittable Word8 b s, MonoFoldable Word8 b) => Binary b s where
     word16Be :: Parser s InputError Word16
     word16Be = integralBe
 
-    {- | Parse a 'Word32' in big-endian format. -}
+    {- | Parse a 'Word32' in big-endian format.
+
+    === __Examples:__
+
+    >>> parse word32Be [0, 0, 0, 1, 0, 0, 0, 0]
+    Right (1,[0,0,0,0])
+
+    >>> parse word32Be [0, 0, 1, 0, 0, 0, 0, 0]
+    Right (256,[0,0,0,0])
+
+    >>> parse word32Be [0, 1, 0, 0, 0, 0, 0, 0]
+    Right (65536,[0,0,0,0])
+
+    >>> parse word32Be [1, 0, 0, 0, 0, 0, 0, 0]
+    Right (16777216,[0,0,0,0])
+    -}
     word32Be :: Parser s InputError Word32
     word32Be = integralBe
 
     {- | Parse a 'Word64' in big-endian format. -}
     word64Be :: Parser s InputError Word64
     word64Be = integralBe
+
+
+-- Instances.
+instance Binary [Word8] [Word8]
 
 
 {- | Parse a machine-width integral in little-endian format. -}
