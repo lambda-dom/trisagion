@@ -67,6 +67,13 @@ import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), matc
 import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 
 
+-- $setup
+-- >>> import Trisagion.Parsers.Char
+-- >>> import Trisagion.Parser
+-- >>> import Trisagion.Parsers.Combinators
+-- >>> import Trisagion.Parsers.Streamable
+
+
 {- | The universal newline type. -}
 data Newline
     = LF                                -- ^ Unix end of line.
@@ -93,7 +100,19 @@ data StringError
     deriving stock (Eq, Ord, Show)
 
 
-{- | Parse a line feed (character @'\\n'@). -}
+{- | Parse a line feed (character @'\\n'@).
+
+=== __Examples:__
+
+>>> parse lf "\n123"
+Right ('\n',"123")
+
+>>> parse lf "0123"
+Left (Left (ValidationError '0'))
+
+>>> parse lf ""
+Left (Right (InputError 1))
+-}
 {-# INLINE lf #-}
 lf :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
 lf = matchOne '\n'
@@ -103,7 +122,28 @@ lf = matchOne '\n'
 cr :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
 cr = matchOne '\r'
 
-{- | Parse a universal newline from the stream. -}
+{- | Parse a universal newline from the stream.
+
+=== __Examples:__
+
+>>> parse newline "\n123"
+Right (LF,"123")
+
+>>> parse newline "\r123"
+Right (CR,"123")
+
+>>> parse newline "\r\n123"
+Right (CRLF,"123")
+
+>>> parse newline "\n\r123"
+Right (LF,"\r123")
+
+>>> parse newline "123"
+Left (Left (ValidationError '1'))
+
+>>> parse newline ""
+Left (Right (InputError 1))
+-}
 {-# INLINE newline #-}
 newline :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Newline
 newline = do
@@ -113,7 +153,31 @@ newline = do
         '\r' -> catchError (fmap (const CRLF) lf) (const (pure CR))
         _    -> throwError $ Left (ValidationError c)
 
-{- | Parse a line from the stream. The line does not contain the ending newline and can be null. -}
+{- | Parse a line from the stream. The line does not contain the ending newline and can be null.
+
+=== __Examples:__
+
+>>> parse line "0123\n456"
+Right ("0123","456")
+
+>>> parse line "0123\r\n456"
+Right ("0123","456")
+
+>>> parse line "0123\r456"
+Right ("0123\r456","")
+
+>>> parse line "0123\n\n456"
+Right ("0123","\n456")
+
+>>> parse line "\n456"
+Right ("","456")
+
+>>> parse line "456"
+Right ("456","")
+
+>>> parse line ""
+Left (InputError 1)
+-}
 {-# INLINEABLE line #-}
 line :: forall b s . (Splittable Char b s, Monoid b) => Parser s InputError b
 line = (fold . intersperse (singleton s '\r')) <$> do
@@ -131,7 +195,22 @@ line = (fold . intersperse (singleton s '\r')) <$> do
                 _       -> pure [xs]
 
 
-{- | Parse a, possibly null, prefix of whitespace. -}
+{- | Parse a, possibly null, prefix of whitespace.
+
+=== __Examples:__
+
+>>> parse spaces "  123"
+Right ("  ","123")
+
+>>> parse spaces "\v\f\r\n123"
+Right ("\v\f\r\n","123")
+
+>>> parse spaces "0123"
+Right ("","0123")
+
+>>> parse spaces ""
+Right ("","")
+-}
 {-# INLINE spaces #-}
 spaces :: Splittable Char b s => Parser s Void b
 spaces = takeWith isSpace
@@ -147,7 +226,22 @@ notSpaces = takeWith (not . isSpace)
 digit :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
 digit = satisfy isDigit
 
-{- | Parse a number sign. -}
+{- | Parse a number sign.
+
+=== __Examples:__
+
+>>> parse sign "+123"
+Right (Positive,"123")
+
+>>> parse sign "-123"
+Right (Negative,"123")
+
+>>> parse sign "0123"
+Left (Left (ValidationError '0'))
+
+>>> parse sign ""
+Left (Right (InputError 1))
+-}
 {-# INLINE sign #-}
 sign :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Sign
 sign = validate v one
@@ -158,7 +252,25 @@ sign = validate v one
             '+' -> Right Positive
             _   -> Left $ ValidationError x
 
-{- | Parse a positive 'Integer' in decimal format. -}
+{- | Parse a positive 'Integer' in decimal format.
+
+=== __Examples:__
+
+>>> parse positive "123"
+Right (123,"")
+
+>>> parse positive "1ab"
+Right (1,"ab")
+
+>>> parse positive "00123"
+Right (123,"")
+
+>>> parse positive "abc"
+Left (Left (ValidationError 'a'))
+
+>>> parse positive ""
+Left (Right (InputError 1))
+-}
 {-# INLINEABLE positive #-}
 positive
     :: (Splittable Char b s, MonoFoldable Char b)
@@ -172,7 +284,22 @@ positive = do
         -- Returns implementation-dependent garbage for non-decimal digits.
         value n c = fromIntegral (ord c - ord '0') * 10 ^ n
 
-{- | Parse a signed 'Integer' in decimal format. -}
+{- | Parse a signed 'Integer' in decimal format.
+
+=== __Examples:__
+
+>>> parse integer "123"
+Right (123,"")
+
+>>> parse integer "00123"
+Right (123,"")
+
+>>> parse integer "+123"
+Right (123,"")
+
+>>> parse integer "-123"
+Right (-123,"")
+-}
 {-# INLINE integer #-}
 integer
     :: (Splittable Char b s, MonoFoldable Char b)
@@ -181,7 +308,7 @@ integer = do
     sgn <- first absurd (fromMaybe Positive <$> optional sign)
     case sgn of
         Positive -> positive
-        Negative -> ((-1) *) <$> positive
+        Negative -> negate <$> positive
 
 
 {- | Parse a single (unicode) letter. -}
@@ -189,7 +316,22 @@ integer = do
 letter :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
 letter = satisfy isLetter
 
-{- | Parse a word. -}
+{- | Parse a word.
+
+=== __Examples:__
+
+>>> parse word "abc  "
+Right ("abc","  ")
+
+>>> parse word "abc__  "
+Right ("abc","__  ")
+
+>>> parse word "__abc"
+Left (Left (ValidationError '_'))
+
+>>> parse word "  __abc"
+Left (Left (ValidationError ' '))
+-}
 {-# INLINE word #-}
 word :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
 word = takeWith1 isLetter
@@ -198,6 +340,20 @@ word = takeWith1 isLetter
 
 An identifier is a letter followed by any combination of letters, digits and the characters @\'-\'@
 or @\'_\'@.
+
+=== __Examples:__
+
+>>> parse identifier "abc  "
+Right ("abc","  ")
+
+>>> parse identifier "abc__  "
+Right ("abc__","  ")
+
+>>> parse identifier "__abc"
+Left (Left (ValidationError '_'))
+
+>>> parse identifier "  __abc"
+Left (Left (ValidationError ' '))
 -}
 {-# INLINE identifier #-}
 identifier :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
@@ -235,6 +391,28 @@ The escape sequences currently supported are:
 +----------+-----+---------------------------+
 | @\\\\@   | 92  | character @\'\\\'@        |
 +----------+-----+---------------------------+
+
+=== __Examples:__
+
+The examples are run in ghci so the escape character @\'\\\'@ must itself be escaped.
+
+>>> parse escape "\\n"
+Right ("\n","")
+
+>>> parse escape "\\s"
+Right (" ","")
+
+>>> parse escape "\\\\"
+Right ("\\","")
+
+>>> parse escape "s"
+Left (Left (EscapeCharError 's'))
+
+>>> parse escape "\\a"
+Left (Left (EscapeSequenceError 'a'))
+
+>>> parse escape ""
+Left (Right (InputError 1))
 -}
 {-# INLINE escape #-}
 escape :: forall b s . Splittable Char b s => Parser s (EscapeError :+: InputError) b
@@ -265,6 +443,19 @@ accepted by the 'escape' parser.
 note(s):
 
   * A quoted string does /not/ span multiple lines.
+
+=== __Examples:__
+
+The examples are run in ghci so the escape character @\'\\\'@ must itself be escaped.
+
+>>> parse string "'Quoted string.'"
+Right ("Quoted string.","")
+
+>>> parse string "'Quoted string with many \\s\\s\\s spaces.'"
+Right ("Quoted string with many     spaces.","")
+
+>>> parse string "'Quoted string with many\\s\\s\\sspaces and one \\\'\\\\\\\' escape character.'"
+Right ("Quoted string with many   spaces and one '\\' escape character.","")
 -}
 {-# INLINEABLE string #-}
 string
@@ -310,6 +501,12 @@ note(s):
     * If the input stream contains Windows end of lines, then the comment text will contain an
     ending @'\\r'@. This can only be stripped by assuming more about the prefix @b@ (the practical
     solution) or complicating the implementation.
+
+
+=== __Examples:__
+
+>>> parse (comment (skip $ matchOne '#')) "#a line comment\r\n code starts here"
+Right ("a line comment\r"," code starts here")
 -}
 {-# INLINE comment #-}
 comment

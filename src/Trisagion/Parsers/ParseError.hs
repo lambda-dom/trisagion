@@ -6,6 +6,7 @@ Parsers with t'ParseError' errors.
 
 module Trisagion.Parsers.ParseError (
     -- * Parsers throwing t'ParseError'-errors.
+    withParseError,
     throwParseError,
     capture,
 ) where
@@ -15,6 +16,9 @@ module Trisagion.Parsers.ParseError (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Void (absurd)
 
+-- Libraries.
+import Control.Monad.Except (MonadError (..))
+
 -- Package.
 import Trisagion.Types.ParseError (ParseError (..))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
@@ -23,14 +27,19 @@ import Trisagion.Parsers.HasOffset (offset)
 
 
 {- | Transform a parser throwing @e@-errors into a parser throwing (@t'ParseError' e@)-errors. -}
-{-# INLINE throwParseError #-}
-throwParseError
+{-# INLINE withParseError #-}
+withParseError
     :: HasOffset s
     => Parser s e a
     -> Parser s (ParseError e) a
-throwParseError p = do
+withParseError p = do
     n <- first absurd offset
     first (ParseError n) p
+
+{- | The parser @'throwParseError' e@ fails unconditionally with @t'ParseError' e@. -}
+{-# INLINE throwParseError #-}
+throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
+throwParseError e = withParseError (throwError e)
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
 
