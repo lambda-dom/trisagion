@@ -29,10 +29,9 @@ import Control.Monad.State (MonadState (..), gets)
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Typeclasses.Splittable (Splittable (splitPrefix, splitWith, splitPrefixExact))
+import Trisagion.Typeclasses.Splittable (Splittable, splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
 import qualified Trisagion.Typeclasses.Splittable as Splittable (matchPrefix)
 import Trisagion.Parser (Parser, lookAhead, parse, eval)
-import Trisagion.Parsers.Combinators (skip)
 import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
 import Trisagion.Parsers.HasOffset (offset)
 import Control.Monad.Except (MonadError(..))
@@ -91,7 +90,7 @@ Right ((),"")
 -}
 {-# INLINE skipPrefix #-}
 skipPrefix :: Splittable a b s => Word -> Parser s Void ()
-skipPrefix = skip . takePrefix
+skipPrefix n = gets (dropPrefix n) >>= put
 
 {- | Skip the longest prefix from the stream whose elements satisfy a predicate.
 
@@ -105,7 +104,7 @@ Right ((),"")
  -}
 {-# INLINE skipWith #-}
 skipWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
-skipWith = skip . takeWith
+skipWith p = gets (dropWith p) >>= put
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate.
 
