@@ -38,7 +38,6 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
 import Trisagion.Parser (Parser, lookAhead, validate)
-import Trisagion.Parsers.Combinators (skip)
 
 
 -- $setup
@@ -109,7 +108,7 @@ Left (InputError 1)
 -}
 {-# INLINE skipOne #-}
 skipOne :: Streamable a s => Parser s InputError ()
-skipOne = skip one
+skipOne = gets dropOne >>= put
 
 {- | Parse one element from the input stream but without consuming input.
 
