@@ -50,8 +50,6 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 -- $setup
 -- >>> import Trisagion.Parsers.Combinators
 -- >>> import Data.Bifunctor
--- >>> import Data.NonEmpty
--- >>> import Data.Void
 -- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
