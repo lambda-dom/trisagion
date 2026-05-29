@@ -69,7 +69,7 @@ instance Streamable a s => HasOffset (Counter s) where
 {- | 'Splittable' instance.
 
 The instance requires computing the length of the prefix, which is @O(n)@ for some types like
-@Text@. This in its turn, requires a @'MonoFoldable' b@ constraint and the
+@Text@. This in its turn, requires a @'MonoFoldable' a b@ constraint and the
 @UndecidableInstances@ extension to shut up GHC.
 -}
 instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) where

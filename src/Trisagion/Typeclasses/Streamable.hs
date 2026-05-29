@@ -48,7 +48,7 @@ __Foldability__: With the definition
 'toList' = 'Data.List.unfoldr' 'uncons'
 @
 
-and the @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a b s@ constraint we have the equality:
+and the @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
 
 prop> monotoList == toList
 
