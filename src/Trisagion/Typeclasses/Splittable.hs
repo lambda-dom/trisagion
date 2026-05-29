@@ -86,7 +86,7 @@ class Streamable a s => Splittable a b s | s -> b where
 
     Default implementation is:
 
-    @dropPrefix n = snd . splitPrefix n@.
+    @dropPrefix n = snd . splitPrefix n@
     -}
     dropPrefix :: Word -> s -> s
     dropPrefix n = snd . splitPrefix n
@@ -95,7 +95,7 @@ class Streamable a s => Splittable a b s | s -> b where
 
     Default implementation is:
 
-    @dropWith = snd . splitWith p@.
+    @dropWith = snd . splitWith p@
     -}
     dropWith :: (a -> Bool) -> s -> s
     dropWith p = snd . splitWith p
