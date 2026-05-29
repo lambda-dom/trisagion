@@ -10,6 +10,7 @@ module Trisagion.Parsers.Splittable (
     takeWith,
     skipPrefix,
     skipWith,
+    takeRemainder,
     takeWith1,
     takeExact,
     matchPrefix,
@@ -29,7 +30,7 @@ import Control.Monad.State (MonadState (..), gets)
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Typeclasses.Splittable (Splittable, splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
+import Trisagion.Typeclasses.Splittable (Splittable (splitRemainder), splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
 import qualified Trisagion.Typeclasses.Splittable as Splittable (matchPrefix)
 import Trisagion.Parser (Parser, lookAhead, parse, eval)
 import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
@@ -105,6 +106,13 @@ Right ((),"")
 {-# INLINE skipWith #-}
 skipWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
 skipWith p = gets (dropWith p) >>= put
+
+{- | Parse the remainder of the stream as a prefix. -}
+{-# INLINE takeRemainder #-}
+takeRemainder :: Splittable a b s => Parser s Void b
+takeRemainder = do
+    (prefix, rest) <- gets splitRemainder
+    put rest $> prefix
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate.
 
