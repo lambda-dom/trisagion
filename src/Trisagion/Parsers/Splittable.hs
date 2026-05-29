@@ -5,7 +5,7 @@ Parsers with @'Splittable' a b s@ constraints.
 -}
 
 module Trisagion.Parsers.Splittable (
-    -- * Parsers @'Splittable' a b s => 'Parser' s e a@.
+    -- * Parsers @'Splittable' a b s => 'Parser' s e b@.
     takePrefix,
     takeWith,
     skipPrefix,
