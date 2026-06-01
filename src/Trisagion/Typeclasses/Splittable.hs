@@ -19,6 +19,8 @@ import Data.Word (Word8)
 import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
 import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
 import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
+import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
+import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
 
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
@@ -240,3 +242,68 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
     dropWith = SBytes.dropWhile
+
+instance Splittable Char Text.Text Text.Text where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Text.Text -> (Text.Text, Text.Text)
+    splitPrefix n = Text.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
+    splitWith = Text.span
+
+    {-# INLINE singleton #-}
+    singleton Text.Text = Text.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> Text.Text -> Maybe (Text.Text, Text.Text)
+    splitPrefixExact n xs = if Text.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+
+    {-# INLINE matchPrefix #-}
+    matchPrefix :: Text.Text -> Text.Text -> Maybe Text.Text
+    matchPrefix xs ys = Text.stripPrefix xs ys
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Text.Text -> (Text.Text, Text.Text)
+    splitRemainder s = (s, Text.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Text.Text -> Text.Text
+    dropPrefix n = Text.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Char -> Bool) -> Text.Text -> Text.Text
+    dropWith = Text.dropWhile
+
+instance Splittable Char LText.Text LText.Text where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> LText.Text -> (LText.Text, LText.Text)
+    splitPrefix n = LText.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
+    splitWith = LText.span
+
+    {-# INLINE singleton #-}
+    singleton LText.Text = LText.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> LText.Text -> Maybe (LText.Text, LText.Text)
+    splitPrefixExact n xs = if LText.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+
+    {-# INLINE matchPrefix #-}
+    matchPrefix :: LText.Text -> LText.Text -> Maybe LText.Text
+    matchPrefix xs ys = LText.stripPrefix xs ys
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: LText.Text -> (LText.Text, LText.Text)
+    splitRemainder s = (s, LText.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> LText.Text -> LText.Text
+    dropPrefix n = LText.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
+    dropWith = LText.dropWhile
+
