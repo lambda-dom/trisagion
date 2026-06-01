@@ -50,7 +50,7 @@ library
         -- Libraries.
         mtl >=2.3 && <2.4,
         -- Non-hackage libraries.
-        mono >=0.1 && <0.2,
+        mono >=0.2 && <0.3,
     build-depends:
     other-modules:
     exposed-modules:
