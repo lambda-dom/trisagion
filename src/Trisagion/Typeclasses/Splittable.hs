@@ -21,6 +21,8 @@ import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empt
 import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
 import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
 import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
+import Data.Sequence (Seq, ViewL (..), empty, viewl, (<|))
+import qualified Data.Sequence as Seq (spanl, splitAt, drop, dropWhileL, singleton)
 
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
@@ -306,4 +308,41 @@ instance Splittable Char LText.Text LText.Text where
     {-# INLINE dropWith #-}
     dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
     dropWith = LText.dropWhile
+
+instance Eq a => Splittable a (Seq a) (Seq a) where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Seq a -> (Seq a, Seq a)
+    splitPrefix n = Seq.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (a -> Bool) -> Seq a -> (Seq a, Seq a)
+    splitWith = Seq.spanl
+
+    {-# INLINE singleton #-}
+    singleton (Seq _) = Seq.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> Seq a -> Maybe (Seq a, Seq a)
+    splitPrefixExact n xs = if length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+
+    {-# INLINEABLE matchPrefix #-}
+    matchPrefix :: Seq a -> Seq a -> Maybe (Seq a)
+    matchPrefix xs ys =
+        case viewl xs of
+            EmptyL      -> Just xs
+            (x :< xs') -> case viewl ys of
+                EmptyL      -> Nothing
+                (y :< ys') -> if x == y then fmap (x <|) $ matchPrefix xs' ys' else Nothing
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Seq a -> (Seq a, Seq a)
+    splitRemainder xs = (xs, empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Seq a -> Seq a
+    dropPrefix n = Seq.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (a -> Bool) -> Seq a -> Seq a
+    dropWith = Seq.dropWhileL
 
