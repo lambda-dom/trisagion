@@ -50,9 +50,9 @@ library
         -- Libraries.
         mtl >=2.3 && <2.4,
         bytestring >=0.12 && <0.13,
-        -- containers >=0.7 && <0.8,
-        -- text >=2.1 && <2.2,
-        -- vector >=0.13 && <0.14,
+        containers >=0.7 && <0.8,
+        text >=2.1 && <2.2,
+        vector >=0.13 && <0.14,
         -- Non-hackage libraries.
         mono >=0.2 && <0.3,
     build-depends:
