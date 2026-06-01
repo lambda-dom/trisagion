@@ -12,6 +12,14 @@ module Trisagion.Typeclasses.Splittable (
 ) where
 
 -- Imports.
+-- Base.
+import Data.Word (Word8)
+
+-- Libraries.
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton)
+
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
 import Trisagion.Typeclasses.Streamable (Streamable)
@@ -102,6 +110,7 @@ class Streamable a s => Splittable a b s | s -> b where
 
 
 -- Instances.
+-- Base.
 instance Eq a => Splittable a [a] [a] where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Word -> [a] -> ([a], [a])
@@ -133,3 +142,102 @@ instance Eq a => Splittable a [a] [a] where
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> [a] -> [a]
     dropWith = dropWhile
+
+
+-- Libraries.
+instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitPrefix n = Bytes.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitWith = Bytes.span
+
+    {-# INLINE singleton #-}
+    singleton Bytes.ByteString = Bytes.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
+    splitPrefixExact = undefined
+
+    {-# INLINE matchPrefix #-}
+    matchPrefix :: Bytes.ByteString -> Bytes.ByteString -> Maybe Bytes.ByteString
+    matchPrefix = undefined
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitRemainder s = (s, Bytes.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> Bytes.ByteString -> Bytes.ByteString
+    dropPrefix n = Bytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
+    dropWith = Bytes.dropWhile
+
+instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitPrefix n = LBytes.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitWith = LBytes.span
+
+    {-# INLINE singleton #-}
+    singleton LBytes.ByteString = LBytes.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
+    splitPrefixExact = undefined
+
+    {-# INLINE matchPrefix #-}
+    matchPrefix :: LBytes.ByteString -> LBytes.ByteString -> Maybe LBytes.ByteString
+    matchPrefix = undefined
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitRemainder s = (s, LBytes.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> LBytes.ByteString -> LBytes.ByteString
+    dropPrefix n = LBytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> LBytes.ByteString -> LBytes.ByteString
+    dropWith = LBytes.dropWhile
+
+instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
+    {-# INLINE splitPrefix #-}
+    splitPrefix :: Word -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitPrefix n = SBytes.splitAt $ fromIntegral n
+
+    {-# INLINE splitWith #-}
+    splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitWith = SBytes.span
+
+    {-# INLINE singleton #-}
+    singleton SBytes.ShortByteString = SBytes.singleton
+
+    {-# INLINE splitPrefixExact #-}
+    splitPrefixExact :: Word -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitPrefixExact = undefined
+
+    {-# INLINE matchPrefix #-}
+    matchPrefix :: SBytes.ShortByteString -> SBytes.ShortByteString -> Maybe SBytes.ShortByteString
+    matchPrefix = undefined
+
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitRemainder s = (s, SBytes.empty)
+
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Word -> SBytes.ShortByteString -> SBytes.ShortByteString
+    dropPrefix n = SBytes.drop (fromIntegral n)
+
+    {-# INLINE dropWith #-}
+    dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
+    dropWith = SBytes.dropWhile
+
