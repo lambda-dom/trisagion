@@ -16,9 +16,9 @@ module Trisagion.Typeclasses.Splittable (
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton)
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
 
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
@@ -159,11 +159,11 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
-    splitPrefixExact = undefined
+    splitPrefixExact n xs = if Bytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Bytes.ByteString -> Bytes.ByteString -> Maybe Bytes.ByteString
-    matchPrefix = undefined
+    matchPrefix xs ys = Bytes.stripPrefix xs ys
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
@@ -191,11 +191,11 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
-    splitPrefixExact = undefined
+    splitPrefixExact n xs = if LBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: LBytes.ByteString -> LBytes.ByteString -> Maybe LBytes.ByteString
-    matchPrefix = undefined
+    matchPrefix xs ys = LBytes.stripPrefix xs ys
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
@@ -223,11 +223,11 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
-    splitPrefixExact = undefined
+    splitPrefixExact n xs = if SBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: SBytes.ShortByteString -> SBytes.ShortByteString -> Maybe SBytes.ShortByteString
-    matchPrefix = undefined
+    matchPrefix xs ys = SBytes.stripPrefix xs ys
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
@@ -240,4 +240,3 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
     dropWith = SBytes.dropWhile
-
