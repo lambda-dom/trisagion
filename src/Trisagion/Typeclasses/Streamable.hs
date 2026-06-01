@@ -16,6 +16,12 @@ module Trisagion.Typeclasses.Streamable (
 -- Base.
 import Data.List (unfoldr, singleton)
 import qualified Data.List as List (uncons, null, isSuffixOf)
+import Data.Word (Word8)
+
+-- Libraries.
+import qualified Data.ByteString as Bytes (ByteString, uncons, null, unpack, drop)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, uncons, null, unpack, drop)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, uncons, null, unpack, drop)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor)
@@ -86,6 +92,7 @@ class MonoFunctor a s => Streamable a s | s -> a where
 
 
 -- Instances.
+-- Base.
 instance Streamable a (Maybe a) where
     {-# INLINE uncons #-}
     uncons :: Maybe a -> Maybe (a, Maybe a)
@@ -122,6 +129,59 @@ instance Streamable a [a] where
     {-# INLINE toList #-}
     toList :: [a] -> [a]
     toList = id
+
+
+-- Libraries.
+instance Streamable Word8 Bytes.ByteString where
+    {-# INLINE uncons #-}
+    uncons :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
+    uncons = Bytes.uncons
+
+    {-# INLINE null #-}
+    null :: Bytes.ByteString -> Bool
+    null = Bytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: Bytes.ByteString -> Bytes.ByteString
+    dropOne = Bytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: Bytes.ByteString -> [Word8]
+    toList = Bytes.unpack
+
+instance Streamable Word8 LBytes.ByteString where
+    {-# INLINE uncons #-}
+    uncons :: LBytes.ByteString -> Maybe (Word8, LBytes.ByteString)
+    uncons = LBytes.uncons
+
+    {-# INLINE null #-}
+    null :: LBytes.ByteString -> Bool
+    null = LBytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: LBytes.ByteString -> LBytes.ByteString
+    dropOne = LBytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: LBytes.ByteString -> [Word8]
+    toList = LBytes.unpack
+
+instance Streamable Word8 SBytes.ShortByteString where
+    {-# INLINE uncons #-}
+    uncons :: SBytes.ShortByteString -> Maybe (Word8, SBytes.ShortByteString)
+    uncons = SBytes.uncons
+
+    {-# INLINE null #-}
+    null :: SBytes.ShortByteString -> Bool
+    null = SBytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: SBytes.ShortByteString -> SBytes.ShortByteString
+    dropOne = SBytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: SBytes.ShortByteString -> [Word8]
+    toList = SBytes.unpack
 
 
 {- | Return 'True' if @xs@ is a suffix of @ys@. -}
