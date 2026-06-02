@@ -14,8 +14,24 @@ module Trisagion.Typeclasses.Streamable (
 
 -- Imports.
 -- Base.
+import qualified Data.Foldable as Foldable (null, toList)
 import Data.List (unfoldr, singleton)
 import qualified Data.List as List (uncons, null, isSuffixOf)
+import Data.Word (Word8)
+
+-- Libraries.
+import qualified Data.ByteString as Bytes (ByteString, uncons, null, unpack, drop)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, uncons, null, unpack, drop)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, uncons, null, unpack, drop)
+import qualified Data.Text as Text (Text, uncons, null, unpack, drop)
+import qualified Data.Text.Lazy as LText (Text, uncons, null, unpack, drop)
+import Data.Sequence (Seq (..))
+import qualified Data.Sequence as Seq (drop)
+import Data.Vector (Vector)
+import qualified Data.Vector as Vector (uncons, drop)
+import qualified Data.Vector.Strict as SVector (Vector, uncons, drop)
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null, toList, drop)
+import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null, toList, drop)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor)
@@ -86,6 +102,7 @@ class MonoFunctor a s => Streamable a s | s -> a where
 
 
 -- Instances.
+-- Base.
 instance Streamable a (Maybe a) where
     {-# INLINE uncons #-}
     uncons :: Maybe a -> Maybe (a, Maybe a)
@@ -122,6 +139,179 @@ instance Streamable a [a] where
     {-# INLINE toList #-}
     toList :: [a] -> [a]
     toList = id
+
+
+-- Libraries.
+instance Streamable Word8 Bytes.ByteString where
+    {-# INLINE uncons #-}
+    uncons :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
+    uncons = Bytes.uncons
+
+    {-# INLINE null #-}
+    null :: Bytes.ByteString -> Bool
+    null = Bytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: Bytes.ByteString -> Bytes.ByteString
+    dropOne = Bytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: Bytes.ByteString -> [Word8]
+    toList = Bytes.unpack
+
+instance Streamable Word8 LBytes.ByteString where
+    {-# INLINE uncons #-}
+    uncons :: LBytes.ByteString -> Maybe (Word8, LBytes.ByteString)
+    uncons = LBytes.uncons
+
+    {-# INLINE null #-}
+    null :: LBytes.ByteString -> Bool
+    null = LBytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: LBytes.ByteString -> LBytes.ByteString
+    dropOne = LBytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: LBytes.ByteString -> [Word8]
+    toList = LBytes.unpack
+
+instance Streamable Word8 SBytes.ShortByteString where
+    {-# INLINE uncons #-}
+    uncons :: SBytes.ShortByteString -> Maybe (Word8, SBytes.ShortByteString)
+    uncons = SBytes.uncons
+
+    {-# INLINE null #-}
+    null :: SBytes.ShortByteString -> Bool
+    null = SBytes.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: SBytes.ShortByteString -> SBytes.ShortByteString
+    dropOne = SBytes.drop 1
+
+    {-# INLINE toList #-}
+    toList :: SBytes.ShortByteString -> [Word8]
+    toList = SBytes.unpack
+
+instance Streamable Char Text.Text where
+    {-# INLINE uncons #-}
+    uncons :: Text.Text -> Maybe (Char, Text.Text)
+    uncons = Text.uncons
+
+    {-# INLINE null #-}
+    null :: Text.Text -> Bool
+    null = Text.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: Text.Text -> Text.Text
+    dropOne = Text.drop 1
+
+    {-# INLINE toList #-}
+    toList :: Text.Text -> [Char]
+    toList = Text.unpack
+
+instance Streamable Char LText.Text where
+    {-# INLINE uncons #-}
+    uncons :: LText.Text -> Maybe (Char, LText.Text)
+    uncons = LText.uncons
+
+    {-# INLINE null #-}
+    null :: LText.Text -> Bool
+    null = LText.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: LText.Text -> LText.Text
+    dropOne = LText.drop 1
+
+    {-# INLINE toList #-}
+    toList :: LText.Text -> [Char]
+    toList = LText.unpack
+
+instance Streamable a (Seq a) where
+    {-# INLINE uncons #-}
+    uncons :: Seq a -> Maybe (a, Seq a)
+    uncons Empty      = Nothing
+    uncons (x :<| xs) = Just (x, xs)
+
+    {-# INLINE null #-}
+    null :: Seq a -> Bool
+    null = Foldable.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: Seq a -> Seq a
+    dropOne = Seq.drop 1
+
+    {-# INLINE toList #-}
+    toList :: Seq a -> [a]
+    toList = Foldable.toList
+
+instance Streamable a (Vector a) where
+    {-# INLINE uncons #-}
+    uncons :: Vector a -> Maybe (a, Vector a)
+    uncons = Vector.uncons
+
+    {-# INLINE null #-}
+    null :: Vector a -> Bool
+    null = Foldable.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: Vector a -> Vector a
+    dropOne = Vector.drop 1
+
+    {-# INLINE toList #-}
+    toList :: Vector a -> [a]
+    toList = Foldable.toList
+
+instance Streamable a (SVector.Vector a) where
+    {-# INLINE uncons #-}
+    uncons :: SVector.Vector a -> Maybe (a, SVector.Vector a)
+    uncons = SVector.uncons
+
+    {-# INLINE null #-}
+    null :: SVector.Vector a -> Bool
+    null = Foldable.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: SVector.Vector a -> SVector.Vector a
+    dropOne = SVector.drop 1
+
+    {-# INLINE toList #-}
+    toList :: SVector.Vector a -> [a]
+    toList = Foldable.toList
+
+instance UVector.Unbox a => Streamable a (UVector.Vector a) where
+    {-# INLINE uncons #-}
+    uncons :: UVector.Vector a -> Maybe (a, UVector.Vector a)
+    uncons = UVector.uncons
+
+    {-# INLINE null #-}
+    null :: UVector.Vector a -> Bool
+    null = UVector.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: UVector.Vector a -> UVector.Vector a
+    dropOne = UVector.drop 1
+
+    {-# INLINE toList #-}
+    toList :: UVector.Vector a -> [a]
+    toList = UVector.toList
+
+instance StVector.Storable a => Streamable a (StVector.Vector a) where
+    {-# INLINE uncons #-}
+    uncons :: StVector.Vector a -> Maybe (a, StVector.Vector a)
+    uncons = StVector.uncons
+
+    {-# INLINE null #-}
+    null :: StVector.Vector a -> Bool
+    null = StVector.null
+
+    {-# INLINE dropOne #-}
+    dropOne :: StVector.Vector a -> StVector.Vector a
+    dropOne = StVector.drop 1
+
+    {-# INLINE toList #-}
+    toList :: StVector.Vector a -> [a]
+    toList = StVector.toList
 
 
 {- | Return 'True' if @xs@ is a suffix of @ys@. -}
