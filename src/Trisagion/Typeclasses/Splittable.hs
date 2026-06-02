@@ -163,7 +163,7 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
-    splitPrefixExact n xs = if Bytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ Bytes.length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Bytes.ByteString -> Bytes.ByteString -> Maybe Bytes.ByteString
@@ -195,7 +195,7 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
-    splitPrefixExact n xs = if LBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ LBytes.length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: LBytes.ByteString -> LBytes.ByteString -> Maybe LBytes.ByteString
@@ -227,7 +227,7 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
-    splitPrefixExact n xs = if SBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ SBytes.length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: SBytes.ShortByteString -> SBytes.ShortByteString -> Maybe SBytes.ShortByteString
@@ -259,7 +259,7 @@ instance Splittable Char Text.Text Text.Text where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> Text.Text -> Maybe (Text.Text, Text.Text)
-    splitPrefixExact n xs = if Text.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ Text.length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Text.Text -> Text.Text -> Maybe Text.Text
@@ -291,7 +291,7 @@ instance Splittable Char LText.Text LText.Text where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> LText.Text -> Maybe (LText.Text, LText.Text)
-    splitPrefixExact n xs = if LText.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ LText.length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: LText.Text -> LText.Text -> Maybe LText.Text
@@ -323,7 +323,7 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Word -> Seq a -> Maybe (Seq a, Seq a)
-    splitPrefixExact n xs = if length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact n xs = if (fromIntegral $ length xs) < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINEABLE matchPrefix #-}
     matchPrefix :: Seq a -> Seq a -> Maybe (Seq a)
@@ -345,4 +345,3 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> Seq a -> Seq a
     dropWith = Seq.dropWhileL
-
