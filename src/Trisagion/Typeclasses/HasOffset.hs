@@ -18,5 +18,5 @@ import Data.Kind (Type)
 class HasOffset (s :: Type) where
     {-# MINIMAL offset #-}
 
-    {- | Monadic getter fetching the current stream offset. -}
-    offset :: s -> Word
+    {- | Return the current stream offset. -}
+    offset :: s -> Int

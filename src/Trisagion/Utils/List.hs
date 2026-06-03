@@ -25,17 +25,19 @@ note(s):
   * The resulting list has at most @n + 1@ elements.
 -}
 {-# INLINE enumDown #-}
-enumDown :: Word -> [a] -> [(Word, a)]
-enumDown n = zip ns
+enumDown :: Int -> [a] -> [(Int, a)]
+enumDown n = if n < 0 then const [] else zip ns
     where
         ns = if n == 0 then [0] else [n, pred n .. 0]
 
 {- | Exact version of 'splitAt'. -}
 {-# INLINEABLE splitAtExact #-}
-splitAtExact :: Word -> [a] -> Maybe ([a], [a])
-splitAtExact 0 xs       = Just ([], xs)
-splitAtExact _ []       = Nothing
-splitAtExact n (x : xs) = fmap (first (x :)) $ splitAtExact (pred n) xs
+splitAtExact :: Int -> [a] -> Maybe ([a], [a])
+splitAtExact n xs
+    | n <= 0 = Just ([], xs)
+    | otherwise = case xs of
+        []       -> Nothing
+        (y : ys) -> fmap (first (y :)) $ splitAtExact (pred n) ys
 
 {- | Match a prefix list, returning the tail. -}
 {-# INLINEABLE matchPrefix #-}

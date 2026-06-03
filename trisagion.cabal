@@ -54,7 +54,7 @@ library
         text >=2.1 && <2.2,
         vector >=0.13 && <0.14,
         -- Non-hackage libraries.
-        mono >=0.2 && <0.3,
+        mono >=0.3 && <0.4,
     build-depends:
     other-modules:
     exposed-modules:

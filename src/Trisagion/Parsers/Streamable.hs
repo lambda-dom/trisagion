@@ -47,13 +47,13 @@ import Trisagion.Parser (Parser, lookAhead, validate)
 
 {- | The @InputError@ error type. -}
 type InputError :: Type
-newtype InputError = InputError Word
+newtype InputError = InputError Int
     deriving stock (Eq, Show)
 
 {- | Monofunctoriality of t'InputError'. -}
-instance MonoFunctor Word InputError where
+instance MonoFunctor Int InputError where
     {-# INLINE monomap #-}
-    monomap :: (Word -> Word) -> InputError -> InputError
+    monomap :: (Int -> Int) -> InputError -> InputError
     monomap f (InputError n) = InputError (f n)
 
 

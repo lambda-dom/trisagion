@@ -71,6 +71,6 @@ capture p = do
         n  <- first absurd offset
         first (set n) p
     where
-        set :: Word -> ParseError e -> ParseError e
+        set :: Int -> ParseError e -> ParseError e
         set _ Failure          = Failure
         set n (ParseError _ e) = ParseError n e

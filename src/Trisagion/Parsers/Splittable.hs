@@ -58,7 +58,7 @@ Right ("01","23")
 Right ("0123","")
 -}
 {-# INLINE takePrefix #-}
-takePrefix :: Splittable a b s => Word -> Parser s Void b
+takePrefix :: Splittable a b s => Int -> Parser s Void b
 takePrefix n = do
     (xs, ys) <- gets $ splitPrefix n
     put ys $> xs
@@ -90,7 +90,7 @@ Right ((),"23")
 Right ((),"")
 -}
 {-# INLINE skipPrefix #-}
-skipPrefix :: Splittable a b s => Word -> Parser s Void ()
+skipPrefix :: Splittable a b s => Int -> Parser s Void ()
 skipPrefix n = gets (dropPrefix n) >>= put
 
 {- | Skip the longest prefix from the stream whose elements satisfy a predicate.
@@ -149,7 +149,7 @@ Right ("01","23")
 Left (InputError 10)
 -}
 {-# INLINE takeExact #-}
-takeExact :: Splittable a b s => Word -> Parser s InputError b
+takeExact :: Splittable a b s => Int -> Parser s InputError b
 takeExact n = do
     r <- gets $ splitPrefixExact n
     case r of
@@ -199,7 +199,7 @@ Left (Left (ValidationError '0'))
 {-# INLINE isolate #-}
 isolate
     :: Splittable a b s
-    => Word                             -- ^ Prefix size.
+    => Int                              -- ^ Prefix size.
     -> Parser b e a                     -- ^ Parser to run on the prefix.
     -> Parser s e (a, b)
 isolate n p = do
