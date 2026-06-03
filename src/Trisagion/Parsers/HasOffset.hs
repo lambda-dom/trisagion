@@ -24,5 +24,5 @@ import Trisagion.Parser (Parser)
 
 {- | Parser returning the current stream offset. -}
 {-# INLINE offset #-}
-offset :: HasOffset s => Parser s Void Word
+offset :: HasOffset s => Parser s Void Int
 offset = gets HasOffset.offset

@@ -72,7 +72,7 @@ class Streamable a s => Splittable a b s | s -> b where
     {-# MINIMAL splitPrefix, splitWith, singleton, splitPrefixExact, matchPrefix #-}
 
     {- | Split the stream at offset @n@ into a pair @(prefix, suffix)@. -}
-    splitPrefix :: Word -> s -> (b, s)
+    splitPrefix :: Int -> s -> (b, s)
 
     {- | Split the longest prefix from the stream whose elements satisfy a predicate. -}
     splitWith :: (a -> Bool) -> s -> (b, s)
@@ -81,7 +81,7 @@ class Streamable a s => Splittable a b s | s -> b where
     singleton :: forall t -> s ~ t => a -> b
 
     {- | Split a prefix of exact size. -}
-    splitPrefixExact :: Word -> s -> Maybe (b, s)
+    splitPrefixExact :: Int -> s -> Maybe (b, s)
 
     {- | Parse and drop a matching prefix. -}
     matchPrefix :: b -> s -> Maybe s
@@ -104,7 +104,7 @@ class Streamable a s => Splittable a b s | s -> b where
 
     @dropPrefix n = snd . splitPrefix n@
     -}
-    dropPrefix :: Word -> s -> s
+    dropPrefix :: Int -> s -> s
     dropPrefix n = snd . splitPrefix n
 
     {- | Drop the longest prefix satisfying a predicate from the stream.
@@ -121,15 +121,15 @@ class Streamable a s => Splittable a b s | s -> b where
 -- Base.
 instance Eq a => Splittable a [a] [a] where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> [a] -> ([a], [a])
-    splitPrefix n = splitAt (fromIntegral n)
+    splitPrefix :: Int -> [a] -> ([a], [a])
+    splitPrefix n = splitAt n
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> [a] -> ([a], [a])
     splitWith p = span p
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> [a] -> Maybe ([a], [a])
+    splitPrefixExact :: Int -> [a] -> Maybe ([a], [a])
     splitPrefixExact n = List.splitAtExact n
 
     {-# INLINE matchPrefix #-}
@@ -144,8 +144,8 @@ instance Eq a => Splittable a [a] [a] where
     splitRemainder xs = (xs, [])
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> [a] -> [a]
-    dropPrefix n = drop (fromIntegral n)
+    dropPrefix :: Int -> [a] -> [a]
+    dropPrefix = drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> [a] -> [a]
@@ -155,8 +155,8 @@ instance Eq a => Splittable a [a] [a] where
 -- Libraries.
 instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
-    splitPrefix n = Bytes.splitAt $ fromIntegral n
+    splitPrefix :: Int -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
+    splitPrefix = Bytes.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
@@ -166,8 +166,8 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
     singleton Bytes.ByteString = Bytes.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
-    splitPrefixExact n xs = if (fromIntegral $ Bytes.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
+    splitPrefixExact n xs = if Bytes.length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Bytes.ByteString -> Bytes.ByteString -> Maybe Bytes.ByteString
@@ -178,8 +178,8 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
     splitRemainder s = (s, Bytes.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> Bytes.ByteString -> Bytes.ByteString
-    dropPrefix n = Bytes.drop (fromIntegral n)
+    dropPrefix :: Int -> Bytes.ByteString -> Bytes.ByteString
+    dropPrefix = Bytes.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
@@ -187,8 +187,8 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
 
 instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
-    splitPrefix n = LBytes.splitAt $ fromIntegral n
+    splitPrefix :: Int -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
+    splitPrefix = LBytes.splitAt . fromIntegral
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
@@ -198,8 +198,8 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
     singleton LBytes.ByteString = LBytes.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
-    splitPrefixExact n xs = if (fromIntegral $ LBytes.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
+    splitPrefixExact n xs = if LBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: LBytes.ByteString -> LBytes.ByteString -> Maybe LBytes.ByteString
@@ -210,8 +210,8 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
     splitRemainder s = (s, LBytes.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> LBytes.ByteString -> LBytes.ByteString
-    dropPrefix n = LBytes.drop (fromIntegral n)
+    dropPrefix :: Int -> LBytes.ByteString -> LBytes.ByteString
+    dropPrefix = LBytes.drop . fromIntegral
 
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> LBytes.ByteString -> LBytes.ByteString
@@ -219,8 +219,8 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
 
 instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
-    splitPrefix n = SBytes.splitAt $ fromIntegral n
+    splitPrefix :: Int -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitPrefix = SBytes.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
@@ -230,8 +230,8 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     singleton SBytes.ShortByteString = SBytes.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
-    splitPrefixExact n xs = if (fromIntegral $ SBytes.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
+    splitPrefixExact n xs = if SBytes.length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: SBytes.ShortByteString -> SBytes.ShortByteString -> Maybe SBytes.ShortByteString
@@ -242,8 +242,8 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     splitRemainder s = (s, SBytes.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> SBytes.ShortByteString -> SBytes.ShortByteString
-    dropPrefix n = SBytes.drop (fromIntegral n)
+    dropPrefix :: Int -> SBytes.ShortByteString -> SBytes.ShortByteString
+    dropPrefix = SBytes.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
@@ -251,8 +251,8 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
 
 instance Splittable Char Text.Text Text.Text where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Text.Text -> (Text.Text, Text.Text)
-    splitPrefix n = Text.splitAt $ fromIntegral n
+    splitPrefix :: Int -> Text.Text -> (Text.Text, Text.Text)
+    splitPrefix = Text.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
@@ -262,8 +262,8 @@ instance Splittable Char Text.Text Text.Text where
     singleton Text.Text = Text.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> Text.Text -> Maybe (Text.Text, Text.Text)
-    splitPrefixExact n xs = if (fromIntegral $ Text.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> Text.Text -> Maybe (Text.Text, Text.Text)
+    splitPrefixExact n xs = if Text.length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Text.Text -> Text.Text -> Maybe Text.Text
@@ -274,8 +274,8 @@ instance Splittable Char Text.Text Text.Text where
     splitRemainder s = (s, Text.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> Text.Text -> Text.Text
-    dropPrefix n = Text.drop (fromIntegral n)
+    dropPrefix :: Int -> Text.Text -> Text.Text
+    dropPrefix = Text.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (Char -> Bool) -> Text.Text -> Text.Text
@@ -283,8 +283,8 @@ instance Splittable Char Text.Text Text.Text where
 
 instance Splittable Char LText.Text LText.Text where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> LText.Text -> (LText.Text, LText.Text)
-    splitPrefix n = LText.splitAt $ fromIntegral n
+    splitPrefix :: Int -> LText.Text -> (LText.Text, LText.Text)
+    splitPrefix = LText.splitAt . fromIntegral
 
     {-# INLINE splitWith #-}
     splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
@@ -294,8 +294,8 @@ instance Splittable Char LText.Text LText.Text where
     singleton LText.Text = LText.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> LText.Text -> Maybe (LText.Text, LText.Text)
-    splitPrefixExact n xs = if (fromIntegral $ LText.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> LText.Text -> Maybe (LText.Text, LText.Text)
+    splitPrefixExact n xs = if LText.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: LText.Text -> LText.Text -> Maybe LText.Text
@@ -306,8 +306,8 @@ instance Splittable Char LText.Text LText.Text where
     splitRemainder s = (s, LText.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> LText.Text -> LText.Text
-    dropPrefix n = LText.drop (fromIntegral n)
+    dropPrefix :: Int -> LText.Text -> LText.Text
+    dropPrefix = LText.drop . fromIntegral
 
     {-# INLINE dropWith #-}
     dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
@@ -315,8 +315,8 @@ instance Splittable Char LText.Text LText.Text where
 
 instance Eq a => Splittable a (Seq a) (Seq a) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Seq a -> (Seq a, Seq a)
-    splitPrefix n = Seq.splitAt $ fromIntegral n
+    splitPrefix :: Int -> Seq a -> (Seq a, Seq a)
+    splitPrefix = Seq.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Seq a -> (Seq a, Seq a)
@@ -326,8 +326,8 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
     singleton (Seq _) = Seq.singleton
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> Seq a -> Maybe (Seq a, Seq a)
-    splitPrefixExact n xs = if (fromIntegral $ length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> Seq a -> Maybe (Seq a, Seq a)
+    splitPrefixExact n xs = if length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINEABLE matchPrefix #-}
     matchPrefix :: Seq a -> Seq a -> Maybe (Seq a)
@@ -343,8 +343,8 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
     splitRemainder xs = (xs, empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> Seq a -> Seq a
-    dropPrefix n = Seq.drop (fromIntegral n)
+    dropPrefix :: Int -> Seq a -> Seq a
+    dropPrefix = Seq.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> Seq a -> Seq a
@@ -352,16 +352,16 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
 
 instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
-    splitPrefix n = Vector.splitAt (fromIntegral n)
+    splitPrefix :: Int -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
+    splitPrefix = Vector.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitWith = Vector.span
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> Vector.Vector a -> Maybe (Vector.Vector a, Vector.Vector a)
-    splitPrefixExact n xs = if (fromIntegral $ length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> Vector.Vector a -> Maybe (Vector.Vector a, Vector.Vector a)
+    splitPrefixExact n xs = if length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: Vector.Vector a -> Vector.Vector a -> Maybe (Vector.Vector a)
@@ -378,8 +378,8 @@ instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
     splitRemainder xs = (xs, Vector.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> Vector.Vector a -> Vector.Vector a
-    dropPrefix n = Vector.drop (fromIntegral n)
+    dropPrefix :: Int -> Vector.Vector a -> Vector.Vector a
+    dropPrefix = Vector.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> Vector.Vector a -> Vector.Vector a
@@ -387,16 +387,16 @@ instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
 
 instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
-    splitPrefix n = SVector.splitAt (fromIntegral n)
+    splitPrefix :: Int -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
+    splitPrefix = SVector.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitWith  = SVector.span
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> SVector.Vector a -> Maybe (SVector.Vector a, SVector.Vector a)
-    splitPrefixExact n xs = if (fromIntegral $ length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> SVector.Vector a -> Maybe (SVector.Vector a, SVector.Vector a)
+    splitPrefixExact n xs = if length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: SVector.Vector a -> SVector.Vector a -> Maybe (SVector.Vector a)
@@ -413,8 +413,8 @@ instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
     splitRemainder xs = (xs, SVector.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> SVector.Vector a -> SVector.Vector a
-    dropPrefix n = SVector.drop (fromIntegral n)
+    dropPrefix :: Int -> SVector.Vector a -> SVector.Vector a
+    dropPrefix = SVector.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> SVector.Vector a -> SVector.Vector a
@@ -422,16 +422,16 @@ instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
 
 instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vector a) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
-    splitPrefix n = UVector.splitAt (fromIntegral n)
+    splitPrefix :: Int -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
+    splitPrefix = UVector.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitWith = UVector.span
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> UVector.Vector a -> Maybe (UVector.Vector a, UVector.Vector a)
-    splitPrefixExact n xs = if (fromIntegral $ UVector.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> UVector.Vector a -> Maybe (UVector.Vector a, UVector.Vector a)
+    splitPrefixExact n xs = if UVector.length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: UVector.Vector a -> UVector.Vector a -> Maybe (UVector.Vector a)
@@ -448,8 +448,8 @@ instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vec
     splitRemainder xs = (xs, UVector.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> UVector.Vector a -> UVector.Vector a
-    dropPrefix n = UVector.drop (fromIntegral n)
+    dropPrefix :: Int -> UVector.Vector a -> UVector.Vector a
+    dropPrefix = UVector.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> UVector.Vector a -> UVector.Vector a
@@ -457,16 +457,16 @@ instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vec
 
 instance (Eq a, StVector.Storable a) => Splittable a (StVector.Vector a) (StVector.Vector a) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
-    splitPrefix n = StVector.splitAt (fromIntegral n)
+    splitPrefix :: Int -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
+    splitPrefix = StVector.splitAt
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitWith = StVector.span
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> StVector.Vector a -> Maybe (StVector.Vector a, StVector.Vector a)
-    splitPrefixExact n xs = if (fromIntegral $ StVector.length xs) < n then Nothing else Just (splitPrefix n xs)
+    splitPrefixExact :: Int -> StVector.Vector a -> Maybe (StVector.Vector a, StVector.Vector a)
+    splitPrefixExact n xs = if StVector.length xs < n then Nothing else Just (splitPrefix n xs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: StVector.Vector a -> StVector.Vector a -> Maybe (StVector.Vector a)
@@ -483,8 +483,8 @@ instance (Eq a, StVector.Storable a) => Splittable a (StVector.Vector a) (StVect
     splitRemainder xs = (xs, StVector.empty)
 
     {-# INLINE dropPrefix #-}
-    dropPrefix :: Word -> StVector.Vector a -> StVector.Vector a
-    dropPrefix n = StVector.drop (fromIntegral n)
+    dropPrefix :: Int -> StVector.Vector a -> StVector.Vector a
+    dropPrefix = StVector.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> StVector.Vector a -> StVector.Vector a

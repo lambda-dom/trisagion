@@ -35,7 +35,7 @@ The implementation initializes the counter to @0@ and then updates it on every s
 by computing the length of the prefix.
 -}
 type Counter:: Type -> Type
-data Counter s = Counter {-# UNPACK #-} !Word !s
+data Counter s = Counter {-# UNPACK #-} !Int !s
     deriving stock (Eq, Show)
 
 
@@ -63,7 +63,7 @@ instance Streamable a s => Streamable a (Counter s) where
 
 instance Streamable a s => HasOffset (Counter s) where
     {-# INLINE offset #-}
-    offset :: Counter s -> Word
+    offset :: Counter s -> Int
     offset (Counter n _) = n
 
 {- | 'Splittable' instance.
@@ -74,7 +74,7 @@ The instance requires computing the length of the prefix, which is @O(n)@ for so
 -}
 instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) where
     {-# INLINE splitPrefix #-}
-    splitPrefix :: Word -> Counter s -> (b, Counter s)
+    splitPrefix :: Int -> Counter s -> (b, Counter s)
     splitPrefix n (Counter off xs) =
         let (prefix, rest) = splitPrefix n xs in
             (prefix, Counter (off + monolength prefix) rest)
@@ -86,7 +86,7 @@ instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) wher
             (prefix, Counter (off + monolength prefix) rest)
 
     {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Word -> Counter s -> Maybe (b, Counter s)
+    splitPrefixExact :: Int -> Counter s -> Maybe (b, Counter s)
     splitPrefixExact n (Counter off xs) =
         case splitPrefixExact n xs of
             Nothing        -> Nothing
@@ -102,11 +102,11 @@ instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) wher
     {-# INLINE singleton #-}
     singleton (type (Counter t)) = singleton t
 
-    -- {-# INLINE splitRemainder #-}
-    -- splitRemainder :: Counter s -> (b, Counter s)
-    -- splitRemainder (Counter off xs) =
-    --     let (prefix, rest) = splitRemainder xs in
-    --         (prefix, Counter (off + monolength prefix) rest)
+    {-# INLINE splitRemainder #-}
+    splitRemainder :: Counter s -> (b, Counter s)
+    splitRemainder (Counter off xs) =
+        let (prefix, rest) = splitRemainder xs in
+            (prefix, Counter (off + monolength prefix) rest)
 
 
 {- | Construct a t'Counter' from a 'Streamable'. -}

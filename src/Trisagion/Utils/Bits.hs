@@ -28,8 +28,8 @@ import Trisagion.Utils.List (enumDown)
 The actual argument is ignored by the function and only the type matters.
 -}
 {-# INLINE bitCount #-}
-bitCount :: FiniteBits w => w -> Word
-bitCount n = fromIntegral $ finiteBitSize n
+bitCount :: FiniteBits w => w -> Int
+bitCount = finiteBitSize
 
 {- | Return the number of bytes in the integral type.
 
@@ -37,16 +37,21 @@ The actual argument is ignored by the function and only the type matters.
 
 note(s):
 
-  * It is implicitely assumed that the number of bits is a multiple of @8@.
+  * It is implicitely assumed that the number of bits is a (positive) multiple of @8@.
 -}
 {-# INLINE byteCount #-}
-byteCount :: FiniteBits w => w -> Word
+byteCount :: FiniteBits w => w -> Int
 byteCount n = bitCount n `quot` 8
 
-{- | Shift an integral @n@ bytes left. -}
+{- | Shift an integral @n@ bytes left.
+
+note(s):
+
+  * It is implicitely assumed that @n@ is positive.
+-}
 {-# INLINE shiftByteL #-}
-shiftByteL :: Bits w => Word -> w -> w
-shiftByteL m n = shiftL n ( 8 * fromIntegral m)
+shiftByteL :: Bits w => Int -> w -> w
+shiftByteL n m = shiftL m (8 * n)
 
 {- | Pack a list of bytes into an integral value.
 

@@ -280,7 +280,7 @@ positive = do
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
         pure $ foldl' (+) 0 $ uncurry value <$> xs
     where
-        value :: Word -> Char -> Integer
+        value :: Int -> Char -> Integer
         -- Returns implementation-dependent garbage for non-decimal digits.
         value n c = fromIntegral (ord c - ord '0') * 10 ^ n
 
