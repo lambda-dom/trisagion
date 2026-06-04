@@ -16,17 +16,17 @@ module Trisagion.Typeclasses.Splittable (
 import Data.Word (Word8)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, singleton, length, stripPrefix)
-import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
-import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile, singleton, stripPrefix, length)
+import qualified Data.ByteString as Bytes (ByteString, span, splitAt, empty, drop, dropWhile, length, stripPrefix)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, span, splitAt, empty, drop, dropWhile, length, stripPrefix)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, span, splitAt, empty, drop, dropWhile, length, stripPrefix)
+import qualified Data.Text as Text (Text, span, splitAt, empty, drop, dropWhile, stripPrefix, length)
+import qualified Data.Text.Lazy as LText (Text, span, splitAt, empty, drop, dropWhile, stripPrefix, length)
 import Data.Sequence (Seq, ViewL (..), empty, viewl, (<|))
-import qualified Data.Sequence as Seq (spanl, splitAt, drop, dropWhileL, singleton)
-import qualified Data.Vector as Vector (Vector, span, splitAt, empty, drop, dropWhile, singleton)
-import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty, drop, dropWhile, singleton)
-import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty, drop, dropWhile, singleton, length)
-import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty, drop, dropWhile, singleton, length)
+import qualified Data.Sequence as Seq (spanl, splitAt, drop, dropWhileL)
+import qualified Data.Vector as Vector (Vector, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Vector.Strict as SVector (Vector, span, splitAt, empty, drop, dropWhile)
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, span, splitAt, empty, drop, dropWhile, length)
+import qualified Data.Vector.Storable as StVector (Vector, Storable, span, splitAt, empty, drop, dropWhile, length)
 
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
@@ -40,19 +40,14 @@ Mirroring the laws for the 'Streamable' typeclass, the first law is:
 __Mononaturality__: With the constraints @('Mono.Typeclasses.MonoFunctor' a s,
 'Mono.Typeclasses.MonoFunctor' a b)@, @singleton@ and @splitPrefix n@ are mononatural.
 
-__Singleton singleton__: The second law says that @singleton@ is @'Data.List.singleton'@ at the
-level of lists:
-
-prop> singleton == toList . singleton
-
-__List identities__: For the third law, assuming a
+__List identities__: For the second law, assuming a
 @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a b@ constraint on the prefix, then at the level of
 lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
 prop> bimap monotoList toList . splitPrefix n == splitAt n . toList
 prop> bimap monotoList toList . splitWith p == span p . toList
 
-__Compatibility__: The fourth and final law is a compatibility condition between
+__Compatibility__: The third and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
 prop> maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
@@ -69,16 +64,13 @@ The following example shows that @'splitWith' p@ is /not/ mononatural.
 ("","\NUL")
 -}
 class Streamable a s => Splittable a b s | s -> b where
-    {-# MINIMAL splitPrefix, splitWith, singleton, splitPrefixExact, matchPrefix #-}
+    {-# MINIMAL splitPrefix, splitWith, splitPrefixExact, matchPrefix #-}
 
     {- | Split the stream at offset @n@ into a pair @(prefix, suffix)@. -}
     splitPrefix :: Int -> s -> (b, s)
 
     {- | Split the longest prefix from the stream whose elements satisfy a predicate. -}
     splitWith :: (a -> Bool) -> s -> (b, s)
-
-    {- | Convert a stream element to a prefix. -}
-    singleton :: forall t -> s ~ t => a -> b
 
     {- | Split a prefix of exact size. -}
     splitPrefixExact :: Int -> s -> Maybe (b, s)
@@ -136,9 +128,6 @@ instance Eq a => Splittable a [a] [a] where
     matchPrefix :: [a] -> [a] -> Maybe [a]
     matchPrefix xs = List.matchPrefix xs
 
-    {-# INLINE singleton #-}
-    singleton _ x = [x]
-
     {-# INLINE splitRemainder #-}
     splitRemainder :: [a] -> ([a], [a])
     splitRemainder xs = (xs, [])
@@ -161,9 +150,6 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitWith = Bytes.span
-
-    {-# INLINE singleton #-}
-    singleton Bytes.ByteString = Bytes.singleton
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> Bytes.ByteString -> Maybe (Bytes.ByteString, Bytes.ByteString)
@@ -194,9 +180,6 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
     splitWith :: (Word8 -> Bool) -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitWith = LBytes.span
 
-    {-# INLINE singleton #-}
-    singleton LBytes.ByteString = LBytes.singleton
-
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> LBytes.ByteString -> Maybe (LBytes.ByteString, LBytes.ByteString)
     splitPrefixExact n xs = if LBytes.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
@@ -225,9 +208,6 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE splitWith #-}
     splitWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitWith = SBytes.span
-
-    {-# INLINE singleton #-}
-    singleton SBytes.ShortByteString = SBytes.singleton
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> SBytes.ShortByteString -> Maybe (SBytes.ShortByteString, SBytes.ShortByteString)
@@ -258,9 +238,6 @@ instance Splittable Char Text.Text Text.Text where
     splitWith :: (Char -> Bool) -> Text.Text -> (Text.Text, Text.Text)
     splitWith = Text.span
 
-    {-# INLINE singleton #-}
-    singleton Text.Text = Text.singleton
-
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> Text.Text -> Maybe (Text.Text, Text.Text)
     splitPrefixExact n xs = if Text.length xs < n then Nothing else Just (splitPrefix n xs)
@@ -290,9 +267,6 @@ instance Splittable Char LText.Text LText.Text where
     splitWith :: (Char -> Bool) -> LText.Text -> (LText.Text, LText.Text)
     splitWith = LText.span
 
-    {-# INLINE singleton #-}
-    singleton LText.Text = LText.singleton
-
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> LText.Text -> Maybe (LText.Text, LText.Text)
     splitPrefixExact n xs = if LText.length xs < fromIntegral n then Nothing else Just (splitPrefix n xs)
@@ -321,9 +295,6 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Seq a -> (Seq a, Seq a)
     splitWith = Seq.spanl
-
-    {-# INLINE singleton #-}
-    singleton (Seq _) = Seq.singleton
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> Seq a -> Maybe (Seq a, Seq a)
@@ -370,9 +341,6 @@ instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
             let (prefix, rest) = Vector.splitAt (length xs) ys in
                 if xs == prefix then Just rest else Nothing
 
-    {-# INLINE singleton #-}
-    singleton (Vector.Vector _) = Vector.singleton
-
     {-# INLINE splitRemainder #-}
     splitRemainder :: Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitRemainder xs = (xs, Vector.empty)
@@ -404,9 +372,6 @@ instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
         if length xs > length ys then Nothing else
             let (prefix, rest) = SVector.splitAt (length xs) ys in
                 if xs == prefix then Just rest else Nothing
-
-    {-# INLINE singleton #-}
-    singleton (SVector.Vector _) = SVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
@@ -440,9 +405,6 @@ instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vec
             let (prefix, rest) = UVector.splitAt (UVector.length xs) ys in
                 if xs == prefix then Just rest else Nothing
 
-    {-# INLINE singleton #-}
-    singleton (UVector.Vector _) = UVector.singleton
-
     {-# INLINE splitRemainder #-}
     splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitRemainder xs = (xs, UVector.empty)
@@ -474,9 +436,6 @@ instance (Eq a, StVector.Storable a) => Splittable a (StVector.Vector a) (StVect
         if StVector.length xs > StVector.length ys then Nothing else
             let (prefix, rest) = StVector.splitAt (StVector.length xs) ys in
                 if xs == prefix then Just rest else Nothing
-
-    {-# INLINE singleton #-}
-    singleton (StVector.Vector _) = StVector.singleton
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: StVector.Vector a -> (StVector.Vector a, StVector.Vector a)

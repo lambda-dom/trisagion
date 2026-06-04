@@ -28,7 +28,6 @@ library
         DerivingStrategies
         DerivingVia
         FunctionalDependencies
-        RequiredTypeArguments
         ExplicitNamespaces
     ghc-options:
         -Wall
