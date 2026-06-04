@@ -69,7 +69,6 @@ import Trisagion.Parsers.Splittable (takeWith, takeWith1)
 
 
 -- $setup
--- >>> import Trisagion.Parsers.Char
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Combinators
 -- >>> import Trisagion.Parsers.Streamable

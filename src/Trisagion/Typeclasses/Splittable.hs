@@ -33,6 +33,10 @@ import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
 import Trisagion.Typeclasses.Streamable (Streamable)
 
 
+-- $setup
+-- >>> import Mono.Typeclasses.MonoFunctor
+
+
 {- | The @Splittable@ typeclass.
 
 Mirroring the laws for the 'Streamable' typeclass, the first law is:
@@ -44,13 +48,17 @@ __List identities__: For the second law, assuming a
 @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a b@ constraint on the prefix, then at the level of
 lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
-prop> bimap monotoList toList . splitPrefix n == splitAt n . toList
-prop> bimap monotoList toList . splitWith p == span p . toList
+@
+bimap monotoList toList . splitPrefix n == splitAt n . toList
+bimap monotoList toList . splitWith p == span p . toList
+@
 
 __Compatibility__: The third and final law is a compatibility condition between
 'Trisagion.Typeclasses.Streamable.uncons' and @splitPrefix@:
 
-prop> maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
+@
+maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
+@
 
 === __Counterexample:__
 
