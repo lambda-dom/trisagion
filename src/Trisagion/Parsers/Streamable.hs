@@ -41,7 +41,6 @@ import Trisagion.Parser (Parser, lookAhead, validate)
 
 
 -- $setup
--- >>> import Trisagion.Streamable
 -- >>> import Trisagion.Parser
 
 

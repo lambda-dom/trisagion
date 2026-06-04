@@ -34,6 +34,7 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 
 
 -- $setup
+-- >>> import Data.Bifunctor
 -- >>> import Mono.Typeclasses.MonoFunctor
 
 
