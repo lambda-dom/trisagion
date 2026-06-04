@@ -54,6 +54,7 @@ import Data.Void (Void, absurd)
 import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
+import Mono.Typeclasses.MonoPointed (MonoPointed (..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
@@ -415,7 +416,9 @@ Left (Left (EscapeSequenceError 'a'))
 Left (Right (InputError 1))
 -}
 {-# INLINE escape #-}
-escape :: forall b s . Splittable Char b s => Parser s (EscapeError :+: InputError) b
+escape
+    :: forall b s . (MonoPointed Char b, Splittable Char b s)
+    => Parser s (EscapeError :+: InputError) b
 escape = do
         c <- first Right one
         if '\\' /= c
@@ -424,15 +427,15 @@ escape = do
     where
         v :: Char -> EscapeError :+: b
         v c = case c of
-            't'  -> Right (singleton s '\t')
-            'n'  -> Right (singleton s '\n')
-            'v'  -> Right (singleton s '\v')
-            'f'  -> Right (singleton s '\f')
-            'r'  -> Right (singleton s '\r')
-            's'  -> Right (singleton s ' ')
-            '\'' -> Right (singleton s '\'')
-            '"'  -> Right (singleton s '"')
-            '\\' -> Right (singleton s '\\')
+            't'  -> Right (monopoint '\t')
+            'n'  -> Right (monopoint '\n')
+            'v'  -> Right (monopoint '\v')
+            'f'  -> Right (monopoint '\f')
+            'r'  -> Right (monopoint '\r')
+            's'  -> Right (monopoint ' ')
+            '\'' -> Right (monopoint '\'')
+            '"'  -> Right (monopoint '"')
+            '\\' -> Right (monopoint '\\')
             _    -> Left (EscapeSequenceError c)
 
 {- | Parse a quoted string with escape sequences.
@@ -459,7 +462,7 @@ Right ("Quoted string with many   spaces and one '\\' escape character.","")
 -}
 {-# INLINEABLE string #-}
 string
-    :: (Splittable Char b s, Monoid b)
+    :: (MonoPointed Char b, Splittable Char b s, Monoid b)
     => Parser s (StringError :+: InputError) b
 string = do
         c      <- startQuote
@@ -482,7 +485,7 @@ string = do
                     then Right c
                     else Left $ EndQuoteError c
 
-        escapeSequence :: Splittable Char b s => Parser s (StringError :+: InputError) b
+        escapeSequence :: (MonoPointed Char b, Splittable Char b s) => Parser s (StringError :+: InputError) b
         escapeSequence = first (first StringEscapeError) escape
 
         block :: Splittable Char b s => Char -> Parser s (StringError :+: InputError) b

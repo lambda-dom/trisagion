@@ -20,6 +20,7 @@ import Data.Kind (Type)
 
 -- non-Hackage libraries.
 import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
+import Mono.Typeclasses.MonoPointed (MonoPointed (..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
@@ -44,6 +45,11 @@ instance MonoFunctor a s => MonoFunctor a (Counter s) where
     {-# INLINE monomap #-}
     monomap :: (a -> a) -> Counter s -> Counter s
     monomap f (Counter n xs) = Counter n (monomap f xs)
+
+instance MonoPointed a s => MonoPointed a (Counter s) where
+    {-# INLINE monopoint #-}
+    monopoint :: a -> Counter s
+    monopoint x = Counter 0 (monopoint x)
 
 instance Streamable a s => Streamable a (Counter s) where
     {-# INLINE uncons #-}
@@ -98,9 +104,6 @@ instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) wher
         case matchPrefix xs ys of
             Nothing -> Nothing
             Just zs -> Just (Counter (off + monolength xs) zs)
-
-    {-# INLINE singleton #-}
-    singleton (type (Counter t)) = singleton t
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Counter s -> (b, Counter s)
