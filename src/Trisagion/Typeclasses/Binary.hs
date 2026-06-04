@@ -32,7 +32,6 @@ import Trisagion.Parsers.Splittable (takeExact)
 
 
 -- $setup
--- >>> import Trisagion.Typeclasses.Binary
 -- >>> import Trisagion.Parser
 
 

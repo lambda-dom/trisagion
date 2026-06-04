@@ -39,7 +39,6 @@ import Trisagion.Types.Result (Result (..), toEither)
 
 
 -- $setup
--- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
 
 
@@ -58,17 +57,23 @@ newtype Parser s e a = Parser (s -> Result s e a)
 For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. Specifically,
 @'first' f@ preserves the 'Applicative' structure,
 
-prop> first f . pure == pure
-prop> (first f p) <*> (first f q) == first f (p <*> q)
+@
+first f . pure == pure
+(first f p) <*> (first f q) == first f (p <*> q)
+@
 
 the 'Monad' structure,
 
-prop> (first f p) >>= (first f .  h) == first f (p >>= h)
+@
+(first f p) >>= (first f .  h) == first f (p >>= h)
+@
 
 and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
 
-prop> first f empty == empty
-prop> (first f p) <|> (first f q) == first f (p <|> q)
+@
+first f empty == empty
+(first f p) <|> (first f q) == first f (p <|> q)
+@
 -}
 instance Bifunctor (Parser s) where
     {-# INLINE bimap #-}
@@ -128,16 +133,20 @@ note(s):
 
 The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
 
-prop> pure x <|> p == pure x
-prop> empty <*> p == empty
-prop> empty >>= h == empty
+@
+pure x <|> p == pure x
+empty <*> p == empty
+empty >>= h == empty
+@
 
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
 'Alternative' instance also satisfies /left distributivity/:
 
-prop> f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
+@
+f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
+@
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}

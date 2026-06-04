@@ -66,11 +66,15 @@ __Foldability__: With the definition
 
 and the @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
 
-prop> monotoList == toList
+@
+monotoList == toList
+@
 
 __Unconsing__: Finally, the third law says that 'uncons' really is uncons-ing at the level of lists.
 
-prop> toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
+@
+toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
+@
 -}
 class MonoFunctor a s => Streamable a s | s -> a where
     {-# MINIMAL uncons #-}

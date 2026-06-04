@@ -39,7 +39,6 @@ import Control.Monad.Except (MonadError(..))
 
 
 -- $setup
--- >>> import Trisagion.Parsers.Splittable
 -- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Streamable
