@@ -185,7 +185,7 @@ specifically the 'put' method, allows the construction of non-normal parsers.
 
 note(s):
 
-  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' s@
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' a s@
   constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffix'.
 -}
 instance MonadState s (Parser s e) where
