@@ -103,10 +103,10 @@ eoi = gets Streamable.null
 Right ((),"123")
 
 >>> parse skipOne ""
-Left (InputError 1)
+Right ((),"")
 -}
 {-# INLINE skipOne #-}
-skipOne :: Streamable a s => Parser s InputError ()
+skipOne :: Streamable a s => Parser s Void ()
 skipOne = gets dropOne >>= put
 
 {- | Parse one element from the input stream but without consuming input.
