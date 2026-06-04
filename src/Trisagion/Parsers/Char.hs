@@ -179,8 +179,8 @@ Right ("456","")
 Left (InputError 1)
 -}
 {-# INLINEABLE line #-}
-line :: forall b s . (Splittable Char b s, Monoid b) => Parser s InputError b
-line = (fold . intersperse (singleton s '\r')) <$> do
+line :: forall b s . (MonoPointed Char b, Splittable Char b s, Monoid b) => Parser s InputError b
+line = (fold . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
             then throwError $ InputError 1
