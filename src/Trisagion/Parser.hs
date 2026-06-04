@@ -59,7 +59,7 @@ For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. 
 
 @
 first f . pure == pure
-(first f p) <*> (first f q) == first f (p <*> q)
+(first f p) \<*\> (first f q) == first f (p \<*\> q)
 @
 
 the 'Monad' structure,
@@ -72,7 +72,7 @@ and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
 
 @
 first f empty == empty
-(first f p) <|> (first f q) == first f (p <|> q)
+(first f p) \<|\> (first f q) == first f (p \<|\> q)
 @
 -}
 instance Bifunctor (Parser s) where
@@ -134,8 +134,8 @@ note(s):
 The 'Alternative' instance obeys the /left catch/, /left absorption/ and /left zero/ laws,
 
 @
-pure x <|> p == pure x
-empty <*> p == empty
+pure x \<|\> p == pure x
+empty \<*\> p == empty
 empty >>= h == empty
 @
 
@@ -145,7 +145,7 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 'Alternative' instance also satisfies /left distributivity/:
 
 @
-f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
+f \<*\> (x \<|\> y) == (f \<*\> x) \<|\> (f \<*\> y)
 @
 -}
 instance Monoid e => Alternative (Parser s e) where
@@ -185,7 +185,7 @@ specifically the 'put' method, allows the construction of non-normal parsers.
 
 note(s):
 
-  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' s@
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' a s@
   constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffix'.
 -}
 instance MonadState s (Parser s e) where
