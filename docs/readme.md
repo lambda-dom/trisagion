@@ -473,3 +473,88 @@ The right (no pun intended) versions of the laws are all violated, essentially b
 As we will see in the next section, the monoid that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
 
 [^7]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
+
+## A. 5. Handling errors.
+
+### A. 5. 1. The `MonadError` instance.
+
+A parsing function has type `s -> e :+: (a, s)` with error type `e`. Error throwing and catching is captured in the `MonadError` typeclass from the [mtl package](https://hackage.haskell.org/package/mtl) and the instance for `Parser s e a` is readily given:
+
+```haskell
+instance MonadError e (Parser s e) where
+    throwError :: e -> Parser s e a
+    throwError e = Parser $ const (Left e)
+
+    catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
+    catchError p h = Parser $ \ s ->
+        case run p s of
+            Left e      -> run (h e) s
+            r@Right _ _ -> r
+```
+
+The `catchError` method of the `MonadError` typeclass does not change the error type (and therefore, the monad), but it is easy (and more importantly, useful), to implement a type-changing version:
+
+```haskell
+catch
+    :: Parser s d a             -- ^ Parser to try.
+    -> (e -> Parser s e a)      -- ^ Error handler.
+    -> Parser s e a
+catch p h = Parser $ \ s ->
+    case run p s of
+        Left e  -> run (h e) s
+        Right p -> Right p
+```
+
+`catch` and `throwError` have the right shape for a monad structure for `ParseError s e a` in the error type `e` but it is not difficult to see that, essentially because of short-circuiting, while it satisfies the identity laws, associativity is violated.
+
+### A. 5. 2. The `Monoid e` constraint.
+
+As discussed in [The `Alternative` instance](#a-3-the-alternative-instance-choice-and-backtracking), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either errors accumulate in some container like a list or the parsers short-circuit on the first error. Short-circuiting completely determines the monoid operation:
+
+```haskell
+(<>) :: Eq e => e -> e -> e
+(<>) x y
+    | x == mempty = y
+    | otherwise   = x
+```
+
+One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-3-4-5-more-laws).
+
+### A. 5. 3. First attempt.
+
+The `ParseError e` type is a thin wrapper around `e`, the _error tag_, to implement the short-circuiting strategy:
+
+```haskell
+data ParseError e
+    = Failure
+    | ParseError !e
+    deriving stock (Eq, Show, Functor)
+```
+
+For the `Monoid` instance, we have as discussed above in [The `Monoid e` constraint](#a-4-2-the-monoid-e-constraint):
+
+```haskell
+instance Semigroup (ParseError e) where
+    (<>) :: ParseError e -> ParseError e -> ParseError e
+    (<>) Fail x = x
+    (<>) x    _ = x
+
+instance Monoid (ParseError e) where
+    mempty :: ParseError e
+    mempty = Fail
+```
+
+A little bit of staring and the reader should be able to convince himself that this type is monoid-isomorphic to `Maybe (First a)` with `First a` the newtype-wrapper from base with semigroup operation pick-the-first-element. The `Maybe` functor then freely adds the monoid unit. From this isomorphism, it follows that:
+
+__Theorem__: for every `f :: d -> e`, `fmap f :: ParseError d -> ParseError e` is a monoid morphism.
+
+The theorem is an implication, not an iff. The constant map `const Fail :: ParseError d -> ParseError e` is a monoid morphism. For a minimal example of a non-monoid morphism, let `y, y' :: d` be two distinct non-identity elements and `z :: e` a non-identity element, then:
+
+```haskell
+f :: Eq d => ParseError d -> ParseError
+f x
+    | x == y    = z
+    | otherwise = mempty 
+```
+
+Now, `f (y' <> y)` and `f y' <> f y` are not equal.
