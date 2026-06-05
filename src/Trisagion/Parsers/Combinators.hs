@@ -18,8 +18,8 @@ module Trisagion.Parsers.Combinators (
     chain,
 
     -- * 'Alternative' parsers.
-    choose,
-    pick,
+    eitherP,
+    choice,
     many,
     some,
     skipMany,
@@ -192,32 +192,32 @@ chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 chain = sequenceA
 
 
-{- | Choose between two parsers.
+{- | Choose between two alternative parsers.
 
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
 
 === __Examples:__
 
->>> parse (choose (withParseError one) (withParseError one)) (initialize "0123")
+>>> parse (eitherP (withParseError one) (withParseError one)) (initialize "0123")
 Right (Left '0',Counter 1 "123")
 
->>> parse (choose (withParseError $ matchOne '1') (withParseError $ first Right one)) (initialize "0123")
+>>> parse (eitherP (withParseError $ matchOne '1') (withParseError $ first Right one)) (initialize "0123")
 Right (Right '0',Counter 1 "123")
 
->>> parse (choose (withParseError $ matchOne '1') (withParseError $ matchOne '2')) (initialize "0123")
+>>> parse (eitherP (withParseError $ matchOne '1') (withParseError $ matchOne '2')) (initialize "0123")
 Left (ParseError 0 (Left (ValidationError '0')))
 -}
-{-# INLINE choose #-}
-choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
-choose q p = (Left <$> q) <|> (Right <$> p)
+{-# INLINE eitherP #-}
+eitherP :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
+eitherP q p = (Left <$> q) <|> (Right <$> p)
 
-{- | Pick between a foldable of parsers.
+{- | Choose between a foldable of parsers.
 
 Run the parsers in succession returning the result of the first successful one.
 -}
-{-# INLINE pick #-}
-pick :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
-pick = asum
+{-# INLINE choice #-}
+choice :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
+choice = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
 
