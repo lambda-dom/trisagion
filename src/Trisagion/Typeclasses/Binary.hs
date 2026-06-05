@@ -24,7 +24,7 @@ import Data.Word (Word8, Word16, Word32, Word64)
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Utils.Bits (byteCount, pack, packReverse)
+import Trisagion.Utils.Bits (bytecount, pack, packReverse)
 import Trisagion.Typeclasses.Splittable (Splittable (..))
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Streamable (InputError, one)
@@ -132,7 +132,7 @@ integralLe
     .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
     => Parser s InputError a
 integralLe = do
-        bs <- takeExact $ byteCount a
+        bs <- takeExact $ bytecount a
         pure $ pack (monotoList bs)
 
 {- | Parse a machine-width integral in big-endian format. -}
@@ -142,5 +142,5 @@ integralBe
     .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
     => Parser s InputError a
 integralBe = do
-        s <- takeExact $ byteCount a
+        s <- takeExact $ bytecount a
         pure $ packReverse (monotoList s)

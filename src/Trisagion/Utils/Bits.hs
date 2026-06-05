@@ -6,10 +6,10 @@ Bit utilities for integral types.
 
 module Trisagion.Utils.Bits (
     -- * Bitwise functions.
-    bitCount,
+    bitcount,
 
     -- * Bytewise functions.
-    byteCount,
+    bytecount,
     pack,
     packReverse,
 ) where
@@ -24,9 +24,9 @@ import Trisagion.Utils.List (enumDown)
 
 
 {- | Return the number of bits in the integral type. -}
-{-# INLINE bitCount #-}
-bitCount :: forall a -> (FiniteBits a, Num a) => Int
-bitCount a = finiteBitSize (0 :: a)
+{-# INLINE bitcount #-}
+bitcount :: forall a -> (FiniteBits a, Num a) => Int
+bitcount a = finiteBitSize (0 :: a)
 
 {- | Return the number of bytes in the integral type.
 
@@ -36,9 +36,9 @@ note(s):
 
   * It is implicitely assumed that the number of bits is a (positive) multiple of @8@.
 -}
-{-# INLINE byteCount #-}
-byteCount :: forall a -> (FiniteBits a, Num a) => Int
-byteCount a = bitCount a `quot` 8
+{-# INLINE bytecount #-}
+bytecount :: forall a -> (FiniteBits a, Num a) => Int
+bytecount a = bitcount a `quot` 8
 
 {- | Shift an integral @n@ bytes left.
 
@@ -54,14 +54,14 @@ shiftByteL n m = shiftL m (8 * n)
 
 note(s):
 
-  * Argument list is truncated to a list of 'byteCount' length.
+  * Argument list is truncated to a list of 'bytecount' length.
 -}
 {-# INLINEABLE pack #-}
 pack :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
 pack
     = foldl' (.|.) zeroBits
     . fmap (uncurry shiftByteL)
-    . zip [0 .. pred $ byteCount a]
+    . zip [0 .. pred $ bytecount a]
     . fmap fromIntegral
 
 {- | Pack a list of bytes into an integral value in reverse order.
@@ -70,12 +70,12 @@ Equivalent to, but more efficient than, @'pack' . reverse@.
 
 note(s)
 
-  * Argument list is truncated to a list of 'byteCount' length.
+  * Argument list is truncated to a list of 'bytecount' length.
 -}
 {-# INLINEABLE packReverse #-}
 packReverse :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
 packReverse
         = foldl' (.|.) zeroBits
         . fmap (uncurry shiftByteL)
-        . enumDown (pred $ byteCount a)
+        . enumDown (pred $ bytecount a)
         . fmap fromIntegral
