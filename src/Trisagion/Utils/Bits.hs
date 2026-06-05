@@ -23,7 +23,20 @@ import Data.Word (Word8)
 import Trisagion.Utils.List (enumDown)
 
 
-{- | Return the number of bits in the integral type. -}
+-- $setup
+-- >>> import Data.Word
+
+
+{- | Return the number of bits in the integral type.
+
+=== __Examples:__
+
+>>> bitcount Word8
+8
+
+>>> bitcount Int
+64
+-}
 {-# INLINE bitcount #-}
 bitcount :: forall a -> (FiniteBits a, Num a) => Int
 bitcount a = finiteBitSize (0 :: a)
@@ -35,6 +48,14 @@ The actual argument is ignored by the function and only the type matters.
 note(s):
 
   * It is implicitely assumed that the number of bits is a (positive) multiple of @8@.
+
+=== __Examples:__
+
+>>> bytecount Word8
+1
+
+>>> bytecount Int
+8
 -}
 {-# INLINE bytecount #-}
 bytecount :: forall a -> (FiniteBits a, Num a) => Int
