@@ -230,7 +230,7 @@ __Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with th
 The `Alternative` instance for `Parser s e a` implements _choice_. Specifically, the operator
 
 ```haskell
-(<|>) :: ParseError s e a -> ParseError s e a -> ParseError s e a
+(<|>) :: Parser s e a -> Parser s e a -> Parser s e a
 ```
 
 tries the first parser and if it errors, _backtracks_ and tries the second on the same input. In order to implement choice, we rely on the parser combinator
