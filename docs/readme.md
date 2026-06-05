@@ -189,3 +189,287 @@ The laws for the typeclasses guarantee that we get the same results either way. 
 <!-- Explicit reference. -->
 
 [^3]: See for example [Notions of computation as monoids](https://arxiv.org/abs/1406.4823) and references therein.
+
+### A. 3. 3. The `Monad` typeclass.
+
+The `Monad` instance is also readily given.
+
+```haskell
+instance Monad (Parser s e) where
+    (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
+    (>>=) p h = Parser $ \ s -> do
+        (x, t) <- parse p s
+        parse (h x) t
+```
+
+### A. 3. 4. Error laws.
+
+The `Bifunctor` instance yields, for a function `f :: d -> e`, a function `first f :: Parser s d a -> Parser s e a`. This function is not only type-changing, but monad-changing.
+
+__Theorem__: For every `f :: d -> e`, the function `first f :: Parser s d a -> Parser s e a` is a natural transformation that is _monoidal_,
+
+```haskell
+first f . pure == pure
+first f (p <*> q) == (first f p) <*> (first f q)
+```
+
+and a _monad morphism_,
+
+```haskell
+first f (p >>= h) == (first f p) >>= (first f .  h)
+```
+
+note(s):
+
+    * In all these laws, free variables are universally quantified.
+
+__Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with the same result, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
+
+## A. 4. The `Alternative` instance: choice and backtracking.
+
+The `Alternative` instance for `Parser s e a` implements _choice_. Specifically, the operator
+
+```haskell
+(<|>) :: ParseError s e a -> ParseError s e a -> ParseError s e a
+```
+
+tries the first parser and if it errors, _backtracks_ and tries the second on the same input. In order to implement choice, we rely on the parser combinator
+
+```haskell
+try :: Parser s e a -> Parser s Void (e :+: a)
+```
+
+implementing backtracking. The `try p` parser runs `p` and if it succeeds it returns the result as a `Right` while if it errors, it backtracks and returns the error as a `Left`. In order to implement the backtracking part, we need to probe and change the input state `s` of the parser, so let us start with that first.
+
+### A. 4. 1. The `MonadState` class.
+
+Probing the state of the parser monad is abstracted out in the `MonadState` typeclass, available from the [mtl package](https://hackage.haskell.org/package/mtl). The instance implementation is as easy as:
+
+```haskell
+instance MonadState s (Parser s e) where
+    get :: Parser s e s
+    get = embed $ \ s -> Right (s, s)
+
+    put :: s -> Parser s e ()
+    put s = embed $ const (Right ((), s))
+```
+
+The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input; the `put` parser however, allows arbitrary state transformations.
+
+### A. 4. 2. The `try` parser.
+
+The implementation of `try` is a standard try-catch, implemented directly:
+
+```haskell
+try :: Parser s e a -> Parser s Void (e :+: a)
+try p = do
+    xs <- get
+    case parse p xs of
+        Left e        -> throwError e
+        Right (x, ys) -> put ys $> x
+```
+
+The `throwError e` fails unconditionally with error `e`:
+
+```haskell
+throwError :: e -> Parser s e a
+throwError e = Parser $ \ _ -> Left e
+```
+
+### A. 4. 3. The `Alternative` instance.
+
+We now have all the ingredients to implement choice via `(<|>)` of the `Alternative` typeclass: try the first parser and return its result; if it errors, backtrack and try the second parser. There is one issue to be solved however, namely, what to do if _both_ parsers error out? One obvious answer is "combine the errors" and "combine the errors" is a code word for a `Monoid` constraint on the error type `e`. With this setup:
+
+```haskell
+(<|>) :: Monoid e => Parser s e a -> Parser s e a -> Parser s e a
+(<|>) p q = do
+    x <- first absurd $ try p
+    case x of
+        Right x -> pure x
+        Left e  -> do
+            y <- first absurd $ try q
+            case y of
+                Right z -> pure z
+                Left e' -> throwError $ e <> e'
+```
+
+The `empty` parser is also easily implemented with a call to `throwError` with the monoid unit for `e`. The monoid laws for `e` imply that with this structure `Parser s e a` is indeed a monoid, but as we will see next, it implies much more.
+
+What does the constraint `Monoid e` mean in practice? Error types are usually plain data with no meaningful monoid operation. One of the most common things to do with an error is to just throw it away to a logger trash bin. But this, I contend, is a wrong way to look at the constraint. What the constraint really is, is a strategy for _accumulating errors_, e. g. maybe you need to gather them all in a list or keep the first one only.
+
+### A. 4. 4. The `eitherP` parser and an alternative to `Alternative`.
+
+With the `Alternative` typeclass, we can write the `either` parser, renamed as `eitherP` to avoid name clashes with base, that is more deserving of the name choice:
+
+```haskell
+eitherP :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
+eitherP p q = (Left <$> p) <|> (Right <$> q)
+```
+
+Uncurry-ing `either`, we get a natural transformation `(Parser s e a, Parser s e b) -> Parser s e (a :+: b)`. Since there is also a map
+
+```haskell
+unit :: Monoid e => () -> Parser s e Void
+unit = const (throwError mempty)
+```
+
+this gives a (symmetric) lax-monoidal structure to `Parser s e` between products and coproducts [^4]. Considering the _codiagonal_,
+
+```haskell
+codiagonal :: a :+: a -> a
+codiagonal = either id id
+```
+
+we have the equality
+
+```haskell
+(<|>) = fmap codiagonal . either
+```
+
+The upshot of all this is that the `Alternative` typeclass is a red herring, choice is really a lax-monoidal structure. Let us go through the steps one by one to make this clearer.
+
+[^4]: The coherence laws do hold up; exercise to the interested reader.
+
+#### A. 4. 4. 1. Monoidal categories and monoids.
+
+Monoidal structures are to categories as monoids are to sets, that is, just as a monoid is a binary function satisfying some equational laws, a monoidal structure is a bifunctor `(:*:)` and an object `k`, the _unit_ object, together with natural isomorphisms
+
+```haskell
+associator  :: a :*: (b :*: c) -> (a :*: b) :*: c
+unitorLeft  :: k :*: a -> a
+unitorRight :: a :*: k -> a
+```
+
+satisfying a bunch of equations, the so called _coherence laws_ [^5].
+
+The value of any abstraction is in the list of examples it covers and the things you can do with it, both the new concepts that can be expressed and the theorems that can be derived. Starting with the examples, the two most important for us, are the monoidal structures given by products and coproducts respectively. As for concepts that can be expressed, one can now generalize the notion of monoid to a monoid in a monoidal category. The classical notion is recovered by using the product monoidal structure.
+
+<!-- The canonical tensor strengths. -->
+
+[^5]: See [Monoidal categories](https://ncatlab.org/nlab/show/monoidal+category) for the full story.
+
+#### A. 4. 4. 2. Why you never heard of monoids for coproducts.
+
+We start with an existence theorem.
+
+__Theorem__: The codiagonal `a :+: a -> a` together with the unique initial `absurd :: Void -> a` is a monoid for the coproduct monoidal structure.
+
+__Proof__: standard exercise in universal property juggling.
+
+Let us call this monoid structure on `a` the _trivial_ one.
+
+__Theorem__: For each `a` there is only one monoid structure for coproducts, the trivial one.
+
+__Proof__: Since `Void` is initial, there is only one function `Void -> a`. By the universal property of coproducts, a function `a :+: a -> a` is of the form `either f g` for functions `f :: a -> a` and `g :: a -> a`. Now plug this in the two identity laws to get `f = id` and `g = id`.
+
+#### A. 4. 4. 3. Monoids and lax-monoidal functors.
+
+Just as there is a notion of _monoid morphism_, a function that is suitably compatible with monoid structures, there is a notion of _monoidal functor_, a functor `f` together with natural isomorphisms,
+
+```haskell
+u :: f a :*: f b -> f (a :+: b)
+e :: j -> f k
+```
+
+where the objects `j` and `k` are the unit objects for `(:*:)` and `(:+:)` respectively, satisfying some equations [^6] . If we drop the requirements that the natural transformations are isomorphisms we obtain the notion of _lax monoidal functor_.
+
+__Theorem__: Let `f` be a lax monoidal functor between monoidal structures `(:*:)` and `(:+:)` and
+
+```haskell
+m :: a :+: a -> a
+v :: k -> a
+```
+
+a `(:+:)`-monoid structure on `a`. Then
+
+```haskell
+m' :: f a :*: f a -> f a
+m' = fmap m . u
+
+v' :: j -> f a
+v' = fmap v . e
+```
+
+is a `(:*:)`-monoid structure on `f a`.
+
+__Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor), proposition 3. 1. and references therein.
+
+[^6]: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor) for them.
+
+#### A. 4. 4. 4. The punchline.
+
+Combining sections [Why you never heard of coproducts](#a-3-4-2-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-3-4-3-monoids-and-lax-monoidal-functors), we have that the functions,
+
+```haskell
+u :: Monoid e => (Parser s e a) :*: (Parser s e b) -> Parser s e (a :+: b)
+u = uncurry (either)
+
+e :: Monoid e => () -> Parser s e Void
+e = unit
+```
+
+make `Parser s e` a lax monoidal functor between `:*:` and `:+:`. By the preservation theorem, the functions
+
+```haskell
+m :: Monoid e => Parser s e a :*: Parser s e a -> Parser s e a
+m = fmap codiagonal . uncurry (either)
+
+v :: Monoid e => () -> Parser s e Void
+v = const (throwError mempty)
+```
+
+give a monoid structure on `f a`, which is just the `Alternative` instance minus the currying.
+
+#### A. 4. 4. 5. More laws.
+
+Since every function is automatically a monoid morphism for the trivial `:+:`-monoid structures, it follows that for every function `f` and all parsers `p` and `q`:
+
+```haskell
+fmap f (p <|> q) = (fmap f p) <|> (fmap f q)
+fmap f empty = empty
+```
+
+But this is also a consequence of naturality of `(<|>)` and thus a consequence of the free theorem [^7]. Slightly more substantive (because they do not follow from any free theorem) are the next two results.
+
+__Theorem__: If `f :: d -> e` is a monoid morphism, then `first f :: Parser s d a -> Parser s e a` is a monoid morphism:
+
+```haskell
+first f empty == empty
+first f (p <|> q) == (first f p) <|> (first f q)
+```
+
+__Proof__: proof by case analysis on the failures.
+
+The second result are the compatibility laws between `<*>` and `<|>`. For that we first need a definition.
+
+__Definition__: A monoid `e` is _idempotent_ if for every `x :: e`, `x <> x = x`.
+
+__Theorem__: The `Alternative` instance for `Parser s e a` satisfies _left catch_, _left absorption_ and _left zero_ laws:
+
+```haskell
+pure x <|> p == pure x
+empty <*> p == empty
+empty >>= h == empty
+```
+
+If the monoid structure on the error type `e` is idempotent then it satisfies both _left_:
+
+```haskell
+f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
+```
+__Proof__: Follows from the monadic definition of `(<*>)` as
+
+```haskell
+p <*> q = do
+    f <- p
+    x <- q
+    pure (f x)
+```
+
+and doing a case by case analysis on the failures.
+
+The right (no pun intended) versions of the laws are all violated, essentially because of short-circuiting.
+
+As we will see in the next section, the monoid that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
+
+[^7]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
