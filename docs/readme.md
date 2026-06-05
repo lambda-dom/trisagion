@@ -55,7 +55,7 @@ Since this is an implementation detail, it is kept mostly private like a closet 
 
 The type constructor `Parser s e a` is a functor in `a` and this is stock derivable. Other instances provide extra structure. The `Bifunctor` instance provides functoriality in the error type and is the basic error handling mechanism. The `Applicative` instance allows to construct a parser for `(a, b)` from parsers for `a` and `b`, or to construct a parser for product types from parsers for the fields. Finally, the `Monad` instance allows us to feed the result of a parser to another.
 
-It should be noted that none of these instances require constraints on the stream type `s` or the error type `e`.
+It should be noted that none of these instances require constraints on the input stream type `s` or the error type `e`.
 
 ### A. 3. 1. The `Bifunctor` instance.
 
@@ -117,3 +117,75 @@ value = pure
 
 One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.
 
+#### A. 3. 2. 2. Unzipping and cozipping.
+
+The universal properties of products and coproducts yield canonical maps,
+
+```haskell
+unzip :: Functor f => f (a, b) -> (f a, f b)
+unzip = fmap fst &&& fmap snd
+
+cozip :: Functor f => f a :+: f b -> f (a :+: b)
+cozip = either (fmap Left) (fmap Right)
+```
+
+The operator `(&&&)` is the representability isomorphism implied by the universal property of products:
+
+```haskell
+(&&&) :: (c -> a) -> (c -> b) -> c -> (a, b)
+(&&&) f g x = (f x, g x)
+```
+
+In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
+
+[^2]: See for example [Lax monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor). The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
+
+#### A. 3. 2. 3. Equivalent description of `Applicative`.
+
+As is well known, the `Applicative` typeclass is equivalent to `f` being lax-monoidal for products [^3]:
+
+```haskell
+zip :: Applicative f => f a -> f b -> f (a, b)
+zip p q = (,) <$> p <*> q
+
+unit :: Applicative f => () -> f ()
+unit = pure
+```
+
+Given the latter, then `<*>` of `Applicative` is given by,
+
+```haskell
+(<*>) :: f (a -> b) -> f a -> f b
+(<*>) = fmap (uncurry ($)) .> zip
+```
+
+where `.>` is composition of a unary function with a binary function:
+
+```haskell
+(.>) :: (c -> d) -> (a -> b -> c) -> a -> b -> d
+(.>) g f x = g . f x
+```
+
+The map `pure` is given by,
+
+```haskell
+pure :: a -> f a
+pure x = fmap (point x) . unit $ terminal x
+```
+
+where `terminal` is the unique function `a -> ()` and `point` the isomorphism `a -> (() -> a)`:
+
+```haskell
+terminal :: a -> ()
+terminal = const ()
+
+point :: a -> (() -> a)
+point = const
+```
+
+The laws for the typeclasses guarantee that we get the same results either way. The reason for this piece of category-theoretic trivia is that once we get to serializers, we will see that it is the lax-monoidal version of `Applicative` that dualizes well.
+
+<!-- The canonical tensor strengths. -->
+<!-- Explicit reference. -->
+
+[^3]: See for example [Notions of computation as monoids](https://arxiv.org/abs/1406.4823) and references therein.
