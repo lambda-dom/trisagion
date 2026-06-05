@@ -254,7 +254,7 @@ instance MonadState s (Parser s e) where
     put s = embed $ const (Right ((), s))
 ```
 
-The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input; the `put` parser however, allows arbitrary state transformations.
+The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input. The `put` parser however, allows _arbitrary_ state transformations. We will see below that this has some unfortunate implications, but the parser is still provided as an escape hatch to allow the coding of new primitive parsers.
 
 ### A. 4. 2. The `try` parser.
 
@@ -306,7 +306,7 @@ eitherP :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
 eitherP p q = (Left <$> p) <|> (Right <$> q)
 ```
 
-Uncurry-ing `either`, we get a natural transformation `(Parser s e a, Parser s e b) -> Parser s e (a :+: b)`. Since there is also a map
+Uncurry-ing `eitherP`, we get a natural transformation `(Parser s e a, Parser s e b) -> Parser s e (a :+: b)`. Since there is also a map
 
 ```haskell
 unit :: Monoid e => () -> Parser s e Void
@@ -401,17 +401,17 @@ __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functo
 Combining sections [Why you never heard of coproducts](#a-3-4-2-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-3-4-3-monoids-and-lax-monoidal-functors), we have that the functions,
 
 ```haskell
-u :: Monoid e => (Parser s e a) :*: (Parser s e b) -> Parser s e (a :+: b)
+u :: Monoid e => (Parser s e a, Parser s e b) -> Parser s e (a :+: b)
 u = uncurry (either)
 
 e :: Monoid e => () -> Parser s e Void
 e = unit
 ```
 
-make `Parser s e` a lax monoidal functor between `:*:` and `:+:`. By the preservation theorem, the functions
+make `Parser s e` a lax monoidal functor between `(,)` and `:+:`. By the preservation theorem, the functions
 
 ```haskell
-m :: Monoid e => Parser s e a :*: Parser s e a -> Parser s e a
+m :: Monoid e => (Parser s e a, Parser s e a) -> Parser s e a
 m = fmap codiagonal . uncurry (either)
 
 v :: Monoid e => () -> Parser s e Void
@@ -422,7 +422,7 @@ give a monoid structure on `f a`, which is just the `Alternative` instance minus
 
 #### A. 4. 4. 5. More laws.
 
-Since every function is automatically a monoid morphism for the trivial `:+:`-monoid structures, it follows that for every function `f` and all parsers `p` and `q`:
+Since every function is automatically a monoid morphism for the trivial `:+:`-monoid structures, it follows that:
 
 ```haskell
 fmap f (p <|> q) = (fmap f p) <|> (fmap f q)
@@ -452,7 +452,7 @@ empty <*> p == empty
 empty >>= h == empty
 ```
 
-If the monoid structure on the error type `e` is idempotent then it satisfies both _left_:
+If the monoid structure on the error type `e` is idempotent then it satisfies _left distributivity_:
 
 ```haskell
 f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
@@ -468,9 +468,7 @@ p <*> q = do
 
 and doing a case by case analysis on the failures.
 
-The right (no pun intended) versions of the laws are all violated, essentially because of short-circuiting.
-
-As we will see in the next section, the monoid that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
+The right (no pun intended) versions of the laws are all violated, essentially because of short-circuiting. As we will see in the next section, the monoid that we will use in the library is idempotent. Another important case is the case when all the error distinctions are erased and the trivial monoid `()` is picked for error type.
 
 [^7]: See [Theorems for Free!](https://dl.acm.org/doi/pdf/10.1145/99370.99404).
 
