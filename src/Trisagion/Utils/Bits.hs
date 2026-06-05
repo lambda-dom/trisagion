@@ -23,13 +23,10 @@ import Data.Word (Word8)
 import Trisagion.Utils.List (enumDown)
 
 
-{- | Return the number of bits in the integral type.
-
-The actual argument is ignored by the function and only the type matters.
--}
+{- | Return the number of bits in the integral type. -}
 {-# INLINE bitCount #-}
-bitCount :: FiniteBits w => w -> Int
-bitCount = finiteBitSize
+bitCount :: forall a -> (FiniteBits a, Num a) => Int
+bitCount a = finiteBitSize (0 :: a)
 
 {- | Return the number of bytes in the integral type.
 
@@ -40,8 +37,8 @@ note(s):
   * It is implicitely assumed that the number of bits is a (positive) multiple of @8@.
 -}
 {-# INLINE byteCount #-}
-byteCount :: FiniteBits w => w -> Int
-byteCount n = bitCount n `quot` 8
+byteCount :: forall a -> (FiniteBits a, Num a) => Int
+byteCount a = bitCount a `quot` 8
 
 {- | Shift an integral @n@ bytes left.
 
@@ -50,7 +47,7 @@ note(s):
   * It is implicitely assumed that @n@ is positive.
 -}
 {-# INLINE shiftByteL #-}
-shiftByteL :: Bits w => Int -> w -> w
+shiftByteL :: Bits a => Int -> a -> a
 shiftByteL n m = shiftL m (8 * n)
 
 {- | Pack a list of bytes into an integral value.
@@ -60,11 +57,11 @@ note(s):
   * Argument list is truncated to a list of 'byteCount' length.
 -}
 {-# INLINEABLE pack #-}
-pack :: forall w . (FiniteBits w, Integral w) => [Word8] -> w
+pack :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
 pack
     = foldl' (.|.) zeroBits
     . fmap (uncurry shiftByteL)
-    . zip [0 .. pred $ byteCount @w zeroBits]
+    . zip [0 .. pred $ byteCount a]
     . fmap fromIntegral
 
 {- | Pack a list of bytes into an integral value in reverse order.
@@ -76,9 +73,9 @@ note(s)
   * Argument list is truncated to a list of 'byteCount' length.
 -}
 {-# INLINEABLE packReverse #-}
-packReverse :: forall w . (FiniteBits w, Integral w) => [Word8] -> w
+packReverse :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
 packReverse
         = foldl' (.|.) zeroBits
         . fmap (uncurry shiftByteL)
-        . enumDown (pred $ byteCount @w zeroBits)
+        . enumDown (pred $ byteCount a)
         . fmap fromIntegral

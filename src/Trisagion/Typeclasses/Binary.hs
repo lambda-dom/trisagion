@@ -128,19 +128,19 @@ instance Binary [Word8] [Word8]
 {- | Parse a machine-width integral in little-endian format. -}
 {-# INLINEABLE integralLe #-}
 integralLe
-    :: forall b s w
-    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral w, FiniteBits w)
-    => Parser s InputError w
+    :: forall b s a
+    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
+    => Parser s InputError a
 integralLe = do
-        bs <- takeExact $ byteCount @w 0
+        bs <- takeExact $ byteCount a
         pure $ pack (monotoList bs)
 
 {- | Parse a machine-width integral in big-endian format. -}
 {-# INLINEABLE integralBe #-}
 integralBe
-    :: forall b s w
-    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral w, FiniteBits w)
-    => Parser s InputError w
+    :: forall b s a
+    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
+    => Parser s InputError a
 integralBe = do
-        s <- takeExact $ byteCount @w 0
+        s <- takeExact $ byteCount a
         pure $ packReverse (monotoList s)
