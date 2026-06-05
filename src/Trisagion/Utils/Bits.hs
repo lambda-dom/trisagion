@@ -38,8 +38,8 @@ import Trisagion.Utils.List (enumDown)
 64
 -}
 {-# INLINE bitcount #-}
-bitcount :: forall a -> (FiniteBits a, Num a) => Int
-bitcount a = finiteBitSize (0 :: a)
+bitcount :: forall a -> FiniteBits a => Int
+bitcount a = finiteBitSize (zeroBits @a)
 
 {- | Return the number of bytes in the integral type.
 
@@ -58,7 +58,7 @@ note(s):
 8
 -}
 {-# INLINE bytecount #-}
-bytecount :: forall a -> (FiniteBits a, Num a) => Int
+bytecount :: forall a -> FiniteBits a => Int
 bytecount a = bitcount a `quot` 8
 
 {- | Shift an integral @n@ bytes left.
