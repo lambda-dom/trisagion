@@ -39,6 +39,8 @@ import Trisagion.Types.Result (Result (..), toEither)
 
 
 -- $setup
+-- >>> import Data.Bifunctor
+-- >>> import Control.Applicative (Alternative (..))
 -- >>> import Trisagion.Parsers.Streamable
 
 
@@ -153,6 +155,18 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 @
 (f \<*\> x) \<|\> (f \<*\> y) == f \<*\> (x \<|\> y)
 @
+
+=== __Counterexample:__
+
+The next example shows that right distributivity is violated even with an idempotent monoid.
+
+>>> let f = bimap (const ()) (const id) $ matchOne '0'
+>>> let g = first (const ()) (matchOne '0') *> bimap (const ()) (const id) (matchOne '1')
+>>> let x = first (const ()) (matchOne '2')
+>>> parse ((f <|> g) <*> x) ("0123")
+Left ()
+>>> parse ((f <*> x) <|> (g <*> x)) ("0123")
+Right ('2',"3")
 -}
 instance Monoid e => Alternative (Parser s e) where
     {-# INLINE empty #-}
