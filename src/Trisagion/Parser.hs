@@ -16,6 +16,7 @@ module Trisagion.Parser (
     remainder,
 
     -- * Error parsers.
+    value,
     catch,
     try,
     validate,
@@ -275,6 +276,14 @@ eval p = fmap fst . parse p
 remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
 
+
+{- | Embed a value in the t'Parser' monad.
+
+The difference with 'pure' is the more precise type signature.
+-}
+{-# INLINE value #-}
+value :: a -> Parser s Void a
+value = pure
 
 {- | The type-changing version of 'catchError'.
 
