@@ -46,6 +46,12 @@ import Trisagion.Types.Result (Result (..), toEither)
 
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
 is the type of parsed values.
+
+note(s):
+
+    * Two parsers @p@ and @q@ are equal, written as @p == q@, iff their parsing functions are
+    extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@. Obviously,
+    this definition is not effective, so it cannot be turned into an 'Eq' instance.
 -}
 type Parser ::  Type -> Type -> Type -> Type
 newtype Parser s e a = Parser (s -> Result s e a)
@@ -59,20 +65,20 @@ For a function @f :: d -> e@, @'first' f@ preserves all the structure in sight. 
 
 @
 first f . pure == pure
-(first f p) \<*\> (first f q) == first f (p \<*\> q)
+first f (p \<*\> q) == (first f p) \<*\> (first f q) 
 @
 
 the 'Monad' structure,
 
 @
-(first f p) >>= (first f .  h) == first f (p >>= h)
+first f (p >>= h) == (first f p) >>= (first f .  h) 
 @
 
 and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
 
 @
 first f empty == empty
-(first f p) \<|\> (first f q) == first f (p \<|\> q)
+first f (p \<|\> q) == (first f p) \<|\> (first f q)
 @
 -}
 instance Bifunctor (Parser s) where
@@ -145,7 +151,7 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 'Alternative' instance also satisfies /left distributivity/:
 
 @
-f \<*\> (x \<|\> y) == (f \<*\> x) \<|\> (f \<*\> y)
+(f \<*\> x) \<|\> (f \<*\> y) == f \<*\> (x \<|\> y)
 @
 -}
 instance Monoid e => Alternative (Parser s e) where
