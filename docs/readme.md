@@ -115,7 +115,7 @@ value :: a -> Parser s Void a
 value = pure
 ```
 
-One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.
+One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker. Note that while we want the error type as monomorphic and concrete as possible, the exact opposite happens with the value type; we want it as polymorphic and general as possible.
 
 #### A. 3. 2. 2. Unzipping and cozipping.
 
@@ -221,7 +221,7 @@ first f (p >>= h) == (first f p) >>= (first f .  h)
 
 note(s):
 
-    * In all these laws, free variables are universally quantified.
+    * In all these laws, t is understood that, unless explicitly said otherwise, free variables are universally quantified.
 
 __Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with the same result, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
 
@@ -254,7 +254,7 @@ instance MonadState s (Parser s e) where
     put s = embed $ const (Right ((), s))
 ```
 
-The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input. The `put` parser however, allows _arbitrary_ state transformations. We will see below that this has some unfortunate implications, but the parser is still provided as an escape hatch to allow the coding of new primitive parsers.
+The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input. The `put` parser however, allows _arbitrary_ state transformations. We will see below that this has some unfortunate implications, but the parser is still provided as an escape hatch to allow making new primitive parsers.
 
 ### A. 4. 2. The `try` parser.
 
