@@ -115,7 +115,7 @@ value :: a -> Parser s Void a
 value = pure
 ```
 
-One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker.
+One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker. Note that while we want the error type as monomorphic and concrete as possible, the exact opposite happens with the value type; we want it as polymorphic and general as possible.
 
 #### A. 3. 2. 2. Unzipping and cozipping.
 
@@ -221,7 +221,7 @@ first f (p >>= h) == (first f p) >>= (first f .  h)
 
 note(s):
 
-    * In all these laws, free variables are universally quantified.
+    * In all these laws, t is understood that, unless explicitly said otherwise, free variables are universally quantified.
 
 __Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with the same result, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
 
@@ -254,7 +254,7 @@ instance MonadState s (Parser s e) where
     put s = embed $ const (Right ((), s))
 ```
 
-The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input. The `put` parser however, allows _arbitrary_ state transformations. We will see below that this has some unfortunate implications, but the parser is still provided as an escape hatch to allow the coding of new primitive parsers.
+The first thing to notice is that both `get` and `put` do not error and `get` does not consume any input. The `put` parser however, allows _arbitrary_ state transformations. We will see below that this has some unfortunate implications, but the parser is still provided as an escape hatch to allow making new primitive parsers.
 
 ### A. 4. 2. The `try` parser.
 
@@ -556,3 +556,186 @@ f x
 ```
 
 Now, `f (y' <> y)` and `f y' <> f y` are not equal.
+
+## A. 6. Typeclasses for the input.
+
+We are at the point where we can finally tackle the constraints needed for the input type `s`; after all, at this point we cannot even get out one element from the input stream.
+
+### A. 6. 1. One out of `s`: the `Streamable` typeclass.
+
+What we need from `s` is an `uncons` operation, returning the pair of the head and tail of the stream.
+
+```haskell
+{- | The @Streamable@ typeclass of input streams @s@ yielding @a@ elements. -}
+class Streamable a s | s -> a where
+    {- | Uncons the first element from the input stream. -}
+    uncons :: s -> Maybe (a, s)
+```
+
+We use functional dependencies to tie the element type @a@ with the stream type @s@, but it could also be done with an associated family type. The reason we chose functional dependencies is that in our experience, inference tends to work better.
+
+### A. 6. 2. The `MonoFunctor` constraint.
+
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this;
+
+```haskell
+class MonoFunctor a s | s -> a where
+    {- | Map over an element of the monofunctor. -}
+    monomap :: (a -> a) -> s -> s
+
+-- Instances.
+instance MonoFunctor a [a] where
+    monomap :: (a -> a) -> [a] -> [a]
+    monomap = fmap
+```
+
+There are corresponding instances for types like `ByteString` and `Text`, but in this document, if we need some concrete stream type we will just defer to something like `[a]`.
+
+The `MonoFunctor` typeclass, as well as monomorphic versions of `Foldable` and `Traversable` can be found in the [mono-traversable package](https://hackage.haskell.org/package/mono-traversable). We have our own, slightly different, version available from the [mono github repository](https://github.com/lambda-dom/mono).
+
+`MonoFunctor` is not a terribly useful typeclass but it ends up being important as a base and to state some of the typeclass laws. With this superclass:
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic, input streams. -}
+class MonoFunctor a s => Streamable a s where
+    {- | Uncons the first element from the input stream. -}
+    uncons :: s -> Maybe (a, s)
+```
+
+### A. 6. 3. No free laws.
+
+Since monofunctors `s` are not polymorphic in `a`, there are no free theorems available and equational laws like naturality must be explicitly required.
+
+__Definition__: Let `s` and `t` be two monofunctors `MonoFunctor a s` and `MonoFunctor a t`. A function `h :: s -> t` is _mononatural_ if for every `f :: a -> a` we have the equality `monomap f . h = h . monomap f`.
+
+notes(s):
+
+    * There are equivalent descriptions of monofunctoriality and mononaturality in terms of monoid actions, but these trivial reformulations do not yield anything important for our purposes.
+
+The first law for `Streamable` is that `uncons` is mononatural. In case it is not clear, the `MonoFunctor` instance of the codomain is
+
+```haskell
+instance MonoFunctor a s => MonoFunctor a (Maybe (a, s))
+    monomap :: (a -> a) -> Maybe (a, s) -> Maybe (a, s)
+    monomap f = fmap (bimap f (monomap f))
+```
+
+### A. 6. 4. The (absence of the) `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists,
+
+```haskell
+toList :: Streamable a s => s -> [a]
+toList = unfoldr uncons
+```
+
+so that `Streamable` could have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+
+    1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
+
+    2. For input streams like `ByteString.Lazy.ByteString` computing its length forces the entire bytestring into memory which is a big no-no.
+
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+
+### A. 6. 5. Two fundamental parsers.
+
+With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
+
+```haskell
+{- | Error thrown when input stream is exhausted. -}
+data InputError = InputError
+    deriving stock (Eq, Show)
+
+
+eoi :: Streamable a s => Parser s Void Bool
+eoi = null <$> get
+
+one :: Streamable a s => Parser s InputError a
+one = do
+    xs <- get
+    case uncons xs of
+        Just (y, ys) -> put ys $> y
+        Nothing      -> throwError InputError
+```
+
+### A. 6. 6. Some definitions.
+
+Recall that the remainder of a parser's input can be obtained via
+
+```haskell
+remainder :: Parser s e a -> s -> Maybe s
+remainder p = either (const Nothing) id . fmap snd . parse p
+```
+
+What is the relation of the remainder with the original input, if any?
+
+__Definition__: A parser `p :: Parser s e a` is _normal_ if for every `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
+
+With the `Streamable` typeclass, the is-suffix relation is simply `isSuffixOf` at the level of lists.
+
+```haskell
+isSuffixOf :: Streamable a s => s -> s -> Bool
+isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
+```
+
+In this library, all parsers are normal and all parser combinators are normal on the assumption that the argument parsers are normal. Since the `Parser` constructor is not exported, the _only_ way to construct non-normal parsers is by using `put`.
+
+## A. 7. Prefixes and the `Splittable` typeclass.
+
+The `Streamable` typeclass allows to write down all commonly used parsers, but alas, since we can only get one element from the input stream at a time the implementations can be very inefficient. What we need is a notion of chunk, or _stream prefix_, and methods to cut out prefixes from streams.
+
+### A. 7. 1. The `Splittable` class.
+
+Hence the `Splittable` typeclass.
+
+```haskell
+class Streamable a s => Splittable a b s where
+    {-# MINIMAL splitAt, splitWith #-}
+
+    {- | Split the stream at index @n@ into a pair @(prefix, suffix)@. -}
+    splitAt :: Int -> s -> (b, s)
+
+    {- | Split the stream into a pair @(prefix, suffix)@ using a predicate @p@.
+
+    @prefix@ is the longest prefix whose elements satisfy @p@ and @suffix@ is the remainder. -}
+    splitWith :: (a -> Bool) -> s -> (b, s)
+```
+
+### A. 7. 2. The laws.
+
+To state the laws, we must assume something of the prefix `b` that is not expressed directly in the typeclass. The first constraint is `MonoFunctor a b` that `b` is a monofunctor with the same type of elements as `s`. With this assumption: for every `n`, `splitAt n` is mononatural.
+
+note(s):
+
+    * `splitWith p` is _not_ mononatural. There is an example in the haddocks for the typeclass.
+
+For the second law, put
+
+```haskell
+let (prefix, suffix) = spliAt n xs
+```
+
+for arbitrary `n` and `xs`. Given the `toList` function on `Streamable`, both `suffix` and `xs` can be converted to lists, and since as per the name `prefix` is supposed to be a prefix of `xs`, then there should be a unique list `l` such that
+
+```haskell
+toList xs = l ++ toList suffix
+```
+
+It follows that we have the equality,
+
+```haskell
+l = take (length $ toList xs - length $ toList suffix) (toList xs)
+```
+
+so it is not much of a stretch to assume that prefixes can be converted to lists. Note that the arguments above for not requiring a `MonoFoldable a s` constraint on `s` do _not_ apply, that is, we are implicitly assuming that prefixes are indeed _finite_ monofoldables, in part because some important parsers with a `Splittable a b s` constraint require computing the lengths of prefixes. Therefore, assuming a further `MonoFoldable a b` constraint, which is satisfied by all the `Splittable` instances defined by the library, the second typeclass law just says that at the level of lists `splitAt` is `splitAt` and `splitWith` is `span`:
+
+```haskell
+bimap monotoList toList . splitAt n = splitAt n . toList
+bimap monotoList toList . splitWith p = span p . toList
+```
+
+The third and final law is a compatibility condition between `uncons` and `splitAt`. Specifically, `uncons` and `splitAt 1` are, minus how they handle the case of an empty stream, the same:
+
+```haskell
+maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
+```
