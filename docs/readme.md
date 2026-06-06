@@ -556,3 +556,127 @@ f x
 ```
 
 Now, `f (y' <> y)` and `f y' <> f y` are not equal.
+
+## A. 6. Typeclasses for the input.
+
+We are at the point where we can finally tackle the constraints needed for the input type `s`; after all, at this point we cannot even get out one element from the input stream.
+
+### A. 6. 1. One out of `s`: the `Streamable` typeclass.
+
+What we need from `s` is an `uncons` operation, returning the pair of the head and tail of the stream.
+
+```haskell
+{- | The @Streamable@ typeclass of input streams @s@ yielding @a@ elements. -}
+class Streamable a s | s -> a where
+    {- | Uncons the first element from the input stream. -}
+    uncons :: s -> Maybe (a, s)
+```
+
+We use functional dependencies to tie the element type @a@ with the stream type @s@, but it could also be done with an associated family type. The reason we chose functional dependencies is that in our experience, inference tends to work better.
+
+### A. 6. 2. The `MonoFunctor` constraint.
+
+All the paradigmatic examples of input streams like `ByteString` and `Text` have a `map`-like operation, a monomorphic variant of `fmap`. The `MonoFunctor` typeclass captures this;
+
+```haskell
+class MonoFunctor a s | s -> a where
+    {- | Map over an element of the monofunctor. -}
+    monomap :: (a -> a) -> s -> s
+
+-- Instances.
+instance MonoFunctor a [a] where
+    monomap :: (a -> a) -> [a] -> [a]
+    monomap = fmap
+```
+
+There are corresponding instances for types like `ByteString` and `Text`, but in this document, if we need some concrete stream type we will just defer to something like `[a]`.
+
+The `MonoFunctor` typeclass, as well as monomorphic versions of `Foldable` and `Traversable` can be found in the [mono-traversable package](https://hackage.haskell.org/package/mono-traversable). We have our own, slightly different, version available from the [mono github repository](https://github.com/lambda-dom/mono).
+
+`MonoFunctor` is not a terribly useful typeclass but it ends up being important as a base and to state some of the typeclass laws. With this superclass:
+
+```haskell
+{- | The @Streamable@ typeclass of monomorphic, input streams. -}
+class MonoFunctor a s => Streamable a s where
+    {- | Uncons the first element from the input stream. -}
+    uncons :: s -> Maybe (a, s)
+```
+
+### A. 6. 3. No free laws.
+
+Since monofunctors `s` are not polymorphic in `a`, there are no free theorems available and equational laws like naturality must be explicitly required.
+
+__Definition__: Let `s` and `t` be two monofunctors `MonoFunctor a s` and `MonoFunctor a t`. A function `h :: s -> t` is _mononatural_ if for every `f :: a -> a` we have the equality `monomap f . h = h . monomap f`.
+
+notes(s):
+
+    * There are equivalent descriptions of monofunctoriality and mononaturality in terms of monoid actions, but these trivial reformulations do not yield anything important for our purposes.
+
+The first law for `Streamable` is that `uncons` is mononatural. In case it is not clear, the `MonoFunctor` instance of the codomain is
+
+```haskell
+instance MonoFunctor a s => MonoFunctor a (Maybe (a, s))
+    monomap :: (a -> a) -> Maybe (a, s) -> Maybe (a, s)
+    monomap f = fmap (bimap f (monomap f))
+```
+
+### A. 6. 4. The (absence of the) `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists,
+
+```haskell
+toList :: Streamable a s => s -> [a]
+toList = unfoldr uncons
+```
+
+so that `Streamable` could have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+
+    1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
+
+    2. For input streams like `ByteString.Lazy.ByteString` computing its length forces the entire bytestring into memory which is a big no-no.
+
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+
+### A. 6. 5. Two fundamental parsers.
+
+With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
+
+```haskell
+{- | Error thrown when input stream is exhausted. -}
+data InputError = InputError
+    deriving stock (Eq, Show)
+
+
+eoi :: Streamable a s => Parser s Void Bool
+eoi = null <$> get
+
+one :: Streamable a s => Parser s InputError a
+one = do
+    xs <- get
+    case uncons xs of
+        Just (y, ys) -> put ys $> y
+        Nothing      -> throwError InputError
+```
+
+### A. 6. 6. Some definitions.
+
+Recall that the remainder of a parser's input can be obtained via
+
+```haskell
+remainder :: Parser s e a -> s -> Maybe s
+remainder p = either (const Nothing) id . fmap snd . parse p
+```
+
+What is the relation of the remainder with the original input, if any?
+
+__Definition__: A parser `p :: Parser s e a` is _normal_ if for every `xs :: s`, on success, the remainder is a (possibly improper) suffix of `xs`.
+
+With the `Streamable` typeclass, the is-suffix relation is simply `isSuffixOf` at the level of lists.
+
+```haskell
+isSuffixOf :: Streamable a s => s -> s -> Bool
+isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
+```
+
+In this library, all parsers are normal and all parser combinators are normal on the assumption that the argument parsers are normal. Since the `Parser` constructor is not exported, the _only_ way to construct non-normal parsers is by using `put`.
+
