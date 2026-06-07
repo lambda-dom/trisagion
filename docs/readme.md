@@ -17,7 +17,7 @@ newtype Parser s e a = Parser (s -> e :+: (a, s))
     deriving stock Functor
 ````
 
-There are two basic functions, one to embed a parsing function and another to run the parser on the input:
+There are two basic functions, one to embed a parsing function in `Parser` and another to run the parser on the input:
 
 ```haskell
 {- | Embed a parsing function in 'Parser'. -}
@@ -142,7 +142,7 @@ The operator `(&&&)` is the representability isomorphism implied by the universa
 (&&&) f g x = (f x, g x)
 ```
 
-In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2].
+In category-theoretic language, every functor is colax-monoidal for products and lax-monoidal for coproducts [^2]. This leads us to an equivalent description of the `Applicative` typeclass.
 
 [^2]: See for example [Lax monoidal functors](https://ncatlab.org/nlab/show/monoidal+functor). The verification of the required coherence laws is a straightforward, albeit tedious, exercise best left to the interested reader.
 
@@ -194,6 +194,26 @@ The laws for the typeclasses guarantee that we get the same results either way. 
 <!-- TODO: The canonical tensor strengths. -->
 
 [^3]: See for example [Notions of computation as monoids](https://arxiv.org/abs/1406.4823) and references therein.
+
+#### A. 3. 2. 4. Parsers for product types.
+
+Using the `Applicative` instance, we have parser combinator that for parsers for types `a` and `b` gives us a parser for `(a, b)`:
+
+```haskell
+pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
+pair p q = (,) <$> p <*> q
+```
+
+We named this parser combinator `pair` instead of `zip` to avoid clashes with base. More generally, given a product type `T a_0 ... a_n` and parsers `p_i :: Parser s e a_i` we have a parser
+
+```haskell
+p_T :: Parser s e T
+p_T = T <$> p_0 <*> ... <*> p_n
+```
+
+Looking at the code, we are applying the parsers `p_i` in succession and then the constructor `T` to the resulting n-tuple. In particular, we are assuming a canonical format where the fields of `T` are laid out in succession.
+
+Similarly, the canonical parser for `()` is simply `pure ()` which implies that in the canonical format `()` takes up no space. This is a consequence of the fact that `()` is the unit for the monoidal product structure. In particular, this format is not self-documenting.
 
 ### A. 3. 3. The `Monad` typeclass.
 
@@ -827,3 +847,7 @@ instance Contravariant (Serializer m) where
     contramap :: (a -> b) -> Serializer m b -> Serializer m a
     contramap f s = embed $ run s . f
 ```
+
+## B. 4. Instances.
+
+Similarly to what we have done with parsers, we now discuss the basic typeclass instances for `Serializer` that will allow us to construct serializers for complex types from more primitive ones.
