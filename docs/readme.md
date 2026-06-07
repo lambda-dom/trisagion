@@ -8,22 +8,28 @@ A _parsing function_ is a value of type,
 type Parser s e a = s -> e :+: (a, s) 
 ````
 
-where `:+:` is just a type operator alias for `Either` to make signatures look prettier. It should be read as: a parsing function for values `a` with error type `e` on input streams `s`. Wrapping in a newtype:
+where `:+:` is just a type operator alias for `Either` to make signatures look prettier. It should be read as: a parsing function for values `a` with error type `e` on input streams `s`. What an __input stream__ is exactly is to be decided later, but typical examples to have in mind are types like `[a]`, `ByteString` and `Text`.
+
+Wrapping in a newtype:
 
 ```haskell
 newtype Parser s e a = Parser (s -> e :+: (a, s))
     deriving stock Functor
 ````
 
-To _parse_ some input, simply:
+We have two basic functions to embed a parsing a function and run the parser on the input:
 
 ```haskell
--- | Run the parser on the input and return the results.
-parse :: Parser s e a -> s -> e :+: (a, s)
-parse (Parser p) = p
+{- | Embed a parsing function in 'Parser'. -}
+embed :: (s -> e :+: (a, s)) -> Parser s e a
+embed = Parser
+
+{- | Run the parser on the input and return the results. -}
+run :: Parser s e a -> s -> e :+: (a, s)
+run (Parser p) = p
 ```
 
-An immediate implication of the type signature of a parsing function is that it is all-or-nothing: _either_ it throws an error _or_ (exclusive or) it succeeds, returning the pair of the parsed result and the rest of the input.
+Note that `run` is the inverse to `embed`. Note also that, as the type signature of a parsing function implies, a parser is all-or-nothing: _either_ it throws an error _or_ (exclusive or) it succeeds, returning the pair of the parsed result and the rest of the input.
 
 At this point, we note that `Parser` could be generalized to a transformer by,
 
@@ -35,7 +41,7 @@ data ParserT m s e a = Parser (s -> m (e :+: (a, s)))
 type Parser = ParserT Identity
 ```
 
-as is done in say, the [Megaparsec library](https://hackage.haskell.org/package/megaparsec). In this library, we explicitly do _not_ make such a generalization; all code is pure (meaning: effect free). This design forces library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `parse`. For the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
+as is done in say, the [Megaparsec library](https://hackage.haskell.org/package/megaparsec). In this library, we explicitly do _not_ make such a generalization; all code is pure. This design forces library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `parse`. For the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
 
 ## A. 2. A small improvement: the type `Result s e a`.
 
@@ -64,12 +70,12 @@ Functoriality in the error type is given by the `Bifunctor` instance.
 ```haskell
 instance Bifunctor (Parser s) where
     bimap :: (d -> e) -> (a -> b) -> Parser s d a -> Parser s e b
-    bimap f g p = Parser $ \ s -> bimap f (first g) $ parse p s
+    bimap f g p = embed $ \ s -> bimap f (first g) $ run p s
 ```
 
-Bifunctoriality provides the basic way to unify error types. If we have parsers `p_i :: Parser s e_i a` and a cospan `f_i :: e_i -> e`, then we have a cospan `first f_i :: Parser s e_i a -> Parser s e a`. The choice of `e` is left to the user, but there is a canonical, minimal choice by taking the coproduct of all `e_i`. Unfortunately, dealing with arbitrary coproducts in Haskell is clunky, even if we reached for any of the innumerable packages on hackage offering extensible sum types [^1].
+Bifunctoriality provides the basic way to unify error types. If we have parsers `p_i :: Parser s e_i a` and a cospan `f_i :: e_i -> e`, then we have a cospan `first f_i :: Parser s e_i a -> Parser s e a`. The choice of `e` is left to the user, but there is a canonical, minimal choice by taking the coproduct of all `e_i` [^1]. It follows that, given a finite collection of parsers `p_i`, we can assume without loss of generality that they have the same error type `e`.
 
-[^1]: For just one example among many, see [sop-core](https://hackage.haskell.org/package/sop-core).
+[^1]: Unfortunately, dealing with arbitrary coproducts in Haskell is clunky, even if we reached for any of the innumerable packages on hackage offering extensible sum types. For just one example among many, see [sop-core](https://hackage.haskell.org/package/sop-core).
 
 ### A. 3. 2. The `Applicative` instance.
 
@@ -82,8 +88,8 @@ instance Applicative (Parser s e) where
 
     (<*>) :: Parser s e (a -> b) -> Parser s e a -> Parser s e b
     (<*>) p q = Parser $ \ s -> do
-        (f, t) <- parse p s
-        (x, u) <- parse q t
+        (f, t) <- run p s
+        (x, u) <- run q t
         pure (f x, u)
 ```
 
@@ -95,7 +101,7 @@ To formalize these definitions, we start by introducing the _remainder_ function
 
 ```haskell
 remainder :: Parser s e a -> s -> e :+: s
-remainder p = fmap snd . parse p
+remainder p = fmap snd . run p
 ```
 
 When we speak of the remainder on a successful parse, we always mean the `ys :: s` inside the `Right ys` returned by `remainder p xs`.
@@ -197,9 +203,9 @@ The `Monad` instance is also readily given.
 ```haskell
 instance Monad (Parser s e) where
     (>>=) :: Parser s e a -> (a -> Parser s e b) -> Parser s e b
-    (>>=) p h = Parser $ \ s -> do
-        (x, t) <- parse p s
-        parse (h x) t
+    (>>=) p h = embed $ \ s -> do
+        (x, t) <- run p s
+        run (h x) t
 ```
 
 ### A. 3. 4. Error laws.
@@ -221,7 +227,7 @@ first f (p >>= h) == (first f p) >>= (first f .  h)
 
 note(s):
 
-    * In all these laws, t is understood that, unless explicitly said otherwise, free variables are universally quantified.
+    * In all these laws, it is understood that, unless explicitly said otherwise, free variables are universally quantified.
 
 __Proof__: Note that if `p` succeeds, then `first f p` also succeeds and with the same result, and conversely, if `p` errors with `e` then `first f p` errors with `f e`. The rest of the proof is a case analysis over the failures.
 
@@ -264,7 +270,7 @@ The implementation of `try` is a standard try-catch, implemented directly:
 try :: Parser s e a -> Parser s Void (e :+: a)
 try p = do
     xs <- get
-    case parse p xs of
+    case run p xs of
         Left e        -> throwError e
         Right (x, ys) -> put ys $> x
 ```
@@ -273,7 +279,7 @@ The `throwError e` fails unconditionally with error `e`:
 
 ```haskell
 throwError :: e -> Parser s e a
-throwError e = Parser $ \ _ -> Left e
+throwError e = embed $ \ _ -> Left e
 ```
 
 ### A. 4. 3. The `Alternative` instance.
@@ -481,10 +487,10 @@ A parsing function has type `s -> e :+: (a, s)` with error type `e`. Error throw
 ```haskell
 instance MonadError e (Parser s e) where
     throwError :: e -> Parser s e a
-    throwError e = Parser $ const (Left e)
+    throwError e = embed $ const (Left e)
 
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
-    catchError p h = Parser $ \ s ->
+    catchError p h = embed $ \ s ->
         case run p s of
             Left e      -> run (h e) s
             r@Right _ _ -> r
@@ -497,7 +503,7 @@ catch
     :: Parser s d a             -- ^ Parser to try.
     -> (e -> Parser s e a)      -- ^ Error handler.
     -> Parser s e a
-catch p h = Parser $ \ s ->
+catch p h = embed $ \ s ->
     case run p s of
         Left e  -> run (h e) s
         Right p -> Right p
@@ -664,7 +670,7 @@ Recall that the remainder of a parser's input can be obtained via
 
 ```haskell
 remainder :: Parser s e a -> s -> Maybe s
-remainder p = either (const Nothing) id . fmap snd . parse p
+remainder p = either (const Nothing) id . fmap snd . run p
 ```
 
 What is the relation of the remainder with the original input, if any?
@@ -738,4 +744,81 @@ The third and final law is a compatibility condition between `uncons` and `split
 
 ```haskell
 maybe [] (bimap singleton toList) . uncons = bimap toList toList . splitAt 1
+```
+
+# B. Serializing.
+
+## B. 1. First attempt.
+
+A first solution is to carry the codomain `s` of a serializer in a `Writer` monad as is done in say, the [cereal package](https://hackage.haskell.org/package/cereal).
+
+```haskell
+data Writer m a = Writer m a
+    deriving stock Functor
+
+
+-- Instances.
+instance Monoid m => Applicative (Writer m) where
+    pure :: a -> Writer m a
+    pure = Writer mempty
+
+    (<*>) :: Writer m (a -> b) -> Writer m a -> Writer m b
+    (<*>) (Writer m f) (Writer n x) = Writer (m <> n) (f x)
+
+instance Monoid m => Monad (Writer m) where
+    (>>=) :: Writer m a -> (a -> Writer m b) -> Writer m b
+    (>>=) (Writer m x) h = let (Writer n y) = h x in Writer (m <> n) y 
+
+
+-- Basic functions.
+run :: Writer m a -> (m, a)
+run (Writer m x) = (m, x)
+```
+
+As is obvious from the code block, `Writer m a` is isomorphic to `(m, a)`. `m` is a monoid with a "cheap" `(<>)` operation, typically a builder for some underlying stream like `ByteString` or `Text`.
+
+We get, from the `Writer` instances alone, a lot of power. For example, the zip combinator allows us to combine writers for `a` and `b` to a writer for `(a, b)`. Expanding the definition:
+
+```haskell
+pair :: Writer m a -> Writer m b -> Writer m (a, b)
+pair p q = do
+    x <- p
+    y <- q
+    pure (x, y)
+```
+
+The `m` accumulator is threaded around by `Writer` in such a way that it disappears from sight. We can recover it by running the writer and applying `fst` to the results.
+
+## B. 2. Two arguments.
+
+There are two main arguments against this implementation. The first is that the `Writer` monad leaks -- see [Issues with monad transformers](https://github.com/haskell-effectful/effectful/blob/master/transformers.md). More importantly for us however, is the conceptual reason: the implementation does not align with basic intuitions about serialization. The result `m` is _hidden_ in the computation when it is the whole point of it. As a consequence, the construction of the serializer for the whole from the parts constructs in parallel the whole object because the constructors are invoked on the way -- e. g. the serializer for `(,)` calls the `(,)` constructor -- but this gets things backwards.
+
+## B. 3. Serializers in the corepresentable representation.
+
+We arrive at the representation of a serializer as a function `a -> s` that given a value `x :: a` returns an `s` encoding `x`.
+
+```haskell
+newtype Serializer s a = Serializer (a -> s)
+```
+
+Entirely parallel to parsers, we have a pair of mutually inverse functions to embed a serializing function and run a serializer:
+
+```haskell
+{- | Embed a serializing function in 'Serializer'. -}
+embed :: (a -> s) -> Serializer s a
+embed = Serializer
+
+{- | Run the serializer the input @x :: a@ and return the results. -}
+run :: Serializer s a -> a -> s
+run (Serializer f) = f
+```
+
+It is naturally to think of `s` as an _output stream_ or _sink_, but what this means exactly is to be decided later. The typical examples to have in mind are, as with parsers, types such as `[a]`, `ByteString` and `Text`.
+
+The first and more obvious difference with parsers, is that serializers are total and never error. The difference is that a serializer is contravariant in `a`. `Contravariant` functor is the typeclass from base formalizing this.
+
+```haskell
+instance Contravariant (Serializer m) where
+    contramap :: (a -> b) -> Serializer m b -> Serializer m a
+    contramap f s = embed $ run s . f
 ```
