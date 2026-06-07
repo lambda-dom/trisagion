@@ -261,7 +261,7 @@ The inverse of @'embed'@.
 run :: Parser s e a -> s ->  Result s e a
 run (Parser f) = f
 
-{- | Parse the input and return the result as an 'Either'. -}
+{- | Run the parser on the input and return the results as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Parser s e a -> s -> e :+: (a, s)
 parse p = toEither . run p
