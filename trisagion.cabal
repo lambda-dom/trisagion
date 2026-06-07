@@ -74,3 +74,4 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Char
+        Trisagion.Serializer

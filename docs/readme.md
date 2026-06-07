@@ -808,14 +808,14 @@ Entirely parallel to parsers, we have a pair of mutually inverse functions to em
 embed :: (a -> s) -> Serializer s a
 embed = Serializer
 
-{- | Run the serializer the input @x :: a@ and return the results. -}
+{- | Run the serializer on the input @x :: a@ and return the results. -}
 run :: Serializer s a -> a -> s
 run (Serializer f) = f
 ```
 
 It is naturally to think of `s` as an _output stream_ or _sink_, but what this means exactly is to be decided later. The typical examples to have in mind are, as with parsers, types such as `[a]`, `ByteString` and `Text`.
 
-The first and more obvious difference with parsers, is that serializers are total and never error. The difference is that a serializer is contravariant in `a`. `Contravariant` functor is the typeclass from base formalizing this.
+The first and more obvious difference with parsers, is that serializers are total and never error. The second difference is that a serializer is contravariant in `a`. `Contravariant` is the typeclass from base formalizing this.
 
 ```haskell
 instance Contravariant (Serializer m) where
