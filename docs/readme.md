@@ -8,7 +8,7 @@ A _parsing function_ is a value of type,
 type Parser s e a = s -> e :+: (a, s) 
 ````
 
-where `:+:` is just a type operator alias for `Either` to make signatures look prettier. It should be read as: a parsing function for values `a` with error type `e` on input streams `s`. What an __input stream__ is exactly is to be decided later, but typical examples to have in mind are types like `[a]`, `ByteString` and `Text`.
+where `:+:` is just a type operator alias for `Either` to make signatures look prettier. It should be read as: a parsing function for values `a` with error type `e` on _input streams_ `s`. What an input stream is exactly is to be decided later, but typical examples to have in mind are types like `[a]`, `ByteString` and `Text`.
 
 Wrapping in a newtype:
 
@@ -17,7 +17,7 @@ newtype Parser s e a = Parser (s -> e :+: (a, s))
     deriving stock Functor
 ````
 
-We have two basic functions to embed a parsing a function and run the parser on the input:
+There are two basic functions, one to embed a parsing function and another to run the parser on the input:
 
 ```haskell
 {- | Embed a parsing function in 'Parser'. -}
@@ -41,7 +41,7 @@ data ParserT m s e a = Parser (s -> m (e :+: (a, s)))
 type Parser = ParserT Identity
 ```
 
-as is done in say, the [Megaparsec library](https://hackage.haskell.org/package/megaparsec). In this library, we explicitly do _not_ make such a generalization; all code is pure. This design forces library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser via `parse`. For the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
+as is done in say, the [Megaparsec library](https://hackage.haskell.org/package/megaparsec). In this library, we explicitly do _not_ make such a generalization; all code is pure. This design forces library users to construct the parser and stuff it somewhere, gather the input from the IO layer and apply the parser. For the cases where the input must be consumed incrementally, some scheme using a streaming library can be bolted on top.
 
 ## A. 2. A small improvement: the type `Result s e a`.
 

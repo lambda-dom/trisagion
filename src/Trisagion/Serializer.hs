@@ -28,6 +28,16 @@ instance Contravariant (Serializer s) where
     contramap :: (a -> b) -> Serializer s b -> Serializer s a
     contramap f s = embed $ run s . f
 
+instance Semigroup s => Semigroup (Serializer s a) where
+    {-# INLINE (<>) #-}
+    (<>) :: Serializer s a -> Serializer s a -> Serializer s a
+    (<>) s t = embed $ \ x -> run s x <> run t x
+
+instance Monoid s => Monoid (Serializer s a) where
+    {-# INLINE mempty #-}
+    mempty :: Serializer s a
+    mempty = embed $ const mempty
+
 
 {- | Embed a serializing function in a t'Serializer'. -}
 {-# INLINE embed #-}
