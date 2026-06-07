@@ -59,7 +59,7 @@ Since this is an implementation detail, it is kept mostly private like a closet 
 
 ## A. 3. Basic instances.
 
-The type constructor `Parser s e a` is a functor in `a` and this is stock derivable. Other instances provide extra structure. The `Bifunctor` instance provides functoriality in the error type and is the basic error handling mechanism. The `Applicative` instance allows to construct a parser for `(a, b)` from parsers for `a` and `b`, or to construct a parser for product types from parsers for the fields. Finally, the `Monad` instance allows us to feed the result of a parser to another.
+The type constructor `Parser s e a` is a functor in `a` and this is stock derivable. Other instances provide extra structure. The `Bifunctor` instance provides functoriality in the error type and is the basic error handling mechanism. The `Applicative` instance allows to construct a parser for `(a, b)` from parsers for `a` and `b`; more generally, it allows the construction of parsers for product types from parsers for the fields. Finally, the `Monad` instance allows us to feed the result of a parser to another.
 
 It should be noted that none of these instances require constraints on the input stream type `s` or the error type `e`.
 
@@ -121,7 +121,7 @@ value :: a -> Parser s Void a
 value = pure
 ```
 
-One could retort that being fully polymorphic in the error type `e` implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker. Note that while we want the error type as monomorphic and concrete as possible, the exact opposite happens with the value type; we want it as polymorphic and general as possible.
+One could retort that being fully polymorphic in the error type `e` already implies that the parser cannot throw an error, since it is not possible to create values of `e` ex-nihilo; after all, `e` could well be uninhabited as is the case with `e ~ Void`. That much is true, but it is still valuable to signal such, and signal it loudly. So where possible, if a parser does not error it will be reflected in the type signature, at the cost of having to litter the code with `first absurd` calls to satisfy the type checker. Note that while we want the error type as monomorphic and concrete as possible, the exact opposite happens with the value type; we want it as polymorphic and general as possible.
 
 #### A. 3. 2. 2. Unzipping and cozipping.
 
@@ -191,8 +191,7 @@ point = const
 
 The laws for the typeclasses guarantee that we get the same results either way. The reason for this piece of category-theoretic trivia is that once we get to serializers, we will see that it is the lax-monoidal version of `Applicative` that dualizes well.
 
-<!-- The canonical tensor strengths. -->
-<!-- Explicit reference. -->
+<!-- TODO: The canonical tensor strengths. -->
 
 [^3]: See for example [Notions of computation as monoids](https://arxiv.org/abs/1406.4823) and references therein.
 
@@ -279,7 +278,7 @@ The `throwError e` fails unconditionally with error `e`:
 
 ```haskell
 throwError :: e -> Parser s e a
-throwError e = embed $ \ _ -> Left e
+throwError e = embed $ const (Left e)
 ```
 
 ### A. 4. 3. The `Alternative` instance.
@@ -329,7 +328,7 @@ codiagonal = either id id
 we have the equality
 
 ```haskell
-(<|>) = fmap codiagonal . either
+(<|>) = fmap codiagonal . eitherP
 ```
 
 The upshot of all this is that the `Alternative` typeclass is a red herring, choice is really a lax-monoidal structure. Let us go through the steps one by one to make this clearer.
@@ -404,11 +403,11 @@ __Proof__: See [Monoidal functors](https://ncatlab.org/nlab/show/monoidal+functo
 
 #### A. 4. 4. 4. The punchline.
 
-Combining sections [Why you never heard of coproducts](#a-3-4-2-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-3-4-3-monoids-and-lax-monoidal-functors), we have that the functions,
+Combining sections [Why you never heard of coproducts](#a-4-4-2-why-you-never-heard-of-monoids-for-coproducts) and [Monoids and lax monoidal functors](#a-4-4-3-monoids-and-lax-monoidal-functors), we have that the functions,
 
 ```haskell
 u :: Monoid e => (Parser s e a, Parser s e b) -> Parser s e (a :+: b)
-u = uncurry (either)
+u = uncurry (eitherP)
 
 e :: Monoid e => () -> Parser s e Void
 e = unit
@@ -418,7 +417,7 @@ make `Parser s e` a lax monoidal functor between `(,)` and `:+:`. By the preserv
 
 ```haskell
 m :: Monoid e => (Parser s e a, Parser s e a) -> Parser s e a
-m = fmap codiagonal . uncurry (either)
+m = fmap codiagonal . uncurry (eitherP)
 
 v :: Monoid e => () -> Parser s e Void
 v = const (throwError mempty)
@@ -435,7 +434,7 @@ fmap f (p <|> q) = (fmap f p) <|> (fmap f q)
 fmap f empty = empty
 ```
 
-But this is also a consequence of naturality of `(<|>)` and thus a consequence of the free theorem [^7]. Slightly more substantive (because they do not follow from any free theorem) are the next two results.
+But this is also a consequence of naturality of `(<|>)` and thus a consequence of the free theorem [^7]. Slightly more substantive are the next two results.
 
 __Theorem__: If `f :: d -> e` is a monoid morphism, then `first f :: Parser s d a -> Parser s e a` is a monoid morphism:
 
@@ -450,7 +449,7 @@ The second result are the compatibility laws between `<*>` and `<|>`. For that w
 
 __Definition__: A monoid `e` is _idempotent_ if for every `x :: e`, `x <> x = x`.
 
-__Theorem__: The `Alternative` instance for `Parser s e a` satisfies _left catch_, _left absorption_ and _left zero_ laws:
+__Theorem__: The `Alternative` instance for `Parser s e a` satisfies the _left catch_, the _left absorption_ and the _left zero_ laws:
 
 ```haskell
 pure x <|> p == pure x
@@ -458,7 +457,7 @@ empty <*> p == empty
 empty >>= h == empty
 ```
 
-If the monoid structure on the error type `e` is idempotent then it satisfies _left distributivity_:
+If the monoid structure on the error type `e` is idempotent then it also satisfies _left distributivity_:
 
 ```haskell
 f <*> (x <|> y) == (f <*> x) <|> (f <*> y)
@@ -513,7 +512,7 @@ catch p h = embed $ \ s ->
 
 ### A. 5. 2. The `Monoid e` constraint.
 
-As discussed in [The `Alternative` instance](#a-3-the-alternative-instance-choice-and-backtracking), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either errors accumulate in some container like a list or the parsers short-circuit on the first error. Short-circuiting completely determines the monoid operation:
+As discussed in [The `Alternative` instance](#a-4-3-the-alternative-instance), the `Alternative` typeclass requires a `Monoid e` constraint on the error type `e` that determines how errors combine, or as we termed it, the error accumulation strategy. There are two basic options: either errors accumulate in some container like a list or the parsers short-circuit on the first error. Short-circuiting completely determines the monoid operation:
 
 ```haskell
 (<>) :: Eq e => e -> e -> e
@@ -522,7 +521,7 @@ As discussed in [The `Alternative` instance](#a-3-the-alternative-instance-choic
     | otherwise   = x
 ```
 
-One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-3-4-5-more-laws).
+One advantage of the short-circuiting strategy is that the monoid is idempotent guaranteeing stronger laws for the `Alternative` instance -- see section [More laws](#a-4-4-5-more-laws).
 
 ### A. 5. 3. First attempt.
 
@@ -535,7 +534,7 @@ data ParseError e
     deriving stock (Eq, Show, Functor)
 ```
 
-For the `Monoid` instance, we have as discussed above in [The `Monoid e` constraint](#a-4-2-the-monoid-e-constraint):
+For the `Monoid` instance, we have as discussed above in [The `Alternative` instance](#a-4-3-the-alternative-instance):
 
 ```haskell
 instance Semigroup (ParseError e) where
@@ -626,24 +625,7 @@ instance MonoFunctor a s => MonoFunctor a (Maybe (a, s))
     monomap f = fmap (bimap f (monomap f))
 ```
 
-### A. 6. 4. The (absence of the) `MonoFoldable` constraint.
-
-Given the `uncons` operation, we can define a conversion to lists,
-
-```haskell
-toList :: Streamable a s => s -> [a]
-toList = unfoldr uncons
-```
-
-so that `Streamable` could have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
-
-    1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
-
-    2. For input streams like `ByteString.Lazy.ByteString` computing its length forces the entire bytestring into memory which is a big no-no.
-
-Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
-
-### A. 6. 5. Two fundamental parsers.
+### A. 6. 4. Two fundamental parsers.
 
 With the `Streamable` typeclass we can now extract one element from the input stream and also check if the input stream has more elements to yield.
 
@@ -664,7 +646,7 @@ one = do
         Nothing      -> throwError InputError
 ```
 
-### A. 6. 6. Some definitions.
+### A. 6. 5. Some definitions.
 
 Recall that the remainder of a parser's input can be obtained via
 
@@ -685,6 +667,29 @@ isSuffixOf xs ys = (toList xs) `isSuffixOf` (toList ys)
 ```
 
 In this library, all parsers are normal and all parser combinators are normal on the assumption that the argument parsers are normal. Since the `Parser` constructor is not exported, the _only_ way to construct non-normal parsers is by using `put`.
+
+### A. 6. 6. The (absence of the) `MonoFoldable` constraint.
+
+Given the `uncons` operation, we can define a conversion to lists,
+
+```haskell
+toList :: Streamable a s => s -> [a]
+toList = unfoldr uncons
+```
+
+so that `Streamable` could have `MonoFoldable` as a superclass. There are two main reasons why `MonoFoldable` is not a superclass:
+
+    1. For infinite lists, `monolength` diverges and we _do_ want infinite lists and other stream-like objects to be instances of `Streamable`.
+
+    2. For input streams like `ByteString.Lazy.ByteString` computing its length forces the entire bytestring into memory which is a big no-no.
+
+Of course, _if_ `s` is an instance of `MonoFoldable` then the equality should hold and this is the second law for `Streamable`.
+
+### A. 6. 7. Conversion to lists and indexed streams.
+
+### A. 6. 8. The `HasPosition` typeclass and `ParseError` revisited.
+
+### A. 6. 9. A Rant over `Int` indexes and lengths.
 
 ## A. 7. Prefixes and the `Splittable` typeclass.
 
