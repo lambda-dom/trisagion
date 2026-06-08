@@ -11,15 +11,22 @@ module Trisagion.Serializer (
     -- ** Basic functions.
     embed,
     run,
+
+    -- * Operators.
+    (|*>),
 ) where
 
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor.Contravariant (Contravariant (..))
+import Data.Void (Void, absurd)
 
 -- Libraries.
-import Data.Functor.Contravariant.Divisible (Divisible (..))
+import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..))
+
+-- non-Hackage libraries.
+import Trisagion.Utils.Either ((:+:))
 
 
 {- | The @Serializer@ type. -}
@@ -48,11 +55,23 @@ instance Monoid s => Divisible (Serializer s) where
     conquer = mempty
 
     {-# INLINE divide #-}
-    divide :: forall a b c . (c -> (a, b)) -> Serializer s a -> Serializer s b -> Serializer s c
-    divide f s t = embed $ g . f
+    divide :: (c -> (a, b)) -> Serializer s a -> Serializer s b -> Serializer s c
+    divide f s t = embed $ uncurry (<>) . bimap (run s) (run t) . f
+
+instance Monoid s => Decidable (Serializer s) where
+    {-# INLINE lose #-}
+    lose :: (a -> Void) -> Serializer s a
+    lose f = embed $ absurd . f
+
+    {-# INLINE choose #-}
+    choose :: (a -> b :+: c) -> Serializer s b -> Serializer s c -> Serializer s a
+    choose f s t = embed $ choice (run s) (run t) . f
         where
-            g :: (a, b) -> s
-            g = uncurry (<>) . bimap (run s) (run t)
+            -- Representability isomorphism.
+            choice :: (a -> s) -> (b -> s) -> a :+: b -> s
+            choice p q r = case r of
+                Left  x -> p x
+                Right y -> q y
 
 
 {- | Embed a serializing function in a t'Serializer'. -}
@@ -67,3 +86,18 @@ The inverse of 'embed'.
 {-# INLINE run #-}
 run :: Serializer s a -> a -> s
 run (Serializer f) = f
+
+
+{- | Monoid action for serializers.
+
+The binary operator @(|*>)@ satisfies the (left) /monoid action/ laws:
+
+@
+mempty |*> p == p
+(m <> n) |*> p == m |*> (n |*> p)
+@
+-}
+{-# INLINE (|*>) #-}
+(|*>) :: Monoid s => s -> Serializer s a -> Serializer s a
+(|*>) m s = embed $ (m <>) . run s
+infixr 5 |*>

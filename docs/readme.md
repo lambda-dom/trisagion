@@ -869,11 +869,207 @@ This is encoded in the `Divisible` typeclass from the [contravariant package](ht
 ```haskell
 instance Monoid s => Divisible (Serializer s) where
     conquer :: Serializer s a
-    conquer = Serializer $ const mempty
+    conquer = embed $ const mempty
 
     divide :: (c -> (a, b)) -> Serializer s a -> Serializer s b -> Serializer m c
-    divide f s t = Serializer $ g . f
+    divide f s t = embed $ g . f
         where
             g = uncurry (<>) . bimap (run s) (run t)
 ```
 
+### B. 4. 2. Serializer for products.
+
+Consider the case of a product type, a type of the form
+
+```haskell
+data T a_0 ... a_n = T a_0 ... a_n
+```
+
+Assume there are serializers `Serializer s a_i` with `i` ranging from `0` to `n`. As mentioned in the section [Parsers for product types](#a-3-2-4-parsers-for-product-types), a natural idea for a format for `T` is to lay out the fields `a_i` consecutively one after another. So a serializer for `T` is, denoting by `p_i :: T a_0 ... a_n -> a_i` the field projections,
+
+```haskell
+s_T :: Serializer s (T a_0 ... a_n)
+s_T = s_0 (p_0 x)
+    <> ...
+    <> s_n (p_n x)
+```
+
+Note the duality in constructing serializers and parsers: for the parser we use the constructor to synthesize the whole from the parts, while for the serializer we use the field projections, or the eliminators, to synthesize the whole from the parts.
+
+### B. 4. 3. The lax-monoidal structure for coproducts.
+
+As seen in the section [The `Alternative` instance](#a-4-3-the-alternative-instance), the `Alternative` instance is equivalent to a lax-monoidal structure from products to coproducts. The corresponding in the serializer world is:
+
+```haskell
+eitherS :: Monoid s => Serializer s a -> Serializer s b -> Serializer s (a :+: b)
+eitherS s t = embed $
+    \case
+        Left x  -> (run s) x
+        Right y -> (run t) y
+
+empty :: Serializer m Void
+empty = embed absurd
+```
+
+Using the `Decidable` typeclass, also from the [contravariant package](https://hackage.haskell.org/package/contravariant):
+
+```haskell
+instance Monoid s => Decidable (Serializer s) where
+    lose :: (a -> Void) -> Serializer s a
+    lose f = embed $ absurd . f
+
+    choose :: (a -> b :+: c) -> Serializer s b -> Serializer s c -> Serializer s a
+    choose f s t = embed $ choice (run s) (run t) . f
+        where
+            -- The Representability isomorphism.
+            choice :: (a -> m) -> (b -> m) -> (a :+: b) -> m
+            choice p q
+                = \case 
+                    Left x  -> p x
+                    Right y -> q y
+```
+
+### B. 4. 4. The `Monoid` instance.
+
+There is also a `Monoid` instance for `Serializer s a` that allows us to combine two serializers.
+
+```haskell
+instance Semigroup s => Semigroup (Serializer s a) where
+    (<>) :: Serializer s a -> Serializer s a -> Serializer s a
+    (<>) s t = embed $ \ x -> run s x <> run t x
+
+instance Monoid s => Monoid (Serializer s a) where
+    mempty :: Serializer s a
+    mempty = embed $ const mempty
+```
+
+If we look at the code for `Divisible` in section [The Lax Monoidal Structure for Products](#b-4-1-the-lax-monoidal-structure-for-products), one can see that this monoid structure allows us to replace uses of it in a way analogous to how `<*>` allows us to seemlessly extend a binary parser combinator to an n-ary parser combinator.
+
+One important property this monoid structure is that it is natural in `a`, and thus a monoid morphism:
+
+__Theorem__: For every `f :: a -> b`, we have the equalities:
+
+```haskell
+contramap f mempty == mempty
+contramp f (s <> t) == contramap f s <> contramap f t 
+```
+
+Because of this property, it could be argued that the monoid instance is the analog of the `Alternative` instance for parsers. But as seen in section [The `Alternative` instance](#a-4-3-the-alternative-instance), the `Alternative` instance is best viewed as a lax-monoidal structure from products to coproducts, and in this form, the serializer analog is given below in section [The lax-monoidal structure for coproducts](#b-4-3-the-lax-monoidal-structure-for-coproducts). But the fundamental break down in the analogy is that there is no error handling needed for serializers; and since there is no error handling, no backtracking is needed; and since there is no analog of backtracking, there is no analog of _choice_.
+
+### B. 4. 5. The left action.
+
+Closely related to the monoid instance is the left action of `s` on `Serializer s a`:
+
+```haskell
+(|*>) :: Monoid s => s -> Serializer s a -> Serializer s a
+(|*>) m s = embed $ \ x -> m <> run s x
+infixr 5 |*>
+```
+
+__Theorem__: `(|*>)` is a left `m`-action on `Serializer m a`, that is, it satisfies the equalities:
+
+```haskell
+m <> n |*> s == m |*> n |*> s
+mempty |*> s == s
+```
+
+This also gives us the occasional useful function `collapse`, that allows us to embed `m` in `Serializer m a`:
+
+```haskell
+collapse :: Monoid s => s -> Serializer s a
+collapse m = m |*> mempty
+```
+
+### B. 4. 6. Serializer and parser for coproducts.
+
+Now consider the case of a coproduct, a type of the form
+
+```haskell
+data T a_0 ... a_n
+    = T_0 a_0
+    ...
+    | T_n a_n
+```
+
+The first thing to notice is that the general case of a constructor of the form `T_i b_0 ... b_n_i` can be reduced to the one-argument case, by setting `a_i ~ (b_0, ..., b_n_i)` and using the constructions of section [Serializer for products](#b-4-2-serializer-for-products).
+
+Assuming the existence of serializers `s_i :: Serializer s a_i` with `i` ranging from `0` to `n`, a natural format for `T a_0 ... a_n` is to first have a discriminating tag followed by the encoding of the relevant value. The tag can be implemented simply by enumerating the constructors top to bottom and return the corresponding ordinal:
+
+```haskell
+tag :: T a_0 ... a_n -> Word
+tag x = case x of
+    T_0 _ -> 0
+    ...
+    T_n _ -> n
+```
+
+This piece of bloatware can even be derived automatically using something like the [generics-sop library](https://hackage.haskell.org/package/generics-sop) or template Haskell, but we will not dwell on this detail here.
+
+note(s):
+
+  * The serializing format using the `tag` function is vulnerable to changes in `T` like reordering or adding new constructors. How this can be solved is a whole different problem.
+
+Assuming the existence of a primitive serializer `word :: Serializer s Word`, we now have:
+
+```haskell
+s :: Serializer s (T a_0 ... a_n)
+s = Serializer $ x ->
+    word (tag x) |*>
+        case x of
+            T_0 x_0 -> s_0 x0
+            ...
+            T_n x_n -> s_n x_n 
+```
+
+The `case` statement is just an expansion of the generic eliminator for `T`, `either s_0 ... s_n`.
+
+Dually, assume the existence of parsers `p_i :: Parser s e a_i`. Also assume the existence of a primitive parser `word :: Parser s e Word`. Then the parser for this format is just:
+
+```haskell
+parser :: Parser s e (T a_0 ... a_n)
+parser =
+    word >>=
+        \case
+            0 -> fmap T_0 p_0
+            ...
+            n -> fmap T_n p_n
+            _ -> throwError e
+```
+
+Once again we see the duality: on the parser side we have the `Monad` bind combinator sequencing the two parsers, while on the serializer side that role is played by the left action `(|*>)` operator. On the parser side, we do a case analysis on the constructor tag and call the appropriate constructor on the appropriate parser, adding a default error branch, while on the serializer side we use the eliminator to dispatch on the appropriate serializer.
+
+### B. 4. 7. Serializer for sequences.
+
+We give one more example of constructing a prism for the whole from a prism for the parts. Starting with lists `[a]`, a format for serializing a list `[a]`, given a serializer `s :: Serializer s a` for `a`, is to first serialize the length, then repeatedly apply `s` to the elements of `t a`.
+
+```haskell
+count :: Serializer s a -> Serializer s [a]
+count s = embed $ xs ->
+    word (length xs) |*> foldmap (run s) xs
+```
+
+For a general foldable `t`, we need to first be able to construct a `t` from a list.
+
+__Definition__: A foldable `f` is a _sequence_ if `toList :: f a -> [a]` is an isomorphism.
+
+We denote the inverse of `toList` by `fromList`. Examples of sequences include `[a]`, `Vector a` and `Seq a`; `Ord a => Set a` is _not_ a sequence, because `toList` returns the list of elements in ascension-key order and therefore `fromList` is only a left inverse. A second related reason is that `Set a` does not have a `Functor` instance. With the `fromList` inverse, we can simply apply contravariance:
+
+```haskell
+sequence :: Foldable t => Serializer s a -> Serializer s (t a)
+sequence s = contramap fromList s
+```
+
+With the `fromList` inverse, and assuming the existence of a parser `p :: Parser s e a`, we have,
+
+```haskell
+parser :: Parser s e (t a)
+parser = word >>= fmap fromList . flip repeat p
+```
+
+where `repeat` is the parser combinator:
+
+```haskell
+repeat :: Word -> Parser s e a -> Parser s e [a]
+repeat 0 _ = pure []
+repeat n p = (:) <$> p <*> repeat (pred n) p
+```
