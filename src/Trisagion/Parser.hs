@@ -16,11 +16,8 @@ module Trisagion.Parser (
     remainder,
 
     -- * Error parsers.
-    value,
     catch,
     try,
-    validate,
-    lookAhead,
 ) where
 
 -- Imports.
@@ -261,7 +258,7 @@ The inverse of @'embed'@.
 run :: Parser s e a -> s ->  Result s e a
 run (Parser f) = f
 
-{- | Parse the input and return the result as an 'Either'. -}
+{- | Run the parser on the input and return the results as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Parser s e a -> s -> e :+: (a, s)
 parse p = toEither . run p
@@ -276,14 +273,6 @@ eval p = fmap fst . parse p
 remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
 
-
-{- | Embed a value in the t'Parser' monad.
-
-The difference with 'pure' is the more precise type signature.
--}
-{-# INLINE value #-}
-value :: a -> Parser s Void a
-value = pure
 
 {- | The type-changing version of 'catchError'.
 
@@ -321,44 +310,3 @@ try p = embed $ \ xs ->
     case run p xs of
         Error e      -> Success (Left e) xs
         Success x ys -> Success (Right x) ys
-
-{- | Run the parser and return the result, validating it.
-
-=== __Examples:__
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "0123"
-Right ('0',"123")
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "123"
-Left (Left ())
-
->>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) ""
-Left (Right (InputError 1))
--}
-{-# INLINE validate #-}
-validate
-    :: (a -> d :+: b)                   -- ^ Validator.
-    -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
-validate v p = do
-    x <- first Right p
-    case v x of
-        Left d  -> throwError $ Left d
-        Right y -> pure y
-
-{- | Run the parser and return the result, but do not consume any input.
-
-=== __Examples:__
-
->>> parse (lookAhead one) "0123"
-Right (Right '0',"0123")
-
->>> parse (lookAhead $ matchOne '1') "0123"
-Right (Left (Left (ValidationError '0')),"0123")
-
->>> parse (lookAhead one) ""
-Right (Left (InputError 1),"")
--}
-{-# INLINE lookAhead #-}
-lookAhead :: Parser s e a -> Parser s Void (e :+: a)
-lookAhead p = fmap (eval p) get

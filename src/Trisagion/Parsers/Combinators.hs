@@ -6,8 +6,13 @@ Various parser combinators.
 
 module Trisagion.Parsers.Combinators (
     -- * Parsers without errors.
+    value,
     optional,
+
+    -- * Error parsers.
     failIff,
+    validate,
+    lookAhead,
 
     -- * 'Applicative' parsers.
     skip,
@@ -43,8 +48,9 @@ import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Parser (Parser, try, lookAhead)
+import Trisagion.Parser (Parser, try, eval)
 import Data.List.NonEmpty (NonEmpty (..), (<|))
+import Control.Monad.State (MonadState(..))
 
 
 -- $setup
@@ -54,6 +60,14 @@ import Data.List.NonEmpty (NonEmpty (..), (<|))
 -- >>> import Trisagion.Parsers.Streamable
 -- >>> import Trisagion.Parsers.ParseError
 
+
+{- | Embed a value in the t'Parser' monad.
+
+The difference with 'pure' is the more precise type signature.
+-}
+{-# INLINE value #-}
+value :: a -> Parser s Void a
+value = pure
 
 {- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
 
@@ -101,6 +115,47 @@ failIff p = do
     case r of
         Left  _ -> pure ()
         Right _ -> throwError mempty
+
+{- | Run the parser and return the result, validating it.
+
+=== __Examples:__
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "0123"
+Right ('0',"123")
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "123"
+Left (Left ())
+
+>>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) ""
+Left (Right (InputError 1))
+-}
+{-# INLINE validate #-}
+validate
+    :: (a -> d :+: b)                   -- ^ Validator.
+    -> Parser s e a                     -- ^ Parser to run.
+    -> Parser s (d :+: e) b
+validate v p = do
+    x <- first Right p
+    case v x of
+        Left d  -> throwError $ Left d
+        Right y -> pure y
+
+{- | Run the parser and return the result, but do not consume any input.
+
+=== __Examples:__
+
+>>> parse (lookAhead one) "0123"
+Right (Right '0',"0123")
+
+>>> parse (lookAhead $ matchOne '1') "0123"
+Right (Left (Left (ValidationError '0')),"0123")
+
+>>> parse (lookAhead one) ""
+Right (Left (InputError 1),"")
+-}
+{-# INLINE lookAhead #-}
+lookAhead :: Parser s e a -> Parser s Void (e :+: a)
+lookAhead p = fmap (eval p) get
 
 
 {- | Run the parser and discard the result. -}
