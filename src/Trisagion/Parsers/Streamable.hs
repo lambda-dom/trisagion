@@ -37,7 +37,8 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Streamable (Streamable (..))
 import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
-import Trisagion.Parser (Parser, lookAhead, validate)
+import Trisagion.Parser (Parser)
+import Trisagion.Parsers.Combinators (lookAhead, validate)
 
 
 -- $setup

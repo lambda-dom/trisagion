@@ -26,16 +26,17 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..), gets)
+import Control.Monad.Except (MonadError (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
 import Trisagion.Typeclasses.Splittable (Splittable (splitRemainder), splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
 import qualified Trisagion.Typeclasses.Splittable as Splittable (matchPrefix)
-import Trisagion.Parser (Parser, lookAhead, parse, eval)
+import Trisagion.Parser (Parser, parse, eval)
+import Trisagion.Parsers.Combinators (lookAhead)
 import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
 import Trisagion.Parsers.HasOffset (offset)
-import Control.Monad.Except (MonadError(..))
 
 
 -- $setup
