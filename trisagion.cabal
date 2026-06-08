@@ -76,3 +76,4 @@ library
         Trisagion.Parsers.Splittable
         Trisagion.Parsers.Char
         Trisagion.Serializer
+        Trisagion.Serializers.Combinators

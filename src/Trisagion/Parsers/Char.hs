@@ -254,6 +254,10 @@ sign = validate v one
 
 {- | Parse a positive 'Integer' in decimal format.
 
+note(s):
+
+    * The parser can construct an arbitrarily large 'Integer' which can lead to exhausted memory.
+
 === __Examples:__
 
 >>> parse positive "123"
