@@ -213,7 +213,7 @@ p_T = T <$> p_0 <*> ... <*> p_n
 
 Looking at the code, we are applying the parsers `p_i` in succession and then the constructor `T` to the resulting n-tuple. In particular, we are assuming a canonical format where the fields of `T` are laid out in succession.
 
-Similarly, the canonical parser for `()` is simply `pure ()` which implies that in the canonical format `()` takes up no space. This is a consequence of the fact that `()` is the unit for the monoidal product structure. In particular, this format is not self-documenting.
+Similarly, the canonical parser for `()` is simply `pure ()` which implies that in the canonical format `()` takes up no space. This is a consequence of the fact that `()` is the unit for the monoidal product structure. In particular, the canonical format is not self-documenting.
 
 ### A. 3. 3. The `Monad` typeclass.
 
@@ -851,3 +851,29 @@ instance Contravariant (Serializer m) where
 ## B. 4. Instances.
 
 Similarly to what we have done with parsers, we now discuss the basic typeclass instances for `Serializer` that will allow us to construct serializers for complex types from more primitive ones.
+
+### B. 4. 1. The lax monoidal structure for products.
+
+As mentioned in [Equivalent description of `Applicative`](#a-3-2-3-equivalent-description-of-applicative), the applicative structure is equivalent to a lax-monoidal structure for the product monoidal structure. The corresponding structure for serializers is also a lax-monoidal structure:
+
+```haskell
+zip :: Monoid s => Serializer s a -> Serializer s b -> Serializer s (a, b)
+zip s t = embed $ uncurry (<>) . bimap (run s) (run t)
+
+unit :: Monoid s => Serializer s ()
+unit = embed $ const mempty
+```
+
+This is encoded in the `Divisible` typeclass from the [contravariant package](https://hackage.haskell.org/package/contravariant).
+
+```haskell
+instance Monoid s => Divisible (Serializer s) where
+    conquer :: Serializer s a
+    conquer = Serializer $ const mempty
+
+    divide :: (c -> (a, b)) -> Serializer s a -> Serializer s b -> Serializer m c
+    divide f s t = Serializer $ g . f
+        where
+            g = uncurry (<>) . bimap (run s) (run t)
+```
+
