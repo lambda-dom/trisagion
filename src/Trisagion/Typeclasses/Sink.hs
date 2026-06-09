@@ -16,7 +16,9 @@ import Data.Word (Word8)
 -- Libraries.
 import Data.Sequence (Seq, (|>), (><))
 import Data.ByteString (ByteString)
-import Data.ByteString.Builder (Builder, word8, byteString)
+import qualified Data.ByteString.Builder as Bytes (Builder, word8, byteString)
+import Data.Text (Text)
+import qualified Data.Text.Lazy.Builder as Text (Builder, singleton, fromText, fromString)
 
 
 -- $setup
@@ -56,10 +58,22 @@ instance Sink a (Seq a) (Seq a) where
     concatenate xs []       = xs
     concatenate xs (y : ys) = concatenate (xs |> y) ys
 
-instance Sink Word8 ByteString Builder where
+instance Sink Word8 ByteString Bytes.Builder where
 
-    snoc :: Builder -> Word8 -> Builder
-    snoc xs n = xs <> word8 n
+    snoc :: Bytes.Builder -> Word8 -> Bytes.Builder
+    snoc xs n = xs <> Bytes.word8 n
 
-    append :: Builder -> ByteString -> Builder
-    append xs ys = xs <> byteString ys
+    append :: Bytes.Builder -> ByteString -> Bytes.Builder
+    append xs ys = xs <> Bytes.byteString ys
+
+instance Sink Char Text Text.Builder where
+
+    snoc :: Text.Builder -> Char -> Text.Builder
+    snoc xs c = xs <> Text.singleton c
+
+    append :: Text.Builder -> Text -> Text.Builder
+    append xs ys = xs <> Text.fromText ys
+
+    {- | Performs replacement on invalid scalar values. -}
+    concatenate :: Text.Builder -> [Char] -> Text.Builder
+    concatenate xs ys = xs <> Text.fromString ys
