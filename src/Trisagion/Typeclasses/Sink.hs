@@ -14,6 +14,10 @@ module Trisagion.Typeclasses.Sink (
 import Data.Sequence (Seq, (|>), (><))
 
 
+-- $setup
+-- >>> import Data.Sequence
+
+
 {- | The @Sink@ typeclass for output streams. -}
 class Monoid s => Sink a b s | s -> b, s -> a where
     {-# MINIMAL snoc, append #-}
@@ -24,9 +28,15 @@ class Monoid s => Sink a b s | s -> b, s -> a where
     {- | Append a suffix to the end of the output stream. -}
     append :: s -> b -> s
 
-    {- | Concatenate a list of elements to the end of the output stream. -}
-    concat :: s -> [a] -> s
-    concat xs ys = foldr (flip snoc) xs ys
+    {- | Concatenate a list of elements to the end of the output stream.
+
+    === __Examples:__
+
+    >>> concatenate (fromList "01") "23"
+    fromList "0123"
+    -}
+    concatenate :: s -> [a] -> s
+    concatenate xs ys = foldr (flip snoc) xs ys
 
 
 -- Instances.
@@ -36,3 +46,14 @@ instance Sink a (Seq a) (Seq a) where
 
     append :: Seq a -> Seq a -> Seq a
     append = (><)
+
+    {- | Concatenate a list of elements to the end of the sequence.
+
+    === __Examples:__
+
+    >>> concatenate (fromList "01") "23"
+    fromList "0123"
+    -}
+    concatenate :: Seq a -> [a] -> Seq a
+    concatenate xs []       = xs
+    concatenate xs (y : ys) = concatenate (xs |> y) ys

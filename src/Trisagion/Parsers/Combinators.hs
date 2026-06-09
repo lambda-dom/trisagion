@@ -41,6 +41,7 @@ module Trisagion.Parsers.Combinators (
 import Control.Applicative (Alternative ((<|>)), asum)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
+import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
 -- Libraries.
@@ -49,7 +50,6 @@ import Control.Monad.Except (MonadError (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Parser (Parser, try, eval)
-import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Control.Monad.State (MonadState(..))
 
 
