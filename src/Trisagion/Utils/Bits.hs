@@ -112,12 +112,50 @@ packReverse
         . enumDown (pred $ bytecount a)
         . fmap fromIntegral
 
-{- | Return the list of bytes from lowest to highest significance. -}
+{- | Return the list of bytes from lowest to highest significance.
+
+=== __Examples:__
+
+>>> let n = (1 :: Word32)
+>>> unpack n
+[1,0,0,0]
+
+>>> let n = (256 :: Word32)
+>>> unpack n
+[0,1,0,0]
+
+>>> let n = (65536 :: Word32)
+>>> unpack n
+[0,0,1,0]
+
+>>> let n = (16777216 :: Word32)
+>>> unpack n
+[0,0,0,1]
+-}
 {-# INLINE unpack #-}
 unpack :: forall a . (Integral a, FiniteBits a) => a -> [Word8]
 unpack n = fmap (`byte` n) [0 .. pred $ bytecount a]
 
-{- | Return the list of bytes from highest to lowest significance. -}
+{- | Return the list of bytes from highest to lowest significance.
+
+=== __Examples:__
+
+>>> let n = (16777216 :: Word32)
+>>> unpackReverse n
+[1,0,0,0]
+
+>>> let n = (65536 :: Word32)
+>>> unpackReverse n
+[0,1,0,0]
+
+>>> let n = (256 :: Word32)
+>>> unpackReverse n
+[0,0,1,0]
+
+>>> let n = (1 :: Word32)
+>>> unpackReverse n
+[0,0,0,1]
+-}
 {-# INLINE unpackReverse #-}
 unpackReverse :: forall a . (Integral a, FiniteBits a) => a -> [Word8]
 unpackReverse n = fmap (`byte` n) (down . pred $ bytecount a)
