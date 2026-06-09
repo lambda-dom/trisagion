@@ -24,6 +24,10 @@ class Monoid s => Sink a b s | s -> b, s -> a where
     {- | Append a suffix to the end of the output stream. -}
     append :: s -> b -> s
 
+    {- | Concatenate a list of elements to the end of the output stream. -}
+    concat :: s -> [a] -> s
+    concat xs ys = foldl' snoc xs ys
+
 
 -- Instances.
 instance Sink a (Seq a) (Seq a) where
