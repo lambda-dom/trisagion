@@ -73,7 +73,7 @@ library
         Trisagion.Parsers.HasOffset
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Split
-        -- Trisagion.Typeclasses.Binary
         Trisagion.Parsers.Char
+        Trisagion.Parsers.Binary
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
