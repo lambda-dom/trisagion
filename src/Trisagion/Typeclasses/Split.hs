@@ -1,14 +1,14 @@
 {- |
-Module: Trisagion.Typeclasses.Splittable
+Module: Trisagion.Typeclasses.Split
 
-The 'Streamable' typeclass allows us to, in principle, write all the needed parsers, but the
-implementations can be very inefficient. To address that, the 'Splittable' typeclass adds new
+The 'Source' typeclass allows us to, in principle, write all the needed parsers, but the
+implementations can be very inefficient. To address that, the 'Split' typeclass adds new
 primitives.
 -}
 
-module Trisagion.Typeclasses.Splittable (
+module Trisagion.Typeclasses.Split (
     -- * Typeclasses.
-    Splittable (..),
+    Split (..),
 ) where
 
 -- Imports.
@@ -30,7 +30,7 @@ import qualified Data.Vector.Storable as StVector (Vector, Storable, span, split
 
 -- Package.
 import qualified Trisagion.Utils.List as List (splitAtExact, matchPrefix)
-import Trisagion.Typeclasses.Streamable (Streamable)
+import Trisagion.Typeclasses.Source (Source)
 
 
 -- $setup
@@ -38,9 +38,9 @@ import Trisagion.Typeclasses.Streamable (Streamable)
 -- >>> import Mono.Typeclasses.MonoFunctor
 
 
-{- | The @Splittable@ typeclass.
+{- | The @Split@ typeclass.
 
-Mirroring the laws for the 'Streamable' typeclass, the first law is:
+Mirroring the laws for the 'Source' typeclass, the first law is:
 
 __Mononaturality__: With the constraints @('Mono.Typeclasses.MonoFunctor' a s,
 'Mono.Typeclasses.MonoFunctor' a b)@, @singleton@ and @splitPrefix n@ are mononatural.
@@ -72,7 +72,7 @@ The following example shows that @'splitWith' p@ is /not/ mononatural.
 >>> bimap (monomap f) (monomap f) . splitWith p $ "a"
 ("","\NUL")
 -}
-class Streamable a s => Splittable a b s | s -> b where
+class Source a s => Split a b s | s -> b where
     {-# MINIMAL splitPrefix, splitWith, splitPrefixExact, matchPrefix #-}
 
     {- | Split the stream at offset @n@ into a pair @(prefix, suffix)@. -}
@@ -120,7 +120,7 @@ class Streamable a s => Splittable a b s | s -> b where
 
 -- Instances.
 -- Base.
-instance Eq a => Splittable a [a] [a] where
+instance Eq a => Split a [a] [a] where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> [a] -> ([a], [a])
     splitPrefix n = splitAt n
@@ -151,7 +151,7 @@ instance Eq a => Splittable a [a] [a] where
 
 
 -- Libraries.
-instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
+instance Split Word8 Bytes.ByteString Bytes.ByteString where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitPrefix = Bytes.splitAt
@@ -180,7 +180,7 @@ instance Splittable Word8 Bytes.ByteString Bytes.ByteString where
     dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
     dropWith = Bytes.dropWhile
 
-instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
+instance Split Word8 LBytes.ByteString LBytes.ByteString where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitPrefix = LBytes.splitAt . fromIntegral
@@ -209,7 +209,7 @@ instance Splittable Word8 LBytes.ByteString LBytes.ByteString where
     dropWith :: (Word8 -> Bool) -> LBytes.ByteString -> LBytes.ByteString
     dropWith = LBytes.dropWhile
 
-instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
+instance Split Word8 SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> SBytes.ShortByteString -> (SBytes.ShortByteString, SBytes.ShortByteString)
     splitPrefix = SBytes.splitAt
@@ -238,7 +238,7 @@ instance Splittable Word8 SBytes.ShortByteString SBytes.ShortByteString where
     dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
     dropWith = SBytes.dropWhile
 
-instance Splittable Char Text.Text Text.Text where
+instance Split Char Text.Text Text.Text where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Text.Text -> (Text.Text, Text.Text)
     splitPrefix = Text.splitAt
@@ -267,7 +267,7 @@ instance Splittable Char Text.Text Text.Text where
     dropWith :: (Char -> Bool) -> Text.Text -> Text.Text
     dropWith = Text.dropWhile
 
-instance Splittable Char LText.Text LText.Text where
+instance Split Char LText.Text LText.Text where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> LText.Text -> (LText.Text, LText.Text)
     splitPrefix = LText.splitAt . fromIntegral
@@ -296,7 +296,7 @@ instance Splittable Char LText.Text LText.Text where
     dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
     dropWith = LText.dropWhile
 
-instance Eq a => Splittable a (Seq a) (Seq a) where
+instance Eq a => Split a (Seq a) (Seq a) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Seq a -> (Seq a, Seq a)
     splitPrefix = Seq.splitAt
@@ -330,7 +330,7 @@ instance Eq a => Splittable a (Seq a) (Seq a) where
     dropWith :: (a -> Bool) -> Seq a -> Seq a
     dropWith = Seq.dropWhileL
 
-instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
+instance Eq a => Split a (Vector.Vector a) (Vector.Vector a) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitPrefix = Vector.splitAt
@@ -362,7 +362,7 @@ instance Eq a => Splittable a (Vector.Vector a) (Vector.Vector a) where
     dropWith :: (a -> Bool) -> Vector.Vector a -> Vector.Vector a
     dropWith = Vector.dropWhile
 
-instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
+instance Eq a => Split a (SVector.Vector a) (SVector.Vector a) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitPrefix = SVector.splitAt
@@ -394,7 +394,7 @@ instance Eq a => Splittable a (SVector.Vector a) (SVector.Vector a) where
     dropWith :: (a -> Bool) -> SVector.Vector a -> SVector.Vector a
     dropWith = SVector.dropWhile
 
-instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vector a) where
+instance (Eq a, UVector.Unbox a) => Split a (UVector.Vector a) (UVector.Vector a) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitPrefix = UVector.splitAt
@@ -426,7 +426,7 @@ instance (Eq a, UVector.Unbox a) => Splittable a (UVector.Vector a) (UVector.Vec
     dropWith :: (a -> Bool) -> UVector.Vector a -> UVector.Vector a
     dropWith = UVector.dropWhile
 
-instance (Eq a, StVector.Storable a) => Splittable a (StVector.Vector a) (StVector.Vector a) where
+instance (Eq a, StVector.Storable a) => Split a (StVector.Vector a) (StVector.Vector a) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitPrefix = StVector.splitAt

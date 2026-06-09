@@ -1,11 +1,11 @@
 {- |
-Module: Trisagion.Typeclasses.Binary
+Module: Trisagion.Parsers.Binary
 
-The @Binary@ for parsers with constraints @'Splittable' m Word8 b s@.
+The @Binary@ typeclass for parsers with constraints @'Split' Word8 b s@.
 -}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Trisagion.Typeclasses.Binary (
+module Trisagion.Parsers.Binary (
     -- * Typeclasses.
     Binary (..),
 
@@ -25,10 +25,10 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Utils.Bits (bytecount, pack, packReverse)
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.Split (Split (..))
 import Trisagion.Parser (Parser)
-import Trisagion.Parsers.Streamable (InputError, one)
-import Trisagion.Parsers.Splittable (takeExact)
+import Trisagion.Parsers.Source (InputError, one)
+import Trisagion.Parsers.Split (takeExact)
 
 
 -- $setup
@@ -36,7 +36,7 @@ import Trisagion.Parsers.Splittable (takeExact)
 
 
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}
-class (Splittable Word8 b s, MonoFoldable Word8 b) => Binary b s where
+class (Split Word8 b s, MonoFoldable Word8 b) => Binary b s where
     {- | Parse a single 'Word8'.
 
     === __Examples:__
@@ -129,7 +129,7 @@ instance Binary [Word8] [Word8]
 {-# INLINEABLE integralLe #-}
 integralLe
     :: forall b s a
-    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
+    .  (Split Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
     => Parser s InputError a
 integralLe = do
         bs <- takeExact $ bytecount a
@@ -139,7 +139,7 @@ integralLe = do
 {-# INLINEABLE integralBe #-}
 integralBe
     :: forall b s a
-    .  (Splittable Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
+    .  (Split Word8 b s, MonoFoldable Word8 b, Integral a, FiniteBits a)
     => Parser s InputError a
 integralBe = do
         s <- takeExact $ bytecount a

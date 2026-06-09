@@ -22,7 +22,7 @@ import qualified Trisagion.Typeclasses.HasOffset as HasOffset (offset)
 import Trisagion.Parser (Parser)
 
 
-{- | Parser returning the current stream offset. -}
+{- | Parser returning the current offset of the input stream. -}
 {-# INLINE offset #-}
 offset :: HasOffset s => Parser s Void Int
 offset = gets HasOffset.offset

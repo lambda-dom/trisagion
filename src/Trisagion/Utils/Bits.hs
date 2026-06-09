@@ -10,8 +10,11 @@ module Trisagion.Utils.Bits (
 
     -- * Bytewise functions.
     bytecount,
+    byte,
     pack,
     packReverse,
+    unpack,
+    unpackReverse,
 ) where
 
 -- Imports.
@@ -61,11 +64,19 @@ note(s):
 bytecount :: forall a -> FiniteBits a => Int
 bytecount a = bitcount a `quot` 8
 
+{- | Return the ith byte of the integral number.
+
+Result is undefined if @i@ is larger than the 'bytecount' of the type.
+-}
+{-# INLINE byte #-}
+byte :: (Integral a, Bits a) => Int -> a -> Word8
+byte i n = fromIntegral $ shiftR (shiftL 0xff (8 * i) .&. n) (8 * i)
+
 {- | Shift an integral @n@ bytes left.
 
 note(s):
 
-  * It is implicitely assumed that @n@ is positive.
+    * It is implicitely assumed that @n@ is positive.
 -}
 {-# INLINE shiftByteL #-}
 shiftByteL :: Bits a => Int -> a -> a
@@ -75,7 +86,7 @@ shiftByteL n m = shiftL m (8 * n)
 
 note(s):
 
-  * Argument list is truncated to a list of 'bytecount' length.
+    * Argument list is truncated to a list of 'bytecount' length.
 -}
 {-# INLINEABLE pack #-}
 pack :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
@@ -91,7 +102,7 @@ Equivalent to, but more efficient than, @'pack' . reverse@.
 
 note(s)
 
-  * Argument list is truncated to a list of 'bytecount' length.
+    * Argument list is truncated to a list of 'bytecount' length.
 -}
 {-# INLINEABLE packReverse #-}
 packReverse :: forall a . (FiniteBits a, Integral a) => [Word8] -> a
@@ -100,3 +111,53 @@ packReverse
         . fmap (uncurry shiftByteL)
         . enumDown (pred $ bytecount a)
         . fmap fromIntegral
+
+{- | Return the list of bytes from lowest to highest significance.
+
+=== __Examples:__
+
+>>> let n = (1 :: Word32)
+>>> unpack n
+[1,0,0,0]
+
+>>> let n = (256 :: Word32)
+>>> unpack n
+[0,1,0,0]
+
+>>> let n = (65536 :: Word32)
+>>> unpack n
+[0,0,1,0]
+
+>>> let n = (16777216 :: Word32)
+>>> unpack n
+[0,0,0,1]
+-}
+{-# INLINE unpack #-}
+unpack :: forall a . (Integral a, FiniteBits a) => a -> [Word8]
+unpack n = fmap (`byte` n) [0 .. pred $ bytecount a]
+
+{- | Return the list of bytes from highest to lowest significance.
+
+=== __Examples:__
+
+>>> let n = (16777216 :: Word32)
+>>> unpackReverse n
+[1,0,0,0]
+
+>>> let n = (65536 :: Word32)
+>>> unpackReverse n
+[0,1,0,0]
+
+>>> let n = (256 :: Word32)
+>>> unpackReverse n
+[0,0,1,0]
+
+>>> let n = (1 :: Word32)
+>>> unpackReverse n
+[0,0,0,1]
+-}
+{-# INLINE unpackReverse #-}
+unpackReverse :: forall a . (Integral a, FiniteBits a) => a -> [Word8]
+unpackReverse n = fmap (`byte` n) (down . pred $ bytecount a)
+    where
+        down m = if m == 0 then [0] else [m, pred m .. 0]

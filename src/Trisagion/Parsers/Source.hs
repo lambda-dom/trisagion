@@ -1,15 +1,15 @@
 {- |
 Module: Trisagion.Parsers.Streamable
 
-Parsers with @'Streamable' a s@ constraints.
+Parsers with @'Source' a s@ constraints.
 -}
 
-module Trisagion.Parsers.Streamable (
+module Trisagion.Parsers.Source (
     -- * Error types.
     InputError (..),
     ValidationError (..),
 
-    -- * Parsers @'Streamable' a s => 'Parser' s e a@.
+    -- * Parsers @'Source' a s => 'Parser' s e a@.
     one,
     eoi,
     skipOne,
@@ -35,8 +35,8 @@ import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Typeclasses.Streamable (Streamable (..))
-import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
+import Trisagion.Typeclasses.Source (Source (..))
+import qualified Trisagion.Typeclasses.Source as Source (null)
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Combinators (lookAhead, validate)
 
@@ -75,14 +75,14 @@ Right ('0',"123")
 Left (InputError 1)
 -}
 {-# INLINE one #-}
-one :: Streamable a s => Parser s InputError a
+one :: Source a s => Parser s InputError a
 one = do
     r <- gets uncons
     case r of
         Just (x, xs) -> put xs $> x
         _            -> throwError $ InputError 1
 
-{- | Parser returning 'True' if there are no more elements in the stream.
+{- | Parser returning 'True' if there are no more elements in the input stream.
 
 === __Examples:__
 
@@ -93,8 +93,8 @@ Right (False,"0123")
 Right (True,"")
 -}
 {-# INLINE eoi #-}
-eoi :: Streamable a s => Parser s Void Bool
-eoi = gets Streamable.null
+eoi :: Source a s => Parser s Void Bool
+eoi = gets Source.null
 
 {- | Skip one element from the input stream.
 
@@ -107,7 +107,7 @@ Right ((),"123")
 Right ((),"")
 -}
 {-# INLINE skipOne #-}
-skipOne :: Streamable a s => Parser s Void ()
+skipOne :: Source a s => Parser s Void ()
 skipOne = gets dropOne >>= put
 
 {- | Parse one element from the input stream but without consuming input.
@@ -121,7 +121,7 @@ Right (Just '0',"0123")
 Right (Nothing,"")
 -}
 {-# INLINE peek #-}
-peek :: Streamable a s => Parser s Void (Maybe a)
+peek :: Source a s => Parser s Void (Maybe a)
 peek = either (const Nothing) Just <$> lookAhead one
 
 {- | Parse one element from the input stream satisfying a predicate.
@@ -139,13 +139,10 @@ Left (Right (InputError 1))
 -}
 {-# INLINE satisfy #-}
 satisfy
-    :: forall a s . Streamable a s
+    :: Source a s
     => (a -> Bool)                      -- ^ Predicate on @a@.
     -> Parser s (ValidationError a :+: InputError) a
-satisfy p = validate v one
-    where
-        v :: a -> ValidationError a :+: a
-        v x = if p x then Right x else Left $ ValidationError x
+satisfy p = validate (\ x -> if p x then Right x else Left $ ValidationError x) one
 
 {- | Parse one element from the input stream matching an @x :: a@.
 
@@ -162,7 +159,7 @@ Left (Right (InputError 1))
 -}
 {-# INLINE matchOne #-}
 matchOne
-    :: (Streamable a s, Eq a)
+    :: (Source a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
     -> Parser s (ValidationError a :+: InputError) a
 matchOne x = satisfy (== x)
@@ -182,7 +179,7 @@ Left (Right (InputError 1))
 -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (Streamable a s, Eq a, Foldable t)
+    :: (Source a s, Eq a, Foldable t)
     => t a                              -- ^ Foldable of @a@'s against which to test inclusion.
     -> Parser s (ValidationError a :+: InputError) a
 oneOf xs = satisfy (`elem` xs)

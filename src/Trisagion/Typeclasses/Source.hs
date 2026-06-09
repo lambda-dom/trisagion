@@ -1,12 +1,12 @@
 {- |
-Module: Trisagion.Typeclasses.Streamable
+Module: Trisagion.Typeclasses.Source
 
-The @Streamable@ typeclass.
+The @Source@ typeclass.
 -}
 
-module Trisagion.Typeclasses.Streamable (
+module Trisagion.Typeclasses.Source (
     -- * Typeclasses.
-    Streamable (..),
+    Source (..),
 
     -- * Functions.
     isSuffix,
@@ -37,10 +37,10 @@ import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, nul
 import Mono.Typeclasses.MonoFunctor (MonoFunctor)
 
 
-{- | The @Streamable@ typeclass of input streams.
+{- | The @Source@ typeclass for input streams.
 
 We assume that all overriden instance implementations are extensionally equal to the default ones.
-To describe the laws for the 'Streamable' typeclass, we start with a definition.
+To describe the laws for the 'Source' typeclass, we start with a definition.
 
 __Definition__: Let @'MonoFunctor' a s@ and @'MonoFunctor' a t@ be two monofunctors. A function
 @h :: s -> t@ is /mononatural/ if for every @f :: a -> a@ we have the equality
@@ -76,13 +76,13 @@ __Unconsing__: Finally, the third law says that 'uncons' really is uncons-ing at
 toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
 @
 -}
-class MonoFunctor a s => Streamable a s | s -> a where
+class MonoFunctor a s => Source a s | s -> a where
     {-# MINIMAL uncons #-}
 
-    {- | Get the first element from the stream. -}
+    {- | Get the first element from the source. -}
     uncons :: s -> Maybe (a, s)
 
-    {- | Return 'True' if the stream has no more elements.
+    {- | Return 'True' if the source has no more elements.
 
     Default implementation is:
 
@@ -91,7 +91,7 @@ class MonoFunctor a s => Streamable a s | s -> a where
     null :: s -> Bool
     null = maybe True (const False) . uncons
 
-    {- | Drop one element from the stream.
+    {- | Get and drop first element from the source.
 
     Default implementation is:
 
@@ -100,7 +100,7 @@ class MonoFunctor a s => Streamable a s | s -> a where
     dropOne :: s -> s
     dropOne s = maybe s snd $ uncons s
 
-    {- | Convert a 'Streamable' to a list.
+    {- | Convert a 'Source' to a list.
 
     Default implementation is:
 
@@ -112,7 +112,7 @@ class MonoFunctor a s => Streamable a s | s -> a where
 
 -- Instances.
 -- Base.
-instance Streamable a (Maybe a) where
+instance Source a (Maybe a) where
     {-# INLINE uncons #-}
     uncons :: Maybe a -> Maybe (a, Maybe a)
     uncons xs =
@@ -132,7 +132,7 @@ instance Streamable a (Maybe a) where
     toList :: Maybe a -> [a]
     toList = maybe [] singleton
 
-instance Streamable a [a] where
+instance Source a [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
     uncons = List.uncons
@@ -151,7 +151,7 @@ instance Streamable a [a] where
 
 
 -- Libraries.
-instance Streamable Word8 Bytes.ByteString where
+instance Source Word8 Bytes.ByteString where
     {-# INLINE uncons #-}
     uncons :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
     uncons = Bytes.uncons
@@ -168,7 +168,7 @@ instance Streamable Word8 Bytes.ByteString where
     toList :: Bytes.ByteString -> [Word8]
     toList = Bytes.unpack
 
-instance Streamable Word8 LBytes.ByteString where
+instance Source Word8 LBytes.ByteString where
     {-# INLINE uncons #-}
     uncons :: LBytes.ByteString -> Maybe (Word8, LBytes.ByteString)
     uncons = LBytes.uncons
@@ -185,7 +185,7 @@ instance Streamable Word8 LBytes.ByteString where
     toList :: LBytes.ByteString -> [Word8]
     toList = LBytes.unpack
 
-instance Streamable Word8 SBytes.ShortByteString where
+instance Source Word8 SBytes.ShortByteString where
     {-# INLINE uncons #-}
     uncons :: SBytes.ShortByteString -> Maybe (Word8, SBytes.ShortByteString)
     uncons = SBytes.uncons
@@ -202,7 +202,7 @@ instance Streamable Word8 SBytes.ShortByteString where
     toList :: SBytes.ShortByteString -> [Word8]
     toList = SBytes.unpack
 
-instance Streamable Char Text.Text where
+instance Source Char Text.Text where
     {-# INLINE uncons #-}
     uncons :: Text.Text -> Maybe (Char, Text.Text)
     uncons = Text.uncons
@@ -219,7 +219,7 @@ instance Streamable Char Text.Text where
     toList :: Text.Text -> [Char]
     toList = Text.unpack
 
-instance Streamable Char LText.Text where
+instance Source Char LText.Text where
     {-# INLINE uncons #-}
     uncons :: LText.Text -> Maybe (Char, LText.Text)
     uncons = LText.uncons
@@ -236,7 +236,7 @@ instance Streamable Char LText.Text where
     toList :: LText.Text -> [Char]
     toList = LText.unpack
 
-instance Streamable a (Seq a) where
+instance Source a (Seq a) where
     {-# INLINE uncons #-}
     uncons :: Seq a -> Maybe (a, Seq a)
     uncons Empty      = Nothing
@@ -254,7 +254,7 @@ instance Streamable a (Seq a) where
     toList :: Seq a -> [a]
     toList = Foldable.toList
 
-instance Streamable a (Vector a) where
+instance Source a (Vector a) where
     {-# INLINE uncons #-}
     uncons :: Vector a -> Maybe (a, Vector a)
     uncons = Vector.uncons
@@ -271,7 +271,7 @@ instance Streamable a (Vector a) where
     toList :: Vector a -> [a]
     toList = Foldable.toList
 
-instance Streamable a (SVector.Vector a) where
+instance Source a (SVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: SVector.Vector a -> Maybe (a, SVector.Vector a)
     uncons = SVector.uncons
@@ -288,7 +288,7 @@ instance Streamable a (SVector.Vector a) where
     toList :: SVector.Vector a -> [a]
     toList = Foldable.toList
 
-instance UVector.Unbox a => Streamable a (UVector.Vector a) where
+instance UVector.Unbox a => Source a (UVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: UVector.Vector a -> Maybe (a, UVector.Vector a)
     uncons = UVector.uncons
@@ -305,7 +305,7 @@ instance UVector.Unbox a => Streamable a (UVector.Vector a) where
     toList :: UVector.Vector a -> [a]
     toList = UVector.toList
 
-instance StVector.Storable a => Streamable a (StVector.Vector a) where
+instance StVector.Storable a => Source a (StVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: StVector.Vector a -> Maybe (a, StVector.Vector a)
     uncons = StVector.uncons
@@ -325,5 +325,5 @@ instance StVector.Storable a => Streamable a (StVector.Vector a) where
 
 {- | Return 'True' if @xs@ is a suffix of @ys@. -}
 {-# INLINE isSuffix #-}
-isSuffix :: (Streamable a s, Eq a) => s -> s -> Bool
+isSuffix :: (Source a s, Eq a) => s -> s -> Bool
 isSuffix xs ys = toList xs `List.isSuffixOf` toList ys
