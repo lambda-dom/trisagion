@@ -1,7 +1,7 @@
 {- |
-Module: Trisagion.Typeclasses.Streamable
+Module: Trisagion.Typeclasses.Source
 
-The @Streamable@ typeclass.
+The @Source@ typeclass.
 -}
 
 module Trisagion.Typeclasses.Source (

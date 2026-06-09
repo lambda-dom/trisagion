@@ -256,7 +256,7 @@ sign = validate v one
 
 note(s):
 
-    * The parser can construct an arbitrarily large 'Integer' which can lead to exhausted memory.
+    * This parser can construct an arbitrarily large 'Integer' which can cause memory exhaustion.
 
 === __Examples:__
 
@@ -289,6 +289,10 @@ positive = do
         value n c = fromIntegral (ord c - ord '0') * 10 ^ n
 
 {- | Parse a signed 'Integer' in decimal format.
+
+note(s):
+
+    * This parser can construct an arbitrarily large 'Integer' which can cause memory exhaustion.
 
 === __Examples:__
 

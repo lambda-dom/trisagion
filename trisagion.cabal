@@ -67,6 +67,7 @@ library
         Trisagion.Typeclasses.Source
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Split
+        Trisagion.Typeclasses.Sink
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Source
