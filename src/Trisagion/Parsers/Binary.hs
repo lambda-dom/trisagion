@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Binary
 
-The @Binary@ for parsers with constraints @'Split' m Word8 b s@.
+The @Binary@ typeclass for parsers with constraints @'Split' Word8 b s@.
 -}
 {-# LANGUAGE UndecidableInstances #-}
 

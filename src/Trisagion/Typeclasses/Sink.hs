@@ -47,13 +47,6 @@ instance Sink a (Seq a) (Seq a) where
     append :: Seq a -> Seq a -> Seq a
     append = (><)
 
-    {- | Concatenate a list of elements to the end of the sequence.
-
-    === __Examples:__
-
-    >>> concatenate (fromList "01") "23"
-    fromList "0123"
-    -}
     concatenate :: Seq a -> [a] -> Seq a
     concatenate xs []       = xs
     concatenate xs (y : ys) = concatenate (xs |> y) ys
