@@ -17,10 +17,10 @@ module Trisagion.Parsers.Combinators (
     -- * 'Applicative' parsers.
     skip,
     between,
-    pair,
-    pairWith,
+    zipP,
+    zipWithP,
     count,
-    chain,
+    sequenceP,
 
     -- * 'Alternative' parsers.
     eitherP,
@@ -57,7 +57,7 @@ import Control.Monad.State (MonadState(..))
 -- >>> import Data.Bifunctor
 -- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
--- >>> import Trisagion.Parsers.Streamable
+-- >>> import Trisagion.Parsers.Source
 -- >>> import Trisagion.Parsers.ParseError
 
 
@@ -197,29 +197,29 @@ between open close p = open *> p <* close
 
 === __Examples:__
 
->>> parse (pair one one) "0123"
+>>> parse (zipP one one) "0123"
 Right (('0','1'),"23")
 
->>> parse (pair (matchOne '1') (matchOne '1')) "0123"
+>>> parse (zipP (matchOne '1') (matchOne '1')) "0123"
 Left (Left (ValidationError '0'))
 
->>> parse (pair (matchOne '0') (matchOne '2')) "0123"
+>>> parse (zipP (matchOne '0') (matchOne '2')) "0123"
 Left (Left (ValidationError '1'))
 -}
-{-# INLINE pair #-}
-pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
-pair = pairWith (,)
+{-# INLINE zipP #-}
+zipP :: Parser s e a -> Parser s e b -> Parser s e (a, b)
+zipP = zipWithP (,)
 
 {- | Sequence two parsers and pair the results with a binary function.
 
 === __Examples:__
 
->>> parse (pairWith max one one) "0123"
+>>> parse (zipWithP max one one) "0123"
 Right ('1',"23")
 -}
-{-# INLINE pairWith #-}
-pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
-pairWith = liftA2
+{-# INLINE zipWithP #-}
+zipWithP :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
+zipWithP = liftA2
 
 {- | Run the parser @n@ times and return the list of results.
 
@@ -241,10 +241,10 @@ count n p = go n
         go 0 = pure []
         go m = (:) <$> p <*> go (pred m)
 
-{- | Chain together a traversable of parsers and return the traversable of results. -}
-{-# INLINE chain #-}
-chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
-chain = sequenceA
+{- | Sequence together a traversable of parsers and return the traversable of results. -}
+{-# INLINE sequenceP #-}
+sequenceP :: Traversable t => t (Parser s e a) -> Parser s e (t a)
+sequenceP = sequenceA
 
 
 {- | Choose between two alternative parsers.
@@ -252,6 +252,9 @@ chain = sequenceA
 Run the first parser and if it fails run the second. Return the results as an @'Either'@.
 
 === __Examples:__
+
+The parser 'eitherP' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
+That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tests below.
 
 >>> parse (eitherP (withParseError one) (withParseError one)) (initialize "0123")
 Right (Left '0',Counter 1 "123")
@@ -268,7 +271,7 @@ eitherP q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Choose between a foldable of parsers.
 
-Run the parsers in succession returning the result of the first successful one.
+Run the parsers in succession, returning the result of the first successful one.
 -}
 {-# INLINE choice #-}
 choice :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
@@ -327,7 +330,7 @@ Left (Right (InputError 1))
 -}
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
-some p = pairWith (:|) p (first absurd (many p))
+some p = zipWithP (:|) p (first absurd (many p))
 
 {- | Run the parser zero or more times until it fails and discard the results. -}
 {-# INLINEABLE skipMany #-}
@@ -353,6 +356,9 @@ note(s):
   @end@ parser will not consume any input.
 
 === __Examples:__
+
+The parser 'untilEnd' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
+That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tests below.
 
 >>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Right one)) (initialize "01}3")
 Right ("01",Counter 2 "}3")

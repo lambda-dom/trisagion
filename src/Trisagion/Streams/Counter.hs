@@ -3,7 +3,7 @@
 {- |
 Module: Trisagion.Streams.Counter
 
-The @Counter@ type wrapping a 'Streamable' with an offset tracking current position.
+The @Counter@ type wrapping a 'Source' with an offset tracking the current position.
 -}
 
 module Trisagion.Streams.Counter (
@@ -24,16 +24,16 @@ import Mono.Typeclasses.MonoPointed (MonoPointed (..))
 import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Streamable (Streamable (..))
-import qualified Trisagion.Typeclasses.Streamable as Streamable (null)
+import Trisagion.Typeclasses.Source (Source (..))
+import qualified Trisagion.Typeclasses.Source as Source (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.Split (Split (..))
 
 
-{- | Wrapper around a 'Streamable' adding an offset to track current position.
+{- | Wrapper around a 'Source' adding an offset to track current position.
 
-The implementation initializes the counter to @0@ and then updates it on every streamable operation
-by computing the length of the prefix.
+The implementation initializes the counter to @0@ and then updates it on every operation of the
+input stream by computing the length of the prefix.
 -}
 type Counter:: Type -> Type
 data Counter s = Counter {-# UNPACK #-} !Int !s
@@ -51,7 +51,7 @@ instance MonoPointed a s => MonoPointed a (Counter s) where
     monopoint :: a -> Counter s
     monopoint x = Counter 0 (monopoint x)
 
-instance Streamable a s => Streamable a (Counter s) where
+instance Source a s => Source a (Counter s) where
     {-# INLINE uncons #-}
     uncons :: Counter s -> Maybe (a, Counter s)
     uncons (Counter n xs) =
@@ -61,24 +61,24 @@ instance Streamable a s => Streamable a (Counter s) where
 
     {-# INLINE null #-}
     null :: Counter s -> Bool
-    null (Counter _ xs) = Streamable.null xs
+    null (Counter _ xs) = Source.null xs
 
     {-# INLINE toList #-}
     toList :: Counter s -> [a]
     toList (Counter _ xs) = toList xs
 
-instance Streamable a s => HasOffset (Counter s) where
+instance Source a s => HasOffset (Counter s) where
     {-# INLINE offset #-}
     offset :: Counter s -> Int
     offset (Counter n _) = n
 
-{- | 'Splittable' instance.
+{- | 'Split' instance.
 
 The instance requires computing the length of the prefix, which is @O(n)@ for some types like
 @Text@. This in its turn, requires a @'MonoFoldable' a b@ constraint and the
 @UndecidableInstances@ extension to shut up GHC.
 -}
-instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) where
+instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Counter s -> (b, Counter s)
     splitPrefix n (Counter off xs) =
@@ -112,7 +112,7 @@ instance (Splittable a b s, MonoFoldable a b) => Splittable a b (Counter s) wher
             (prefix, Counter (off + monolength prefix) rest)
 
 
-{- | Construct a t'Counter' from a 'Streamable'. -}
+{- | Construct a t'Counter' from a 'Source'. -}
 {-# INLINE initialize #-}
 initialize :: s -> Counter s
 initialize = Counter 0

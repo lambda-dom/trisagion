@@ -1,11 +1,11 @@
 {- |
-Module: Trisagion.Parsers.Splittable
+Module: Trisagion.Parsers.Split
 
-Parsers with @'Splittable' a b s@ constraints.
+Parsers with @'Split' a b s@ constraints.
 -}
 
-module Trisagion.Parsers.Splittable (
-    -- * Parsers @'Splittable' a b s => 'Parser' s e b@.
+module Trisagion.Parsers.Split (
+    -- * Parsers @'Split' a b s => 'Parser' s e b@.
     takePrefix,
     takeWith,
     skipPrefix,
@@ -31,21 +31,21 @@ import Control.Monad.Except (MonadError (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Typeclasses.Splittable (Splittable (splitRemainder), splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
-import qualified Trisagion.Typeclasses.Splittable as Splittable (matchPrefix)
+import Trisagion.Typeclasses.Split (Split, splitRemainder, splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
+import qualified Trisagion.Typeclasses.Split as Split (matchPrefix)
 import Trisagion.Parser (Parser, parse, eval)
 import Trisagion.Parsers.Combinators (lookAhead)
-import Trisagion.Parsers.Streamable (InputError (..), ValidationError (..), satisfy)
+import Trisagion.Parsers.Source (InputError (..), ValidationError (..), satisfy)
 import Trisagion.Parsers.HasOffset (offset)
 
 
 -- $setup
 -- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
--- >>> import Trisagion.Parsers.Streamable
+-- >>> import Trisagion.Parsers.Source
 
 
-{- | Parse a fixed size prefix from the stream.
+{- | Parse a fixed size prefix from the input stream.
 
 The parser does not error and it is guaranteed that the prefix has length equal or less than @n@.
 
@@ -58,12 +58,12 @@ Right ("01","23")
 Right ("0123","")
 -}
 {-# INLINE takePrefix #-}
-takePrefix :: Splittable a b s => Int -> Parser s Void b
+takePrefix :: Split a b s => Int -> Parser s Void b
 takePrefix n = do
     (xs, ys) <- gets $ splitPrefix n
     put ys $> xs
 
-{- | Parse the longest prefix from the stream whose elements satisfy a predicate.
+{- | Parse the longest prefix from the input stream whose elements satisfy a predicate.
 
 === __Examples:__
 
@@ -74,12 +74,12 @@ Right ("012","3")
 Right ("","")
 -}
 {-# INLINE takeWith #-}
-takeWith :: Splittable a b s => (a -> Bool) -> Parser s Void b
+takeWith :: Split a b s => (a -> Bool) -> Parser s Void b
 takeWith p = do
     (xs, ys) <- gets $ splitWith p
     put ys $> xs
 
-{- | Skip a fixed size prefix from the stream.
+{- | Skip a fixed size prefix from the input stream.
 
 === __Examples:__
 
@@ -90,10 +90,10 @@ Right ((),"23")
 Right ((),"")
 -}
 {-# INLINE skipPrefix #-}
-skipPrefix :: Splittable a b s => Int -> Parser s Void ()
+skipPrefix :: Split a b s => Int -> Parser s Void ()
 skipPrefix n = gets (dropPrefix n) >>= put
 
-{- | Skip the longest prefix from the stream whose elements satisfy a predicate.
+{- | Skip the longest prefix from the input stream whose elements satisfy a predicate.
 
 === __Examples:__
 
@@ -104,12 +104,12 @@ Right ((),"3")
 Right ((),"")
  -}
 {-# INLINE skipWith #-}
-skipWith :: Splittable a b s => (a -> Bool) -> Parser s Void ()
+skipWith :: Split a b s => (a -> Bool) -> Parser s Void ()
 skipWith p = gets (dropWith p) >>= put
 
-{- | Parse the remainder of the stream as a prefix. -}
+{- | Parse the remainder of the input stream as a prefix. -}
 {-# INLINE takeRemainder #-}
-takeRemainder :: Splittable a b s => Parser s Void b
+takeRemainder :: Split a b s => Parser s Void b
 takeRemainder = do
     (prefix, rest) <- gets splitRemainder
     put rest $> prefix
@@ -131,14 +131,14 @@ Left (Left (ValidationError '0'))
 Left (Right (InputError 1))
 -}
 {-# INLINE takeWith1 #-}
-takeWith1 :: Splittable a b s => (a -> Bool) -> Parser s (ValidationError a :+: InputError) b
+takeWith1 :: Split a b s => (a -> Bool) -> Parser s (ValidationError a :+: InputError) b
 takeWith1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
         Left e  -> throwError e
         Right _ -> first absurd $ takeWith p
 
-{- | Parse an exact, fixed size prefix from the stream.
+{- | Parse an exact, fixed size prefix from the input stream.
 
 === __Examples:__
 
@@ -149,14 +149,14 @@ Right ("01","23")
 Left (InputError 10)
 -}
 {-# INLINE takeExact #-}
-takeExact :: Splittable a b s => Int -> Parser s InputError b
+takeExact :: Split a b s => Int -> Parser s InputError b
 takeExact n = do
     r <- gets $ splitPrefixExact n
     case r of
         Just (xs, ys) -> put ys $> xs
         Nothing       -> throwError $ InputError n
 
-{- | Parse a matching prefix from the stream.
+{- | Parse a matching prefix from the input stream.
 
 === __Examples:__
 
@@ -170,14 +170,14 @@ Left (ValidationError "012345")
 Left (ValidationError "{}")
 -}
 {-# INLINE matchPrefix #-}
-matchPrefix :: Splittable a b s => b -> Parser s (ValidationError b) ()
+matchPrefix :: Split a b s => b -> Parser s (ValidationError b) ()
 matchPrefix xs = do
-    r <- gets $ Splittable.matchPrefix xs
+    r <- gets $ Split.matchPrefix xs
     case r of
         Just ys -> put ys $> ()
         Nothing -> throwError $ ValidationError xs
 
-{- | Run a parser isolated to a fixed size prefix of the stream.
+{- | Run a parser isolated to a fixed size prefix of the input stream.
 
 The prefix on which the parser runs may have a size smaller than @n@ if there is not enough input
 in the stream. Any unconsumed input in the prefix is returned along with the result.
@@ -198,7 +198,7 @@ Left (Left (ValidationError '0'))
 -}
 {-# INLINE isolate #-}
 isolate
-    :: Splittable a b s
+    :: Split a b s
     => Int                              -- ^ Prefix size.
     -> Parser b e a                     -- ^ Parser to run on the prefix.
     -> Parser s e (a, b)
@@ -225,7 +225,7 @@ Left (InputError 1)
 -}
 {-# INLINE consumed #-}
 consumed
-    :: (HasOffset s, Splittable a b s)
+    :: (HasOffset s, Split a b s)
     => Parser s e a                     -- ^ Parser to run.
     -> Parser s e (a, b)
 consumed p = do

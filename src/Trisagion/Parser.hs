@@ -39,7 +39,7 @@ import Trisagion.Types.Result (Result (..), toEither)
 -- $setup
 -- >>> import Data.Bifunctor
 -- >>> import Control.Applicative (Alternative (..))
--- >>> import Trisagion.Parsers.Streamable
+-- >>> import Trisagion.Parsers.Source
 
 
 {- | The parsing monad @Parser s e a@.
@@ -203,8 +203,8 @@ specifically the 'put' method, allows the construction of non-normal parsers.
 
 note(s):
 
-  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Streamable.Streamable' a s@
-  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Streamable.isSuffix'.
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Source.Source' a s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Source.isSuffix'.
 -}
 instance MonadState s (Parser s e) where
     {-# INLINE get #-}

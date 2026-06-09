@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Char
 
-Parsers with constraints @'Streamable' Char s@.
+Parsers with constraints @'Source' Char s@.
 -}
 
 module Trisagion.Parsers.Char (
@@ -60,18 +60,18 @@ import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (enumDown)
-import Trisagion.Typeclasses.Streamable (Streamable)
-import Trisagion.Typeclasses.Splittable (Splittable (..))
+import Trisagion.Typeclasses.Source (Source)
+import Trisagion.Typeclasses.Split (Split (..))
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Combinators (optional, manyTill, validate, lookAhead)
-import Trisagion.Parsers.Streamable (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
-import Trisagion.Parsers.Splittable (takeWith, takeWith1)
+import Trisagion.Parsers.Source (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
+import Trisagion.Parsers.Split (takeWith, takeWith1)
 
 
 -- $setup
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Combinators
--- >>> import Trisagion.Parsers.Streamable
+-- >>> import Trisagion.Parsers.Source
 
 
 {- | The universal newline type. -}
@@ -114,15 +114,15 @@ Left (Left (ValidationError '0'))
 Left (Right (InputError 1))
 -}
 {-# INLINE lf #-}
-lf :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+lf :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
 lf = matchOne '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
-cr :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+cr :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
 cr = matchOne '\r'
 
-{- | Parse a universal newline from the stream.
+{- | Parse a universal newline from the input stream.
 
 === __Examples:__
 
@@ -145,7 +145,7 @@ Left (Left (ValidationError '1'))
 Left (Right (InputError 1))
 -}
 {-# INLINE newline #-}
-newline :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Newline
+newline :: Source Char s => Parser s (ValidationError Char :+: InputError) Newline
 newline = do
     c <- first Right one
     case c of
@@ -153,7 +153,7 @@ newline = do
         '\r' -> catchError (fmap (const CRLF) lf) (const (pure CR))
         _    -> throwError $ Left (ValidationError c)
 
-{- | Parse a line from the stream. The line does not contain the ending newline and can be null.
+{- | Parse a line from the input stream. The line does not contain the ending newline and can be null.
 
 === __Examples:__
 
@@ -179,7 +179,7 @@ Right ("456","")
 Left (InputError 1)
 -}
 {-# INLINEABLE line #-}
-line :: forall b s . (MonoPointed Char b, Splittable Char b s, Monoid b) => Parser s InputError b
+line :: forall b s . (MonoPointed Char b, Split Char b s, Monoid b) => Parser s InputError b
 line = (fold . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
@@ -212,18 +212,18 @@ Right ("","0123")
 Right ("","")
 -}
 {-# INLINE spaces #-}
-spaces :: Splittable Char b s => Parser s Void b
+spaces :: Split Char b s => Parser s Void b
 spaces = takeWith isSpace
 
 {- | Parse a, possibly null, prefix of non-whitespace characters. -}
 {-# INLINE notSpaces #-}
-notSpaces :: Splittable Char b s => Parser s Void b
+notSpaces :: Split Char b s => Parser s Void b
 notSpaces = takeWith (not . isSpace)
 
 
 {- | Parse a decimal digit. -}
 {-# INLINE digit #-}
-digit :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+digit :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
 digit = satisfy isDigit
 
 {- | Parse a number sign.
@@ -243,7 +243,7 @@ Left (Left (ValidationError '0'))
 Left (Right (InputError 1))
 -}
 {-# INLINE sign #-}
-sign :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Sign
+sign :: Source Char s => Parser s (ValidationError Char :+: InputError) Sign
 sign = validate v one
     where
         v :: Char -> ValidationError Char :+: Sign
@@ -277,7 +277,7 @@ Left (Right (InputError 1))
 -}
 {-# INLINEABLE positive #-}
 positive
-    :: (Splittable Char b s, MonoFoldable Char b)
+    :: (Split Char b s, MonoFoldable Char b)
     => Parser s (ValidationError Char :+: InputError) Integer
 positive = do
         digits <- takeWith1 isDigit
@@ -306,7 +306,7 @@ Right (-123,"")
 -}
 {-# INLINE integer #-}
 integer
-    :: (Splittable Char b s, MonoFoldable Char b)
+    :: (Split Char b s, MonoFoldable Char b)
     => Parser s (ValidationError Char :+: InputError) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> optional sign)
@@ -317,7 +317,7 @@ integer = do
 
 {- | Parse a single (unicode) letter. -}
 {-# INLINE letter #-}
-letter :: Streamable Char s => Parser s (ValidationError Char :+: InputError) Char
+letter :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
 letter = satisfy isLetter
 
 {- | Parse a word.
@@ -337,7 +337,7 @@ Left (Left (ValidationError '_'))
 Left (Left (ValidationError ' '))
 -}
 {-# INLINE word #-}
-word :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
+word :: Split Char b s => Parser s (ValidationError Char :+: InputError) b
 word = takeWith1 isLetter
 
 {- | Parse an identifier.
@@ -360,7 +360,7 @@ Left (Left (ValidationError '_'))
 Left (Left (ValidationError ' '))
 -}
 {-# INLINE identifier #-}
-identifier :: Splittable Char b s => Parser s (ValidationError Char :+: InputError) b
+identifier :: Split Char b s => Parser s (ValidationError Char :+: InputError) b
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
@@ -420,7 +420,7 @@ Left (Right (InputError 1))
 -}
 {-# INLINE escape #-}
 escape
-    :: forall b s . (MonoPointed Char b, Splittable Char b s)
+    :: forall b s . (MonoPointed Char b, Split Char b s)
     => Parser s (EscapeError :+: InputError) b
 escape = do
         c <- first Right one
@@ -465,14 +465,14 @@ Right ("Quoted string with many   spaces and one '\\' escape character.","")
 -}
 {-# INLINEABLE string #-}
 string
-    :: (MonoPointed Char b, Splittable Char b s, Monoid b)
+    :: (MonoPointed Char b, Split Char b s, Monoid b)
     => Parser s (StringError :+: InputError) b
 string = do
         c      <- startQuote
         blocks <- manyTill (endQuote c) (catchError escapeSequence (const $ block c))
         pure $ foldl' (<>) mempty blocks
     where
-        startQuote :: Streamable Char s => Parser s (StringError :+: InputError) Char
+        startQuote :: Source Char s => Parser s (StringError :+: InputError) Char
         startQuote = validate v one
             where
                 v :: Char -> StringError :+: Char
@@ -480,7 +480,7 @@ string = do
                     then Right c
                     else Left $ StartQuoteError c
 
-        endQuote :: Streamable Char s => Char -> Parser s (StringError :+: InputError) Char
+        endQuote :: Source Char s => Char -> Parser s (StringError :+: InputError) Char
         endQuote c = validate v one
             where
                 v :: Char -> StringError :+: Char
@@ -488,10 +488,10 @@ string = do
                     then Right c
                     else Left $ EndQuoteError c
 
-        escapeSequence :: (MonoPointed Char b, Splittable Char b s) => Parser s (StringError :+: InputError) b
+        escapeSequence :: (MonoPointed Char b, Split Char b s) => Parser s (StringError :+: InputError) b
         escapeSequence = first (first StringEscapeError) escape
 
-        block :: Splittable Char b s => Char -> Parser s (StringError :+: InputError) b
+        block :: Split Char b s => Char -> Parser s (StringError :+: InputError) b
         block c = first (first f) $ takeWith1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
@@ -516,7 +516,7 @@ Right ("a line comment\r"," code starts here")
 -}
 {-# INLINE comment #-}
 comment
-    :: Splittable Char b s
+    :: Split Char b s
     => Parser s e ()                    -- ^ Parser for start of line comment.
     -> Parser s e b
 comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)
