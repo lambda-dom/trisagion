@@ -10,8 +10,13 @@ module Trisagion.Typeclasses.Sink (
 ) where
 
 -- Imports.
+-- Base.
+import Data.Word (Word8)
+
 -- Libraries.
 import Data.Sequence (Seq, (|>), (><))
+import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder, word8, byteString)
 
 
 -- $setup
@@ -50,3 +55,11 @@ instance Sink a (Seq a) (Seq a) where
     concatenate :: Seq a -> [a] -> Seq a
     concatenate xs []       = xs
     concatenate xs (y : ys) = concatenate (xs |> y) ys
+
+instance Sink Word8 ByteString Builder where
+
+    snoc :: Builder -> Word8 -> Builder
+    snoc xs n = xs <> word8 n
+
+    append :: Builder -> ByteString -> Builder
+    append xs ys = xs <> byteString ys
