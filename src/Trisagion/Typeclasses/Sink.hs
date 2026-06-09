@@ -26,7 +26,7 @@ class Monoid s => Sink a b s | s -> b, s -> a where
 
     {- | Concatenate a list of elements to the end of the output stream. -}
     concat :: s -> [a] -> s
-    concat xs ys = foldl' snoc xs ys
+    concat xs ys = foldr (flip snoc) xs ys
 
 
 -- Instances.
