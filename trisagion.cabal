@@ -41,6 +41,8 @@ library
         -Wredundant-constraints
         -Wmissing-deriving-strategies
         -Wunused-packages
+        -- Prepare for dependent types.
+        -Wterm-variable-capture
     hs-source-dirs:
         src
     build-depends:

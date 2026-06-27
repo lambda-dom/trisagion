@@ -53,7 +53,7 @@ note(s):
     extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@. Obviously,
     this definition is not effective, so it cannot be turned into an 'Eq' instance.
 -}
-type Parser ::  Type -> Type -> Type -> Type
+type Parser :: Type -> Type -> Type -> Type
 newtype Parser s e a = Parser (s -> Result s e a)
     deriving stock Functor
 
