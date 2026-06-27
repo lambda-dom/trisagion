@@ -12,9 +12,12 @@ module Trisagion.Typeclasses.Sink (
 -- Imports.
 -- Base.
 import Data.Word (Word8)
+-- For bytestring serialization.
+import GHC.IsList (fromList)
 
 -- Libraries.
-import Data.Sequence (Seq, (|>), (><))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Sequence (singleton, fromList)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Builder as Bytes (Builder, word8, byteString)
 import Data.Text (Text)
@@ -27,53 +30,62 @@ import qualified Data.Text.Lazy.Builder as Text (Builder, singleton, fromText, f
 
 {- | The @Sink@ typeclass for output streams. -}
 class Monoid s => Sink a b s | s -> b, s -> a where
-    {-# MINIMAL snoc, append #-}
+    {-# MINIMAL single, suffix #-}
 
-    {- | Append an element to the end of the output stream. -}
-    snoc :: s -> a -> s
+    {- | Construct an output stream from a single element. -}
+    single :: a -> s
 
-    {- | Append a suffix to the end of the output stream. -}
-    append :: s -> b -> s
+    {- | Construct an output stream from a suffix. -}
+    suffix :: b -> s
 
-    {- | Concatenate a list of elements to the end of the output stream.
+    {- | Construct an output stream from a list of streams.
 
     === __Examples:__
 
-    >>> concatenate (fromList "01") "23"
-    fromList "0123"
+    >>> many "01"
+    fromList "01"
     -}
-    concatenate :: s -> [a] -> s
-    concatenate xs ys = foldr (flip snoc) xs ys
+    many :: [a] -> s
+    many = foldMap single
 
 
 -- Instances.
 instance Sink a (Seq a) (Seq a) where
-    snoc :: Seq a -> a -> Seq a
-    snoc = (|>)
+    {-# INLINE single #-}
+    single :: a -> Seq a
+    single = Sequence.singleton
 
-    append :: Seq a -> Seq a -> Seq a
-    append = (><)
+    {-# INLINE suffix #-}
+    suffix :: Seq a -> Seq a
+    suffix = id
 
-    concatenate :: Seq a -> [a] -> Seq a
-    concatenate xs []       = xs
-    concatenate xs (y : ys) = concatenate (xs |> y) ys
+    {-# INLINE many #-}
+    many :: [a] -> Seq a
+    many = Sequence.fromList
 
 instance Sink Word8 ByteString Bytes.Builder where
+    {-# INLINE single #-}
+    single :: Word8 -> Bytes.Builder
+    single n = Bytes.word8 n
 
-    snoc :: Bytes.Builder -> Word8 -> Bytes.Builder
-    snoc xs n = xs <> Bytes.word8 n
+    {-# INLINE suffix #-}
+    suffix :: ByteString -> Bytes.Builder
+    suffix xs = Bytes.byteString xs
 
-    append :: Bytes.Builder -> ByteString -> Bytes.Builder
-    append xs ys = xs <> Bytes.byteString ys
+    {-# INLINE many #-}
+    many :: [Word8] -> Bytes.Builder
+    many = fromList
 
 instance Sink Char Text Text.Builder where
+    {-# INLINE single #-}
+    single :: Char -> Text.Builder
+    single c = Text.singleton c
 
-    snoc :: Text.Builder -> Char -> Text.Builder
-    snoc xs c = xs <> Text.singleton c
-
-    append :: Text.Builder -> Text -> Text.Builder
-    append xs ys = xs <> Text.fromText ys
+    {-# INLINE suffix #-}
+    suffix :: Text -> Text.Builder
+    suffix ys = Text.fromText ys
 
     {- | Performs replacement on invalid scalar values. -}
-    concatenate :: Text.Builder -> [Char] -> Text.Builder
-    concatenate xs ys = xs <> Text.fromString ys
+    {-# INLINE many #-}
+    many :: [Char] -> Text.Builder
+    many xs = Text.fromString xs

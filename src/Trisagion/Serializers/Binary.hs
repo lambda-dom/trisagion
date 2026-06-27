@@ -33,10 +33,9 @@ import Trisagion.Serializer (Serializer, embed)
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
 class Sink Word8 b s => Binary b s where
-
     {- | Serialize a single 'Word8'. -}
     word8 :: Serializer s Word8
-    word8 = embed $ snoc mempty
+    word8 = embed single
 
     {- | Serialize a single 'Int8'. -}
     int8 :: Serializer s Int8
@@ -69,38 +68,45 @@ class Sink Word8 b s => Binary b s where
 
 -- Instances.
 instance Binary ByteString Builder where
-
+    {-# INLINE word8 #-}
     word8 :: Serializer Builder Word8
     word8 = embed $ Bytes.word8
 
+    {-# INLINE int8 #-}
     int8 :: Serializer Builder Int8
     int8 = embed $ Bytes.int8
 
+    {-# INLINE word16Le #-}
     word16Le :: Serializer Builder Word16
     word16Le = embed $ Bytes.word16LE
 
+    {-# INLINE word32Le #-}
     word32Le :: Serializer Builder Word32
     word32Le = embed $ Bytes.word32LE
 
+    {-# INLINE word64Le #-}
     word64Le :: Serializer Builder Word64
     word64Le = embed $ Bytes.word64LE
 
+    {-# INLINE word16Be #-}
     word16Be :: Serializer Builder Word16
     word16Be = embed $ Bytes.word16BE
 
+    {-# INLINE word32Be #-}
     word32Be :: Serializer Builder Word32
     word32Be = embed $ Bytes.word32BE
 
+    {-# INLINE word64Be #-}
     word64Be :: Serializer Builder Word64
     word64Be = embed $ Bytes.word64BE
 
 
 {- | Serialize machine-width integral in little-endian format. -}
-{-# INLINEABLE integralLe #-}
+{-# INLINE integralLe #-}
 integralLe :: (Sink Word8 b s, Integral a, FiniteBits a) => Serializer s a
-integralLe = embed $ concatenate mempty . unpack
+integralLe = embed $ many . unpack
 
 {- | Serialize machine-width integral in big-endian format. -}
-{-# INLINEABLE integralBe #-}
+{-# INLINE integralBe #-}
 integralBe :: (Sink Word8 b s, Integral a, FiniteBits a) => Serializer s a
-integralBe = embed $ concatenate mempty . unpackReverse
+integralBe = embed $ many . unpackReverse
