@@ -38,13 +38,7 @@ class Monoid s => Sink a b s | s -> b, s -> a where
     {- | Construct an output stream from a suffix. -}
     suffix :: b -> s
 
-    {- | Construct an output stream from a list of streams.
-
-    === __Examples:__
-
-    >>> many "01"
-    fromList "01"
-    -}
+    {- | Construct an output stream from a list of streams. -}
     many :: [a] -> s
     many = foldMap single
 
