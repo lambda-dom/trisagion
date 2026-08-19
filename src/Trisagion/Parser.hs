@@ -30,6 +30,7 @@ import Data.Void (Void)
 -- Libraries.
 import Control.Monad.State (MonadState (..))
 import Control.Monad.Except (MonadError (..))
+import Optics.Core (view)
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
@@ -261,7 +262,7 @@ run (Parser f) = f
 {- | Run the parser on the input and return the results as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Parser s e a -> s -> e :+: (a, s)
-parse p = toEither . run p
+parse p = view toEither . run p
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
 {-# INLINE eval #-}
