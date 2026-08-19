@@ -13,7 +13,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
 -- Base.
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Int (Int8)
-import Data.Word (Word8)
+import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
 import Optics.Core (view)
@@ -28,6 +28,8 @@ import Trisagion.Serializer (Serializer, embed)
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
 class Sink Word8 b s => Binary b s where
+    {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
+
     {- | Serialize a single 'Word8'. -}
     {-# INLINE word8 #-}
     word8 :: Serializer s Word8
@@ -37,4 +39,22 @@ class Sink Word8 b s => Binary b s where
     {-# INLINE int8 #-}
     int8 :: Serializer s Int8
     int8 = contramap (view int8ToWord8) word8
+
+    {- | Serialize a 'Word16' in little-endian format. -}
+    word16Le :: Serializer s Word16
+
+    {- | Serialize a 'Word32' in little-endian format. -}
+    word32Le :: Serializer s Word32
+
+    {- | Serialize a 'Word64' in little-endian format. -}
+    word64Le :: Serializer s Word64
+
+    {- | Serialize a 'Word16' in big-endian format. -}
+    word16Be :: Serializer s Word16
+
+    {- | Serialize a 'Word32' in big-endian format. -}
+    word32Be :: Serializer s Word32
+
+    {- | Serialize a 'Word64' in big-endian format. -}
+    word64Be :: Serializer s Word64
 
