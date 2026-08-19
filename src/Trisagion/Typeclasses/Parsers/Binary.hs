@@ -19,13 +19,13 @@ import Optics.Core (review, view)
 
 -- non-Hackage libraries.
 import Data.Bits.Optics (word16BytesLe, word32BytesLe, word64BytesLe, word16BytesBe, word32BytesBe, word64BytesBe)
+import Data.Word.Optics (word8ToInt8)
 
 -- Package.
 import Trisagion.Typeclasses.Split (Split)
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Source (InputError, one)
 import Trisagion.Parsers.Split (takeExact)
-import Data.Word.Optics (word8ToInt8)
 
 
 -- $setup
