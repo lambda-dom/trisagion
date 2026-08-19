@@ -71,7 +71,6 @@ library
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Split
         Trisagion.Typeclasses.Sink
-        Trisagion.Typeclasses.Parsers.Binary
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Source
@@ -81,4 +80,5 @@ library
         Trisagion.Parsers.Char
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
-        -- Trisagion.Serializers.Binary
+        Trisagion.Typeclasses.Parsers.Binary
+        Trisagion.Typeclasses.Serializers.Binary

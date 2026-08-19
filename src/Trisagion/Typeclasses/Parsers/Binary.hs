@@ -15,7 +15,7 @@ import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import Optics.Core (review)
+import Optics.Core (review, view)
 
 -- non-Hackage libraries.
 import Data.Bits.Optics (word16BytesLe, word32BytesLe, word64BytesLe, word16BytesBe, word32BytesBe, word64BytesBe)
@@ -25,6 +25,7 @@ import Trisagion.Typeclasses.Split (Split)
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Source (InputError, one)
 import Trisagion.Parsers.Split (takeExact)
+import Data.Word.Optics (word8ToInt8)
 
 
 -- $setup
@@ -70,12 +71,14 @@ class (Split Word8 b s) => Binary b s where
     {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Parse a single 'Word8'. -}
+    {-# INLINE word8 #-}
     word8 :: Parser s InputError Word8
     word8 = one
 
     {- | Parse a single 'Int8'. -}
+    {-# INLINE int8 #-}
     int8 :: Parser s InputError Int8
-    int8 = fromIntegral <$> word8
+    int8 = (view word8ToInt8) <$> word8
 
     {- | Parse a 'Word16' in little-endian format. -}
     word16Le :: Parser s InputError Word16
@@ -98,37 +101,6 @@ class (Split Word8 b s) => Binary b s where
 
 -- Instances.
 instance Binary [Word8] [Word8] where
-    {- | Parse a single 'Word8'.
-
-    === __Examples:__
-
-    >>> parse word8 [0xff, 0, 0, 0]
-    Right (255,[0,0,0])
-
-    >>> parse word8 [1, 0, 0, 0]
-    Right (1,[0,0,0])
-
-    >>> parse word8 []
-    Left (InputError 1)
-    -}
-    {-# INLINE word8 #-}
-    word8 :: Parser [Word8] InputError Word8
-    word8 = one
-
-    {- | Parse a single 'Int8'.
-
-    === __Examples:__
-
-    >>> parse int8 [1, 0, 0, 0]
-    Right (1,[0,0,0])
-
-    >>> parse int8 [fromIntegral (-1 :: Int), 0, 0, 0]
-    Right (-1,[0,0,0])
-    -}
-    {-# INLINE int8 #-}
-    int8 :: Parser [Word8] InputError Int8
-    int8 = fromIntegral <$> word8
-
     {- | Parse a 'Word16' in little-endian format. -}
     {-# INLINE word16Le #-}
     word16Le :: Parser [Word8] InputError Word16
@@ -160,7 +132,7 @@ instance Binary [Word8] [Word8] where
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8)
             h (m : n : p : q : []) = (m, n, p, q)
-            h _            = error "Impossible case."
+            h _                    = error "Impossible case."
 
     {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Le #-}
@@ -169,7 +141,7 @@ instance Binary [Word8] [Word8] where
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
             h (m : n : p : q : r : s : t : u : []) = (m, n, p, q, r, s, t, u)
-            h _            = error "Impossible case."
+            h _                                    = error "Impossible case."
 
     {- | Parse a 'Word16' in big-endian format. -}
     {-# INLINE word16Be #-}
@@ -202,7 +174,7 @@ instance Binary [Word8] [Word8] where
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8)
             h (m : n : p : q : []) = (q, p, n, m)
-            h _            = error "Impossible case."
+            h _                    = error "Impossible case."
 
     {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Be #-}
@@ -211,4 +183,4 @@ instance Binary [Word8] [Word8] where
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
             h (m : n : p : q : r : s : t : u : []) = (u, t, s, r, q, p, n, m)
-            h _            = error "Impossible case."
+            h _                                    = error "Impossible case."
