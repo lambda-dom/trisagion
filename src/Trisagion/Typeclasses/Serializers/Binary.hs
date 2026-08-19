@@ -16,6 +16,9 @@ import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
+import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder)
+import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE)
 import Optics.Core (view)
 
 -- non-Hackage libraries.
@@ -58,3 +61,37 @@ class Sink Word8 b s => Binary b s where
     {- | Serialize a 'Word64' in big-endian format. -}
     word64Be :: Serializer s Word64
 
+
+-- Instances.
+instance Binary ByteString Builder where
+    {-# INLINE word8 #-}
+    word8 :: Serializer Builder Word8
+    word8 = embed $ Bytes.word8
+
+    {-# INLINE int8 #-}
+    int8 :: Serializer Builder Int8
+    int8 = embed $ Bytes.int8
+
+    {-# INLINE word16Le #-}
+    word16Le :: Serializer Builder Word16
+    word16Le = embed $ Bytes.word16LE
+
+    {-# INLINE word32Le #-}
+    word32Le :: Serializer Builder Word32
+    word32Le = embed $ Bytes.word32LE
+
+    {-# INLINE word64Le #-}
+    word64Le :: Serializer Builder Word64
+    word64Le = embed $ Bytes.word64LE
+
+    {-# INLINE word16Be #-}
+    word16Be :: Serializer Builder Word16
+    word16Be = embed $ Bytes.word16BE
+
+    {-# INLINE word32Be #-}
+    word32Be :: Serializer Builder Word32
+    word32Be = embed $ Bytes.word32BE
+
+    {-# INLINE word64Be #-}
+    word64Be :: Serializer Builder Word64
+    word64Be = embed $ Bytes.word64BE
