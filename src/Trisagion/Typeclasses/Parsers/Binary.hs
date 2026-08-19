@@ -15,6 +15,9 @@ import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
+import qualified Data.ByteString as Bytes (ByteString, index)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, index)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, index)
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
@@ -101,7 +104,6 @@ class (Split Word8 b s) => Binary b s where
 
 -- Instances.
 instance Binary [Word8] [Word8] where
-    {- | Parse a 'Word16' in little-endian format. -}
     {-# INLINE word16Le #-}
     word16Le :: Parser [Word8] InputError Word16
     word16Le = mkParserWord16Le h
@@ -134,7 +136,6 @@ instance Binary [Word8] [Word8] where
             h (m : n : p : q : _) = (m, n, p, q)
             h _                   = error "Impossible case."
 
-    {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Le #-}
     word64Le :: Parser [Word8] InputError Word64
     word64Le = mkParserWord64Le h
@@ -143,7 +144,6 @@ instance Binary [Word8] [Word8] where
             h (m : n : p : q : r : s : t : u : _) = (m, n, p, q, r, s, t, u)
             h _                                   = error "Impossible case."
 
-    {- | Parse a 'Word16' in big-endian format. -}
     {-# INLINE word16Be #-}
     word16Be :: Parser [Word8] InputError Word16
     word16Be = mkParserWord16Be h
@@ -176,7 +176,6 @@ instance Binary [Word8] [Word8] where
             h (m : n : p : q : _) = (q, p, n, m)
             h _                   = error "Impossible case."
 
-    {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Be #-}
     word64Be :: Parser [Word8] InputError Word64
     word64Be = mkParserWord64Be h
@@ -184,3 +183,192 @@ instance Binary [Word8] [Word8] where
             h :: [Word8] -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
             h (m : n : p : q : r : s : t : u : _) = (u, t, s, r, q, p, n, m)
             h _                                   = error "Impossible case."
+
+instance Binary Bytes.ByteString Bytes.ByteString where
+    {-# INLINE word16Le #-}
+    word16Le :: Parser Bytes.ByteString InputError Word16
+    word16Le = mkParserWord16Le h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8)
+            h xs = (Bytes.index xs 0, Bytes.index xs 1)
+
+    {-# INLINE word32Le #-}
+    word32Le :: Parser Bytes.ByteString InputError Word32
+    word32Le = mkParserWord32Le h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (Bytes.index xs 0, Bytes.index xs 1, Bytes.index xs 2, Bytes.index xs 3)
+
+    {-# INLINE word64Le #-}
+    word64Le :: Parser Bytes.ByteString InputError Word64
+    word64Le = mkParserWord64Le h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    Bytes.index xs 0,
+                    Bytes.index xs 1,
+                    Bytes.index xs 2,
+                    Bytes.index xs 3,
+                    Bytes.index xs 4,
+                    Bytes.index xs 5,
+                    Bytes.index xs 6,
+                    Bytes.index xs 7
+                )
+
+    {-# INLINE word16Be #-}
+    word16Be :: Parser Bytes.ByteString InputError Word16
+    word16Be = mkParserWord16Be h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8)
+            h xs = (Bytes.index xs 1, Bytes.index xs 0)
+
+    {-# INLINE word32Be #-}
+    word32Be :: Parser Bytes.ByteString InputError Word32
+    word32Be = mkParserWord32Be h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (Bytes.index xs 3, Bytes.index xs 2, Bytes.index xs 1, Bytes.index xs 0)
+
+    {-# INLINE word64Be #-}
+    word64Be :: Parser Bytes.ByteString InputError Word64
+    word64Be = mkParserWord64Be h
+        where
+            h :: Bytes.ByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    Bytes.index xs 7,
+                    Bytes.index xs 6,
+                    Bytes.index xs 5,
+                    Bytes.index xs 4,
+                    Bytes.index xs 3,
+                    Bytes.index xs 2,
+                    Bytes.index xs 1,
+                    Bytes.index xs 0
+                )
+
+instance Binary LBytes.ByteString LBytes.ByteString where
+    {-# INLINE word16Le #-}
+    word16Le :: Parser LBytes.ByteString InputError Word16
+    word16Le = mkParserWord16Le h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8)
+            h xs = (LBytes.index xs 0, LBytes.index xs 1)
+
+    {-# INLINE word32Le #-}
+    word32Le :: Parser LBytes.ByteString InputError Word32
+    word32Le = mkParserWord32Le h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (LBytes.index xs 0, LBytes.index xs 1, LBytes.index xs 2, LBytes.index xs 3)
+
+    {-# INLINE word64Le #-}
+    word64Le :: Parser LBytes.ByteString InputError Word64
+    word64Le = mkParserWord64Le h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    LBytes.index xs 0,
+                    LBytes.index xs 1,
+                    LBytes.index xs 2,
+                    LBytes.index xs 3,
+                    LBytes.index xs 4,
+                    LBytes.index xs 5,
+                    LBytes.index xs 6,
+                    LBytes.index xs 7
+                )
+
+    {-# INLINE word16Be #-}
+    word16Be :: Parser LBytes.ByteString InputError Word16
+    word16Be = mkParserWord16Be h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8)
+            h xs = (LBytes.index xs 1, LBytes.index xs 0)
+
+    {-# INLINE word32Be #-}
+    word32Be :: Parser LBytes.ByteString InputError Word32
+    word32Be = mkParserWord32Be h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (LBytes.index xs 3, LBytes.index xs 2, LBytes.index xs 1, LBytes.index xs 0)
+
+    {-# INLINE word64Be #-}
+    word64Be :: Parser LBytes.ByteString InputError Word64
+    word64Be = mkParserWord64Be h
+        where
+            h :: LBytes.ByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    LBytes.index xs 7,
+                    LBytes.index xs 6,
+                    LBytes.index xs 5,
+                    LBytes.index xs 4,
+                    LBytes.index xs 3,
+                    LBytes.index xs 2,
+                    LBytes.index xs 1,
+                    LBytes.index xs 0
+                )
+
+instance Binary SBytes.ShortByteString SBytes.ShortByteString where
+    {-# INLINE word16Le #-}
+    word16Le :: Parser SBytes.ShortByteString InputError Word16
+    word16Le = mkParserWord16Le h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8)
+            h xs = (SBytes.index xs 0, SBytes.index xs 1)
+
+    {-# INLINE word32Le #-}
+    word32Le :: Parser SBytes.ShortByteString InputError Word32
+    word32Le = mkParserWord32Le h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (SBytes.index xs 0, SBytes.index xs 1, SBytes.index xs 2, SBytes.index xs 3)
+
+    {-# INLINE word64Le #-}
+    word64Le :: Parser SBytes.ShortByteString InputError Word64
+    word64Le = mkParserWord64Le h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    SBytes.index xs 0,
+                    SBytes.index xs 1,
+                    SBytes.index xs 2,
+                    SBytes.index xs 3,
+                    SBytes.index xs 4,
+                    SBytes.index xs 5,
+                    SBytes.index xs 6,
+                    SBytes.index xs 7
+                )
+
+    {-# INLINE word16Be #-}
+    word16Be :: Parser SBytes.ShortByteString InputError Word16
+    word16Be = mkParserWord16Be h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8)
+            h xs = (SBytes.index xs 1, SBytes.index xs 0)
+
+    {-# INLINE word32Be #-}
+    word32Be :: Parser SBytes.ShortByteString InputError Word32
+    word32Be = mkParserWord32Be h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8, Word8, Word8)
+            h xs = (SBytes.index xs 3, SBytes.index xs 2, SBytes.index xs 1, SBytes.index xs 0)
+
+    {-# INLINE word64Be #-}
+    word64Be :: Parser SBytes.ShortByteString InputError Word64
+    word64Be = mkParserWord64Be h
+        where
+            h :: SBytes.ShortByteString -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
+            h xs =
+                (
+                    SBytes.index xs 7,
+                    SBytes.index xs 6,
+                    SBytes.index xs 5,
+                    SBytes.index xs 4,
+                    SBytes.index xs 3,
+                    SBytes.index xs 2,
+                    SBytes.index xs 1,
+                    SBytes.index xs 0
+                )
