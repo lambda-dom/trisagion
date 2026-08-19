@@ -107,8 +107,8 @@ instance Binary [Word8] [Word8] where
     word16Le = mkParserWord16Le h
         where
             h :: [Word8] -> (Word8, Word8)
-            h (m : n : []) = (m, n)
-            h _            = error "Impossible case."
+            h (m : n : _) = (m, n)
+            h _           = error "Impossible case."
 
     {- | Parse a 'Word32' in little-endian format.
 
@@ -131,8 +131,8 @@ instance Binary [Word8] [Word8] where
     word32Le = mkParserWord32Le h
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8)
-            h (m : n : p : q : []) = (m, n, p, q)
-            h _                    = error "Impossible case."
+            h (m : n : p : q : _) = (m, n, p, q)
+            h _                   = error "Impossible case."
 
     {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Le #-}
@@ -140,8 +140,8 @@ instance Binary [Word8] [Word8] where
     word64Le = mkParserWord64Le h
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
-            h (m : n : p : q : r : s : t : u : []) = (m, n, p, q, r, s, t, u)
-            h _                                    = error "Impossible case."
+            h (m : n : p : q : r : s : t : u : _) = (m, n, p, q, r, s, t, u)
+            h _                                   = error "Impossible case."
 
     {- | Parse a 'Word16' in big-endian format. -}
     {-# INLINE word16Be #-}
@@ -149,8 +149,8 @@ instance Binary [Word8] [Word8] where
     word16Be = mkParserWord16Be h
         where
             h :: [Word8] -> (Word8, Word8)
-            h (m : n : []) = (n, m)
-            h _            = error "Impossible case."
+            h (m : n : _) = (n, m)
+            h _           = error "Impossible case."
 
     {- | Parse a 'Word32' in big-endian format.
 
@@ -173,8 +173,8 @@ instance Binary [Word8] [Word8] where
     word32Be = mkParserWord32Be h
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8)
-            h (m : n : p : q : []) = (q, p, n, m)
-            h _                    = error "Impossible case."
+            h (m : n : p : q : _) = (q, p, n, m)
+            h _                   = error "Impossible case."
 
     {- | Parse a 'Word64' in little-endian format.-}
     {-# INLINE word64Be #-}
@@ -182,5 +182,5 @@ instance Binary [Word8] [Word8] where
     word64Be = mkParserWord64Be h
         where
             h :: [Word8] -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)
-            h (m : n : p : q : r : s : t : u : []) = (u, t, s, r, q, p, n, m)
-            h _                                    = error "Impossible case."
+            h (m : n : p : q : r : s : t : u : _) = (u, t, s, r, q, p, n, m)
+            h _                                   = error "Impossible case."
