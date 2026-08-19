@@ -57,6 +57,7 @@ library
         contravariant >=1.5 && <1.6,
         -- Non-hackage libraries.
         mono >=0.3 && <0.4,
+        optics-conversions >=0.1 && <0.2,
     build-depends:
     other-modules:
     exposed-modules:
