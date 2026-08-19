@@ -17,9 +17,11 @@ module Trisagion.Types.Result (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Kind (Type)
 
+-- Libraries.
+import Optics.Core (Iso', iso)
+
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Optics.Core (Iso', iso)
 
 
 {- | The 'Result' type of a parsing function, isomorphic to @'Either' e (a, s)@. -}
