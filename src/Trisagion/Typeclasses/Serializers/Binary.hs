@@ -11,6 +11,8 @@ module Trisagion.Typeclasses.Serializers.Binary (
     -- * Serializers.
     byteString,
     shortByteString,
+    latin1,
+    char,
 ) where
 
 -- Imports.
@@ -22,10 +24,10 @@ import Data.Word (Word8, Word16, Word32, Word64)
 -- Libraries.
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder)
-import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, byteString, shortByteString)
+import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, byteString, shortByteString, char8, charUtf8)
 import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import Data.ByteString.Short (ShortByteString)
-import Optics.Core (view)
+import Optics.Core (view, review)
 
 -- non-Hackage libraries.
 import Data.Int.Optics (int8ToWord8)
@@ -33,6 +35,8 @@ import Data.Int.Optics (int8ToWord8)
 -- Package.
 import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
+import Data.Char (chr)
+import Data.Word.Optics (word8ToInt)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
@@ -112,3 +116,18 @@ byteString = embed $ Bytes.byteString
 {-# INLINE shortByteString #-}
 shortByteString :: Serializer Builder ShortByteString
 shortByteString = embed $ Bytes.shortByteString
+
+{- | Serialize a 'Word8' in the latin-1, or ISO/IEC 8859-1, encoding.
+
+The latin-1 encoding is a superset of ascii, so this Serializer can also be used to serialize 'Word8'
+in the ascii encoding as long as it is known that it is in the range @[0 .. 127]@. If the argument
+is not in this range, it is truncated to fit.
+-}
+{-# INLINE latin1 #-}
+latin1 :: Serializer Builder Word8
+latin1 = embed $ Bytes.char8 . chr . (review word8ToInt)
+
+{- | Serialize a 'Char' in the utf8 encoding. -}
+{-# INLINE char #-}
+char :: Serializer Builder Char
+char = embed $ Bytes.charUtf8
