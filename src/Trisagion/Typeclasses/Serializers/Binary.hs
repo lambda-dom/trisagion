@@ -9,7 +9,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
     Binary (..),
 
     -- * Serializers.
-    lazyByteString,
+    byteString,
     shortByteString,
 ) where
 
@@ -22,7 +22,9 @@ import Data.Word (Word8, Word16, Word32, Word64)
 -- Libraries.
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder)
-import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, lazyByteString, shortByteString)
+import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, byteString, shortByteString)
+import qualified Data.ByteString.Lazy as Lazy (ByteString)
+import Data.ByteString.Short (ShortByteString)
 import Optics.Core (view)
 
 -- non-Hackage libraries.
@@ -31,8 +33,6 @@ import Data.Int.Optics (int8ToWord8)
 -- Package.
 import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
-import Data.ByteString.Lazy (LazyByteString)
-import Data.ByteString.Short (ShortByteString)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
@@ -69,7 +69,7 @@ class Sink Word8 b s => Binary b s where
 
 
 -- Instances.
-instance Binary ByteString Builder where
+instance Binary Lazy.ByteString Builder where
     {-# INLINE word8 #-}
     word8 :: Serializer Builder Word8
     word8 = embed $ Bytes.word8
@@ -103,10 +103,10 @@ instance Binary ByteString Builder where
     word64Be = embed $ Bytes.word64BE
 
 
-{- | Serialize a lazy 'Data.ByteString.Lazy.ByteString'. -}
-{-# INLINE lazyByteString #-}
-lazyByteString :: Serializer Builder LazyByteString
-lazyByteString = embed $ Bytes.lazyByteString
+{- | Serialize a 'Data.ByteString.ByteString'. -}
+{-# INLINE byteString #-}
+byteString :: Serializer Builder ByteString
+byteString = embed $ Bytes.byteString
 
 {- | Serialize a 'Data.ByteString.Short.ShortByteString'. -}
 {-# INLINE shortByteString #-}
