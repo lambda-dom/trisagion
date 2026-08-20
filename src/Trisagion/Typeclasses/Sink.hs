@@ -18,8 +18,8 @@ import GHC.IsList (fromList)
 -- Libraries.
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Sequence (singleton, fromList)
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Builder as Bytes (Builder, word8, byteString)
+import Data.ByteString.Lazy (ByteString)
+import qualified Data.ByteString.Builder as Bytes (Builder, word8, lazyByteString)
 import Data.Text (Text)
 import qualified Data.Text.Lazy.Builder as Text (Builder, singleton, fromText, fromString)
 
@@ -64,7 +64,7 @@ instance Sink Word8 ByteString Bytes.Builder where
 
     {-# INLINE suffix #-}
     suffix :: ByteString -> Bytes.Builder
-    suffix xs = Bytes.byteString xs
+    suffix xs = Bytes.lazyByteString xs
 
     {-# INLINE many #-}
     many :: [Word8] -> Bytes.Builder

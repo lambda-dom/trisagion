@@ -1,21 +1,22 @@
 {- |
-Module: Trisagion.Serializers.Binary
+Module: Trisagion.Typeclasses.Serializers.Binary
 
-The @Binary@ typeclass for serializers with constraints @'Sink' Word8 b s@.
+The @Binary@ typeclass for serializers with @'Sink' 'Word8' b s@ constraints.
 -}
 
-module Trisagion.Serializers.Binary (
+module Trisagion.Typeclasses.Serializers.Binary (
     -- * Typeclasses.
     Binary (..),
 
-    -- * Generic serializers.
-    integralLe,
-    integralBe,
+    -- * Serializers.
+    byteString,
+    shortByteString,
+    latin1,
+    char,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Bits (FiniteBits)
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -23,51 +24,56 @@ import Data.Word (Word8, Word16, Word32, Word64)
 -- Libraries.
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder)
-import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE)
+import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, byteString, shortByteString, char8, charUtf8)
+import qualified Data.ByteString.Lazy as Lazy (ByteString)
+import Data.ByteString.Short (ShortByteString)
+import Optics.Core (view, review)
+
+-- non-Hackage libraries.
+import Data.Int.Optics (int8ToWord8)
 
 -- Package.
-import Trisagion.Utils.Bits (unpack, unpackReverse)
-import Trisagion.Typeclasses.Sink (Sink (..))
+import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
+import Data.Char (chr)
+import Data.Word.Optics (word8ToInt)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
 class Sink Word8 b s => Binary b s where
+    {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
+
     {- | Serialize a single 'Word8'. -}
+    {-# INLINE word8 #-}
     word8 :: Serializer s Word8
     word8 = embed single
 
     {- | Serialize a single 'Int8'. -}
+    {-# INLINE int8 #-}
     int8 :: Serializer s Int8
-    int8 = contramap fromIntegral word8
+    int8 = contramap (view int8ToWord8) word8
 
     {- | Serialize a 'Word16' in little-endian format. -}
     word16Le :: Serializer s Word16
-    word16Le = integralLe
 
     {- | Serialize a 'Word32' in little-endian format. -}
     word32Le :: Serializer s Word32
-    word32Le = integralLe
 
     {- | Serialize a 'Word64' in little-endian format. -}
     word64Le :: Serializer s Word64
-    word64Le = integralLe
 
     {- | Serialize a 'Word16' in big-endian format. -}
     word16Be :: Serializer s Word16
-    word16Be = integralBe
 
     {- | Serialize a 'Word32' in big-endian format. -}
     word32Be :: Serializer s Word32
-    word32Be = integralBe
 
     {- | Serialize a 'Word64' in big-endian format. -}
     word64Be :: Serializer s Word64
-    word64Be = integralBe
 
 
 -- Instances.
-instance Binary ByteString Builder where
+instance Binary Lazy.ByteString Builder where
     {-# INLINE word8 #-}
     word8 :: Serializer Builder Word8
     word8 = embed $ Bytes.word8
@@ -101,12 +107,27 @@ instance Binary ByteString Builder where
     word64Be = embed $ Bytes.word64BE
 
 
-{- | Serialize machine-width integral in little-endian format. -}
-{-# INLINE integralLe #-}
-integralLe :: (Sink Word8 b s, Integral a, FiniteBits a) => Serializer s a
-integralLe = embed $ many . unpack
+{- | Serialize a 'Data.ByteString.ByteString'. -}
+{-# INLINE byteString #-}
+byteString :: Serializer Builder ByteString
+byteString = embed $ Bytes.byteString
 
-{- | Serialize machine-width integral in big-endian format. -}
-{-# INLINE integralBe #-}
-integralBe :: (Sink Word8 b s, Integral a, FiniteBits a) => Serializer s a
-integralBe = embed $ many . unpackReverse
+{- | Serialize a 'Data.ByteString.Short.ShortByteString'. -}
+{-# INLINE shortByteString #-}
+shortByteString :: Serializer Builder ShortByteString
+shortByteString = embed $ Bytes.shortByteString
+
+{- | Serialize a 'Word8' in the latin-1, or ISO/IEC 8859-1, encoding.
+
+The latin-1 encoding is a superset of ascii, so this Serializer can also be used to serialize 'Word8'
+in the ascii encoding as long as it is known that it is in the range @[0 .. 127]@. If the argument
+is not in this range, it is truncated to fit.
+-}
+{-# INLINE latin1 #-}
+latin1 :: Serializer Builder Word8
+latin1 = embed $ Bytes.char8 . chr . (review word8ToInt)
+
+{- | Serialize a 'Char' in the utf8 encoding. -}
+{-# INLINE char #-}
+char :: Serializer Builder Char
+char = embed $ Bytes.charUtf8

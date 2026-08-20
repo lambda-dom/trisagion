@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               trisagion
-version:            0.1.0.0
+version:            0.0.1.0
 synopsis:           A parsing and serializing library.
 description:        Please see the README on GitHub at <https://github.com/lambda-dom/trisagion#readme>
 category:           Parsing
@@ -55,14 +55,15 @@ library
         text >=2.1 && <2.2,
         vector >=0.13 && <0.14,
         contravariant >=1.5 && <1.6,
+        optics-core >= 0.4.2 && <0.4.3,
         -- Non-hackage libraries.
         mono >=0.3 && <0.4,
+        optics-conversions >=0.1 && <0.2,
     build-depends:
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either
         Trisagion.Utils.List
-        Trisagion.Utils.Bits
         Trisagion.Types.Result
         Trisagion.Types.ParseError
         Trisagion.Streams.Counter
@@ -77,7 +78,7 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Split
         Trisagion.Parsers.Char
-        Trisagion.Parsers.Binary
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
-        Trisagion.Serializers.Binary
+        Trisagion.Typeclasses.Parsers.Binary
+        Trisagion.Typeclasses.Serializers.Binary
