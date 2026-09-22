@@ -55,6 +55,7 @@ library
         text >=2.1 && <2.2,
         vector >=0.13 && <0.14,
         contravariant >=1.5 && <1.6,
+        selective >=0.7 && <0.8,
         optics-core >= 0.4.2 && <0.4.3,
         -- Non-hackage libraries.
         mono >=0.3 && <0.4,
