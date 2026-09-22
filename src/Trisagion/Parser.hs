@@ -28,8 +28,9 @@ import Data.Kind (Type)
 import Data.Void (Void)
 
 -- Libraries.
-import Control.Monad.State (MonadState (..))
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (MonadState (..))
+import Control.Selective (Selective (..), selectM)
 import Optics.Core (view)
 
 -- Package.
@@ -181,6 +182,11 @@ instance Monoid e => Alternative (Parser s e) where
                 case run q xs of
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
+
+{- | The 'Selective' instande. -}
+instance Selective (Parser s e) where
+    select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
+    select = selectM
 
 {- | The 'MonadState' instance.
 
