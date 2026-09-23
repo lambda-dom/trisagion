@@ -185,6 +185,7 @@ instance Monoid e => Alternative (Parser s e) where
 
 {- | The 'Selective' instande. -}
 instance Selective (Parser s e) where
+    {-# INLINE select #-}
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
     select = selectM
 
