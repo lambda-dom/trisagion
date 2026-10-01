@@ -60,7 +60,6 @@ library
         -- Non-hackage libraries.
         mono >=0.3 && <0.4,
         optics-conversions >=0.1 && <0.2,
-    build-depends:
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either
