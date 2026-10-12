@@ -12,6 +12,10 @@ module Lib.Monoid (
     test_semigroup_law,
     test_monoid_laws,
     test_semigroup_idempotency,
+
+    -- * Morphism laws.
+    test_semigroup_morphism_law,
+    test_monoid_morphism_law,
 ) where
 
 -- Imports.
@@ -98,3 +102,35 @@ test_semigroup_idempotency g =
         (fromString "x <> x", uncurry (<>) . (\ x -> (x, x)))
         (fromString "id", id)
         g
+
+{- | Test semigroup morphism laws. -}
+test_semigroup_morphism_law
+    :: (Monoid m, Monoid n, Eq n, Show m, Show n)
+    => (String, m -> n)
+    -> Gen m
+    -> Property ()
+test_semigroup_morphism_law (xs, f) genM = do
+    x <- gen genM
+    y <- gen genM
+    assert $ eq
+        .$ (fromString $ xs ++ "(x <> y)", f (x <> y))
+        .$ (fromString $ xs ++ "x <> " ++ xs ++ " y", f x <> f y)
+
+{- | Test unit preservation of a function. -}
+test_monoid_morphism_unit_law
+    :: (Monoid m, Monoid n, Eq n, Show n)
+    => (String, m -> n)
+    -> Property ()
+test_monoid_morphism_unit_law (xs, f) = do
+    assert $ eq
+        .$ (fromString $ xs ++ "mempty", f mempty)
+        .$ (fromString "mempty", mempty)
+
+test_monoid_morphism_law
+    :: (Monoid m, Monoid n, Eq n, Show m, Show n)
+    => (String, m -> n)
+    -> Gen m
+    -> Property ()
+test_monoid_morphism_law p genM
+    =  test_semigroup_morphism_law p genM
+    *> test_monoid_morphism_unit_law p
