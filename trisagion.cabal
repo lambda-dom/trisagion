@@ -96,9 +96,12 @@ test-suite trisagion-tests
     type: exitcode-stdio-1.0
     main-is: Main.hs
     build-depends:
-        -- mono,
+        trisagion,
         -- Libraries.
         tasty         >=1.5 && <1.6,
-        -- falsify       >=0.4 && <0.5,
-        -- tasty-falsify >=0.1 && <0.2,
+        falsify       >=0.4 && <0.5,
+        tasty-falsify >=0.1 && <0.2,
     other-modules:
+        Lib.Gen
+        Lib.Monoid
+        Tests.Types.ParseError
