@@ -22,13 +22,9 @@ source-repository head
     type: git
     location: https://github.com/lambda-dom/trisagion
 
-library
+
+common common-fields
     default-language: GHC2021
-    default-extensions:
-        DerivingStrategies
-        DerivingVia
-        FunctionalDependencies
-        RequiredTypeArguments
     ghc-options:
         -Wall
         -Wcompat
@@ -43,24 +39,33 @@ library
         -Wunused-packages
         -- Prepare for dependent types.
         -Wterm-variable-capture
-    hs-source-dirs:
-        src
     build-depends:
         -- GHC >= 9.10 && < 9.12
         base >=4.20 && <4.21,
+
+library
+    import:
+        common-fields
+    default-extensions:
+        DerivingStrategies
+        DerivingVia
+        FunctionalDependencies
+        RequiredTypeArguments
+    hs-source-dirs:
+        src
+    build-depends:
         -- Libraries.
-        mtl >=2.3 && <2.4,
-        bytestring >=0.12 && <0.13,
-        containers >=0.7 && <0.8,
-        text >=2.1 && <2.2,
-        vector >=0.13 && <0.14,
-        contravariant >=1.5 && <1.6,
-        selective >=0.7 && <0.8,
-        optics-core >= 0.4.2 && <0.4.3,
+        mtl                >=2.3   && <2.4,
+        bytestring         >=0.12  && <0.13,
+        containers         >=0.7   && <0.8,
+        text               >=2.1   && <2.2,
+        vector             >=0.13  && <0.14,
+        contravariant      >=1.5   && <1.6,
+        selective          >=0.7   && <0.8,
+        optics-core        >=0.4.2 && <0.4.3,
         -- Non-hackage libraries.
-        mono >=0.1 && <0.2,
-        optics-conversions >=0.1 && <0.2,
-    other-modules:
+        mono               >=0.1   && <0.2,
+        optics-conversions >=0.1   && <0.2,
     exposed-modules:
         Trisagion.Utils.Either
         Trisagion.Utils.List
@@ -71,6 +76,9 @@ library
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Split
         Trisagion.Typeclasses.Sink
+        Trisagion.Serializers.Combinators
+        Trisagion.Typeclasses.Parsers.Binary
+        Trisagion.Typeclasses.Serializers.Binary
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.Source
@@ -79,6 +87,21 @@ library
         Trisagion.Parsers.Split
         Trisagion.Parsers.Char
         Trisagion.Serializer
-        Trisagion.Serializers.Combinators
-        Trisagion.Typeclasses.Parsers.Binary
-        Trisagion.Typeclasses.Serializers.Binary
+
+test-suite trisagion-tests
+    import:
+        common-fields
+    hs-source-dirs:
+        tests
+    type: exitcode-stdio-1.0
+    main-is: Main.hs
+    build-depends:
+        trisagion,
+        -- Libraries.
+        tasty         >=1.5 && <1.6,
+        falsify       >=0.4 && <0.5,
+        tasty-falsify >=0.1 && <0.2,
+    other-modules:
+        Lib.Gen
+        Lib.Monoid
+        Tests.Types.ParseError

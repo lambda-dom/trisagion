@@ -150,7 +150,7 @@ empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' instance also satisfies /left distributivity/:
+'Alternative' instance is also idempotent and moreover satisfies /left distributivity/:
 
 @
 (f \<*\> x) \<|\> (f \<*\> y) == f \<*\> (x \<|\> y)
@@ -183,7 +183,7 @@ instance Monoid e => Alternative (Parser s e) where
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
 
-{- | The 'Selective' instande. -}
+{- | The 'Selective' instance. -}
 instance Selective (Parser s e) where
     {-# INLINE select #-}
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
