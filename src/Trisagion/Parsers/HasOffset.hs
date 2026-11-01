@@ -49,6 +49,7 @@ offset = gets HasOffset.offset
 >>> parse (spanned one) $ initialize "0123"
 Right (('0',Span {lower = 0, upper = 1}),Counter 1 "123")
 -}
+{-# INLINE spanned #-}
 spanned :: HasOffset s => Parser s e a -> Parser s e (a, Span)
 spanned p = do
     lower <- first absurd offset
