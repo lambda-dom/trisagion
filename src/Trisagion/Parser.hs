@@ -70,13 +70,13 @@ first f . pure == pure
 first f (p \<*\> q) == (first f p) \<*\> (first f q) 
 @
 
-the 'Monad' structure,
+and the 'Monad' structure,
 
 @
 first f (p >>= h) == (first f p) >>= (first f .  h) 
 @
 
-and, assuming @f@ is a /monoid morphism/, the 'Alternative' structure,
+Furthermore, if @f@ is a /monoid morphism/ then the 'Alternative' structure is also preserved:
 
 @
 first f empty == empty
@@ -90,7 +90,7 @@ instance Bifunctor (Parser s) where
 
 {- | The 'Applicative' instance.
 
-Allows sequencing of parsers and combine their results. With @'pure' x@ values can be embedded in a
+Allows sequencing of parsers and combine their results. With @'pure'@, values can be embedded in a
 parser. The parser @p \<*\> q@ first runs @p@ then @q@, and returns the result of @p@ applied to
 the result of @q@.
 
@@ -163,9 +163,9 @@ The next example shows that right distributivity is violated even with an idempo
 >>> let f = bimap (const ()) (const id) $ matchOne '0'
 >>> let g = first (const ()) (matchOne '0') *> bimap (const ()) (const id) (matchOne '1')
 >>> let x = first (const ()) (matchOne '2')
->>> parse ((f <|> g) <*> x) ("0123")
+>>> parse ((f <|> g) <*> x) "0123"
 Left ()
->>> parse ((f <*> x) <|> (g <*> x)) ("0123")
+>>> parse ((f <*> x) <|> (g <*> x)) "0123"
 Right ('2',"3")
 -}
 instance Monoid e => Alternative (Parser s e) where
@@ -183,7 +183,7 @@ instance Monoid e => Alternative (Parser s e) where
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
 
-{- | The 'Selective' instande. -}
+{- | The 'Selective' instance. -}
 instance Selective (Parser s e) where
     {-# INLINE select #-}
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
@@ -202,12 +202,12 @@ The @'get'@ parser allows probing the t'Parser' state, e.g.:
 The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
 the t'Parser' state.
 
-__Definition__: a parser @p@ is /normal/ if for every input @xs@, on success, the 'remainder' is a,
+__Definition__: a parser @p@ is /monotonic/ if for every input @xs@, on success, the 'remainder' is a,
 possibly improper, suffix of @xs@.
 
-All the parsers in the library are provably normal, and all parser combinators return normal
-parsers on the assumption that the arguments are normal, but the 'MonadState' typeclass,
-specifically the 'put' method, allows the construction of non-normal parsers.
+All the parsers in the library are provably monotonic, and all parser combinators return monotonic
+parsers on the assumption that the arguments are monotonic, but the 'MonadState' typeclass,
+specifically the 'put' method, allows the construction of non-monotonic parsers.
 
 note(s):
 

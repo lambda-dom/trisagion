@@ -213,7 +213,7 @@ isolate n p = do
 note(s):
 
   * Implementation requires computing the difference of offsets, so it implicitly relies on
-    normality of @p@.
+    @p@ being monotonic.
 
 === __Examples:__
 
@@ -233,6 +233,6 @@ consumed p = do
     start <- first absurd offset
     x     <- p
     end   <- first absurd offset
-    -- Implicitly relies on the parser @p@ being normal, for positivity of @end - start@.
+    -- Implicitly relies on the parser @p@ being monotonic, for positivity of @end - start@.
     let ys = either absurd id $ eval (takePrefix (end - start)) xs
     pure (x, ys)

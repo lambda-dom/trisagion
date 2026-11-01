@@ -99,6 +99,9 @@ note(s):
 
 === __Examples:__
 
+The parser 'failIff' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
+That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tests below.
+
 >>> parse (failIff (withParseError $ matchOne '1')) (initialize "0123")
 Right ((),Counter 0 "0123")
 
@@ -249,7 +252,8 @@ sequenceP = sequenceA
 
 {- | Choose between two alternative parsers.
 
-Run the first parser and if it fails run the second. Return the results as an @'Either'@.
+Run the first parser and return the results. If it fails, run the second parser. Return the results
+as an @'Either'@.
 
 === __Examples:__
 
