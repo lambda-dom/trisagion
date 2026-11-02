@@ -7,11 +7,19 @@ The @Binary@ typeclass for parsers with @'Split' 'Word8' b s@ constraints.
 module Trisagion.Typeclasses.Parsers.Binary (
     -- * Typeclasses.
     Binary (..),
+
+    -- * `Int` parsers.
+    int16Le,
+    int32Le,
+    int64Le,
+    int16Be,
+    int32Be,
+    int64Be,
 ) where
 
 -- Imports.
 -- Base.
-import Data.Int (Int8)
+import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
@@ -21,8 +29,14 @@ import qualified Data.ByteString.Short as SBytes (ShortByteString, index)
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
-import Data.Bits.Optics (word16BytesLe, word32BytesLe, word64BytesLe, word16BytesBe, word32BytesBe, word64BytesBe)
-import Data.Word.Optics (word8ToInt8)
+import Data.Bits.Optics (
+    word16BytesLe,
+    word32BytesLe,
+    word64BytesLe,
+    word16BytesBe,
+    word32BytesBe,
+    word64BytesBe)
+import Data.Word.Optics (word8ToInt8, word16ToInt16, word32ToInt32, word64ToInt64)
 
 -- Package.
 import Trisagion.Typeclasses.Split (Split)
@@ -372,3 +386,27 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
                     SBytes.index xs 1,
                     SBytes.index xs 0
                 )
+
+{- | Parse a 'Int16' in little-endian format. -}
+int16Le :: Binary b s => Parser s InputError Int16
+int16Le = fmap (view word16ToInt16) word16Le
+
+{- | Parse a 'Int32' in little-endian format. -}
+int32Le :: Binary b s => Parser s InputError Int32
+int32Le = fmap (view word32ToInt32) word32Le
+
+{- | Parse a 'Int64' in little-endian format. -}
+int64Le :: Binary b s => Parser s InputError Int64
+int64Le = fmap (view word64ToInt64) word64Le
+
+{- | Parse a 'Int16' in big-endian format. -}
+int16Be :: Binary b s => Parser s InputError Int16
+int16Be = fmap (view word16ToInt16) word16Be
+
+{- | Parse a 'Int32' in big-endian format. -}
+int32Be :: Binary b s => Parser s InputError Int32
+int32Be = fmap (view word32ToInt32) word32Be
+
+{- | Parse a 'Int64' in big-endian format. -}
+int64Be :: Binary b s => Parser s InputError Int64
+int64Be = fmap (view word64ToInt64) word64Be
