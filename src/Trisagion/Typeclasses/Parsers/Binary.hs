@@ -9,6 +9,7 @@ module Trisagion.Typeclasses.Parsers.Binary (
     Binary (..),
 
     -- * `Int` parsers.
+    int8,
     int16Le,
     int32Le,
     int64Le,
@@ -91,11 +92,6 @@ class (Split Word8 b s) => Binary b s where
     {-# INLINE word8 #-}
     word8 :: Parser s InputError Word8
     word8 = one
-
-    {- | Parse a single 'Int8'. -}
-    {-# INLINE int8 #-}
-    int8 :: Parser s InputError Int8
-    int8 = (view word8ToInt8) <$> word8
 
     {- | Parse a 'Word16' in little-endian format. -}
     word16Le :: Parser s InputError Word16
@@ -386,6 +382,11 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
                     SBytes.index xs 1,
                     SBytes.index xs 0
                 )
+
+{- | Parse a single 'Int8'. -}
+{-# INLINE int8 #-}
+int8 :: Binary b s => Parser s InputError Int8
+int8 = fmap (view word8ToInt8) word8
 
 {- | Parse a 'Int16' in little-endian format. -}
 int16Le :: Binary b s => Parser s InputError Int16
