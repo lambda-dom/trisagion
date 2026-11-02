@@ -24,9 +24,9 @@ import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
 -- Libraries.
-import qualified Data.ByteString as Bytes (ByteString, index)
-import qualified Data.ByteString.Lazy as LBytes (ByteString, index)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, index)
+import qualified Data.ByteString as Bytes (ByteString, index, pack)
+import qualified Data.ByteString.Lazy as LBytes (ByteString, index, toStrict)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromShort)
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
@@ -44,6 +44,7 @@ import Trisagion.Typeclasses.Split (Split)
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.Source (InputError, one)
 import Trisagion.Parsers.Split (takeExact)
+import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 
 -- $setup
@@ -110,6 +111,16 @@ class (Split Word8 b s) => Binary b s where
 
     {- | Parse a 'Word64' in big-endian format. -}
     word64Be :: Parser s InputError Word64
+
+    {- | Turn a prefix parser into a 'Bytes.ByteString' parser.
+
+    note(s):
+
+        * The default implementation is to make use of the 'MonoFoldable' constraint and apply the
+        obvious function under @fmap@. Specific prefix types usually have a faster conversion method.
+    -}
+    bytes :: MonoFoldable Word8 b => Parser s e b -> Parser s e Bytes.ByteString
+    bytes = fmap (Bytes.pack . monotoList)
 
 
 -- Instances.
@@ -257,6 +268,10 @@ instance Binary Bytes.ByteString Bytes.ByteString where
                     Bytes.index xs 0
                 )
 
+    {-# INLINE bytes #-}
+    bytes :: Parser Bytes.ByteString e Bytes.ByteString -> Parser Bytes.ByteString e Bytes.ByteString
+    bytes = id
+
 instance Binary LBytes.ByteString LBytes.ByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser LBytes.ByteString InputError Word16
@@ -320,6 +335,18 @@ instance Binary LBytes.ByteString LBytes.ByteString where
                     LBytes.index xs 0
                 )
 
+    {- | Turn a lazy bytestring parser into a strict one.
+
+    note(s):
+
+        * Requires conversion of the lazy bytestring into a strict one, which is an expensive
+        operation.
+    -}
+    {-# INLINE bytes #-}
+    bytes :: Parser LBytes.ByteString e LBytes.ByteString -> Parser LBytes.ByteString e Bytes.ByteString
+    bytes = fmap LBytes.toStrict
+
+
 instance Binary SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser SBytes.ShortByteString InputError Word16
@@ -382,6 +409,11 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
                     SBytes.index xs 1,
                     SBytes.index xs 0
                 )
+
+    {-# INLINE bytes #-}
+    bytes :: Parser SBytes.ShortByteString e SBytes.ShortByteString -> Parser SBytes.ShortByteString e Bytes.ByteString
+    bytes = fmap SBytes.fromShort
+
 
 {- | Parse a single 'Int8'. -}
 {-# INLINE int8 #-}
