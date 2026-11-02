@@ -26,7 +26,7 @@ import Data.Word (Word8, Word16, Word32, Word64)
 -- Libraries.
 import qualified Data.ByteString as Bytes (ByteString, index, pack)
 import qualified Data.ByteString.Lazy as LBytes (ByteString, index, toStrict)
-import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromShort)
+import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromShort, pack, toShort)
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
@@ -121,6 +121,16 @@ class (Split Word8 b s) => Binary b s where
     -}
     bytes :: MonoFoldable Word8 b => Parser s e b -> Parser s e Bytes.ByteString
     bytes = fmap (Bytes.pack . monotoList)
+
+    {- | Turn a prefix parser into a 'SBytes.ShortByteString' parser.
+
+    note(s):
+
+        * The default implementation is to make use of the 'MonoFoldable' constraint and apply the
+        obvious function under @fmap@. Specific prefix types usually have a faster conversion method.
+    -}
+    shortBytes :: MonoFoldable Word8 b => Parser s e b -> Parser s e SBytes.ShortByteString
+    shortBytes = fmap (SBytes.pack . monotoList)
 
 
 -- Instances.
@@ -272,6 +282,10 @@ instance Binary Bytes.ByteString Bytes.ByteString where
     bytes :: Parser Bytes.ByteString e Bytes.ByteString -> Parser Bytes.ByteString e Bytes.ByteString
     bytes = id
 
+    {-# INLINE shortBytes #-}
+    shortBytes :: Parser Bytes.ByteString e Bytes.ByteString -> Parser Bytes.ByteString e SBytes.ShortByteString
+    shortBytes = fmap SBytes.toShort
+
 instance Binary LBytes.ByteString LBytes.ByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser LBytes.ByteString InputError Word16
@@ -413,6 +427,10 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
     {-# INLINE bytes #-}
     bytes :: Parser SBytes.ShortByteString e SBytes.ShortByteString -> Parser SBytes.ShortByteString e Bytes.ByteString
     bytes = fmap SBytes.fromShort
+
+    {-# INLINE shortBytes #-}
+    shortBytes :: Parser SBytes.ShortByteString e SBytes.ShortByteString -> Parser SBytes.ShortByteString e SBytes.ShortByteString
+    shortBytes = id
 
 
 {- | Parse a single 'Int8'. -}
