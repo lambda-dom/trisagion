@@ -59,7 +59,7 @@ library
         optics-core >= 0.4.2 && <0.4.3,
         -- Non-hackage libraries.
         mono >=0.1 && <0.2,
-        optics-conversions >=0.1 && <0.2,
+        optics-conversions >=0.0.1 && <0.0.2,
     other-modules:
     exposed-modules:
         Trisagion.Utils.Either

@@ -45,7 +45,6 @@ import Prelude hiding (takeWhile)
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
-import Data.Foldable (fold)
 import Data.List (intersperse)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
@@ -180,7 +179,7 @@ Left (InputError 1)
 -}
 {-# INLINEABLE line #-}
 line :: forall b s . (MonoPointed Char b, Split Char b s, Monoid b) => Parser s InputError b
-line = (fold . intersperse (monopoint '\r')) <$> do
+line = (foldl' (<>) mempty . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
             then throwError $ InputError 1
