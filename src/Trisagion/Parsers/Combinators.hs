@@ -46,11 +46,11 @@ import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.State (MonadState (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Parser (Parser, try, eval)
-import Control.Monad.State (MonadState(..))
 
 
 -- $setup

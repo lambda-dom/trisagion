@@ -16,12 +16,12 @@ import Data.Word (Word8)
 import GHC.IsList (fromList)
 
 -- Libraries.
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Sequence (singleton, fromList)
 import Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Builder as Bytes (Builder, word8, lazyByteString)
 import Data.Text (Text)
 import qualified Data.Text.Lazy.Builder as Text (Builder, singleton, fromText, fromString)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Sequence (singleton, fromList)
 
 
 -- $setup

@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 {- |
 Module: Trisagion.Parsers.Streamable
 
@@ -55,4 +57,4 @@ spanned p = do
     lower <- first absurd offset
     x     <- p
     upper <- first absurd offset
-    pure (x, Span {lower = lower, upper = upper})
+    pure (x, Span {..})
