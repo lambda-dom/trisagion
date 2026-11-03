@@ -42,7 +42,7 @@ import Trisagion.Serializers.Combinators (many)
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
 class Sink Word8 b s => Binary b s where
-    {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be  #-}
+    {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Serialize a single 'Word8'. -}
     {-# INLINE word8 #-}
