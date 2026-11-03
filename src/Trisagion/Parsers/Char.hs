@@ -45,7 +45,6 @@ import Prelude hiding (takeWhile)
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
 import Data.Char (isSpace, isDigit, ord, isLetter)
-import Data.Foldable (fold)
 import Data.List (intersperse)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
@@ -77,7 +76,7 @@ import Trisagion.Parsers.Split (takeWith, takeWith1)
 {- | The universal newline type. -}
 data Newline
     = LF                                -- ^ Unix end of line.
-    | CR                                -- ^ MacOS end of line.
+    | CR                                -- ^ MacOS end of line. Mainly for backwards compatibility.
     | CRLF                              -- ^ Windows end of line.
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
@@ -155,6 +154,10 @@ newline = do
 
 {- | Parse a line from the input stream. The line does not contain the ending newline and can be null.
 
+note(s):
+
+    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
+
 === __Examples:__
 
 >>> parse line "0123\n456"
@@ -180,7 +183,7 @@ Left (InputError 1)
 -}
 {-# INLINEABLE line #-}
 line :: forall b s . (MonoPointed Char b, Split Char b s, Monoid b) => Parser s InputError b
-line = (fold . intersperse (monopoint '\r')) <$> do
+line = (foldl' (<>) mempty . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
             then throwError $ InputError 1
@@ -503,24 +506,20 @@ string = do
 
 {- | Parse a line comment.
 
-A line comment starts with @p@ and runs to the end of the line (character @'\\n'@), returning the
-prefix in-between.
+A line comment starts with @p@ and runs to the end of the line, returning the prefix in-between.
 
 note(s):
 
-    * If the input stream contains Windows end of lines, then the comment text will contain an
-    ending @'\\r'@. This can only be stripped by assuming more about the prefix @b@ (the practical
-    solution) or complicating the implementation.
-
+    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
 
 === __Examples:__
 
 >>> parse (comment (skip $ matchOne '#')) "#a line comment\r\n code starts here"
-Right ("a line comment\r"," code starts here")
+Right ("a line comment"," code starts here")
 -}
 {-# INLINE comment #-}
 comment
-    :: Split Char b s
+    :: (Split Char b s, MonoPointed Char b, Monoid b)
     => Parser s e ()                    -- ^ Parser for start of line comment.
-    -> Parser s e b
-comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)
+    -> Parser s (e :+: InputError) b
+comment p = first Left p *> first Right line

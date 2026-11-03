@@ -17,7 +17,10 @@ module Trisagion.Types.Span (
 import Data.Kind (Type)
 
 
-{- | The @Span@ type. -}
+{- | The @Span@ type.
+
+A /span/ is a closed-open interval of the form @[m, n[@ with @m, n :: 'Int'@.
+-}
 type Span :: Type
 data Span = Span {
     lower :: {-# UNPACK #-} !Int,

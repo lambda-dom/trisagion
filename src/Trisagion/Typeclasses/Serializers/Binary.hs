@@ -17,6 +17,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
 
 -- Imports.
 -- Base.
+import Data.Char (chr)
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Int (Int8)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -24,19 +25,30 @@ import Data.Word (Word8, Word16, Word32, Word64)
 -- Libraries.
 import Data.ByteString (ByteString)
 import Data.ByteString.Builder (Builder)
-import qualified Data.ByteString.Builder as Bytes (word8, int8, word16LE, word32LE, word64LE, word16BE, word32BE, word64BE, byteString, shortByteString, char8, charUtf8)
+import qualified Data.ByteString.Builder as Bytes (
+    word8,
+    int8,
+    word16LE,
+    word32LE,
+    word64LE,
+    word16BE,
+    word32BE,
+    word64BE,
+    byteString,
+    shortByteString,
+    char8,
+    charUtf8)
 import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import Data.ByteString.Short (ShortByteString)
 import Optics.Core (view, review)
 
 -- non-Hackage libraries.
 import Data.Int.Optics (int8ToWord8)
+import Data.Word.Optics (word8ToInt)
 
 -- Package.
 import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
-import Data.Char (chr)
-import Data.Word.Optics (word8ToInt)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}

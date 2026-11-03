@@ -31,7 +31,14 @@ import Control.Monad.Except (MonadError (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Typeclasses.Split (Split, splitRemainder, splitPrefix, splitWith, splitPrefixExact, dropPrefix, dropWith)
+import Trisagion.Typeclasses.Split (
+    Split,
+    splitRemainder,
+    splitPrefix,
+    splitWith,
+    splitPrefixExact,
+    dropPrefix,
+    dropWith)
 import qualified Trisagion.Typeclasses.Split as Split (matchPrefix)
 import Trisagion.Parser (Parser, parse, eval)
 import Trisagion.Parsers.Combinators (lookAhead)
