@@ -76,7 +76,7 @@ import Trisagion.Parsers.Split (takeWith, takeWith1)
 {- | The universal newline type. -}
 data Newline
     = LF                                -- ^ Unix end of line.
-    | CR                                -- ^ MacOS end of line.
+    | CR                                -- ^ MacOS end of line. Mainly for backwards compatibility.
     | CRLF                              -- ^ Windows end of line.
     deriving stock (Eq, Ord, Bounded, Enum, Show)
 
@@ -153,6 +153,10 @@ newline = do
         _    -> throwError $ Left (ValidationError c)
 
 {- | Parse a line from the input stream. The line does not contain the ending newline and can be null.
+
+note(s):
+
+    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
 
 === __Examples:__
 
@@ -502,15 +506,11 @@ string = do
 
 {- | Parse a line comment.
 
-A line comment starts with @p@ and runs to the end of the line (character @'\\n'@), returning the
-prefix in-between.
+A line comment starts with @p@ and runs to the end of the line, returning the prefix in-between.
 
 note(s):
 
-    * If the input stream contains Windows end of lines, then the comment text will contain an
-    ending @'\\r'@. This can only be stripped by assuming more about the prefix @b@ (the practical
-    solution) or complicating the implementation.
-
+    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
 
 === __Examples:__
 
@@ -519,7 +519,7 @@ Right ("a line comment\r"," code starts here")
 -}
 {-# INLINE comment #-}
 comment
-    :: Split Char b s
+    :: (Split Char b s, MonoPointed Char b, Monoid b)
     => Parser s e ()                    -- ^ Parser for start of line comment.
-    -> Parser s e b
-comment p = p *> first absurd (takeWith (/= '\n') <* optional lf)
+    -> Parser s (e :+: InputError) b
+comment p = first Left p *> first Right line
