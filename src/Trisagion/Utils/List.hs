@@ -30,6 +30,7 @@ enumDown n = if n < 0 then const [] else zip ns
     where
         ns = if n == 0 then [0] else [n, pred n .. 0]
 
+
 {- | Exact version of 'splitAt'.
 
 === __Examples:__
