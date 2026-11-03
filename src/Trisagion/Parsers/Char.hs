@@ -515,7 +515,7 @@ note(s):
 === __Examples:__
 
 >>> parse (comment (skip $ matchOne '#')) "#a line comment\r\n code starts here"
-Right ("a line comment\r"," code starts here")
+Right ("a line comment"," code starts here")
 -}
 {-# INLINE comment #-}
 comment
