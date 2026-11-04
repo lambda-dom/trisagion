@@ -8,12 +8,15 @@ module Trisagion.Parser (
     -- * The parsing monad.
     Parser,
 
-    -- * Basic functions.
+    -- ** Basic functions.
     embed,
     run,
     parse,
     eval,
     remainder,
+
+    -- ** Isomorphisms.
+    parsing,
 
     -- * Error parsers.
     catch,
@@ -31,7 +34,7 @@ import Data.Void (Void)
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.State (MonadState (..))
 import Control.Selective (Selective (..), selectM)
-import Optics.Core (view)
+import Optics.Core (Iso', iso, view, review)
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
@@ -51,9 +54,10 @@ is the type of parsed values.
 
 note(s):
 
-    * Two parsers @p@ and @q@ are equal, written as @p == q@, iff their parsing functions are
-    extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@. Obviously,
-    this definition is not effective, so it cannot be turned into an 'Eq' instance.
+    * Two parsers @p@ and @q@ are said to be /equal/, written as @p == q@, iff their parsing
+    functions are extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@.
+    Obviously enough, this definition is not effective, so it cannot be turned into an 'Eq'
+    instance.
 -}
 type Parser :: Type -> Type -> Type -> Type
 newtype Parser s e a = Parser (s -> Result s e a)
@@ -158,7 +162,8 @@ Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <>
 
 === __Counterexample:__
 
-The next example shows that right distributivity is violated even with an idempotent monoid.
+The next example shows that right distributivity is violated even with an idempotent monoid. In the
+example, the error monoid is @()@.
 
 >>> let f = bimap (const ()) (const id) $ matchOne '0'
 >>> let g = first (const ()) (matchOne '0') *> bimap (const ()) (const id) (matchOne '1')
@@ -202,8 +207,8 @@ The @'get'@ parser allows probing the t'Parser' state, e.g.:
 The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
 the t'Parser' state.
 
-__Definition__: a parser @p@ is /monotonic/ if for every input @xs@, on success, the 'remainder' is a,
-possibly improper, suffix of @xs@.
+__Definition__: a parser @p@ is /monotonic/ if for every input @xs@, on success, the 'remainder' is
+a, possibly improper, suffix of @xs@.
 
 All the parsers in the library are provably monotonic, and all parser combinators return monotonic
 parsers on the assumption that the arguments are monotonic, but the 'MonadState' typeclass,
@@ -269,7 +274,7 @@ run (Parser f) = f
 {- | Run the parser on the input and return the results as an 'Either'. -}
 {-# INLINE parse #-}
 parse :: Parser s e a -> s -> e :+: (a, s)
-parse p = view toEither . run p
+parse = view parsing
 
 {- | Evaluate the parser on the input and return the result, discarding the remainder. -}
 {-# INLINE eval #-}
@@ -280,6 +285,12 @@ eval p = fmap fst . parse p
 {-# INLINE remainder #-}
 remainder :: Parser s e a -> s -> e :+: s
 remainder p = fmap snd . parse p
+
+
+{- | The isomorphism between parsers and parsing functions. -}
+{-# INLINE parsing #-}
+parsing :: Iso' (Parser s e a) (s -> e :+: (a, s))
+parsing = iso (\ p -> view toEither . run p) (\ f -> embed $ review toEither . f)
 
 
 {- | The type-changing version of 'catchError'.
