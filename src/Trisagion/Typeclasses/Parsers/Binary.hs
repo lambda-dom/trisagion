@@ -59,13 +59,15 @@ mkParserWord16Le f = (review word16BytesLe . f) <$> takeExact 2
 {-# INLINE mkParserWord32Le #-}
 mkParserWord32Le
     :: (Split Word8 b s)
-    => (b -> (Word8, Word8, Word8, Word8)) -> Parser s InputError Word32
+    => (b -> (Word8, Word8, Word8, Word8))
+    -> Parser s InputError Word32
 mkParserWord32Le f = (review word32BytesLe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Le #-}
 mkParserWord64Le
     :: (Split Word8 b s)
-    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)) -> Parser s InputError Word64
+    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
+    -> Parser s InputError Word64
 mkParserWord64Le f = (review word64BytesLe . f) <$> takeExact 8
 
 {-# INLINE mkParserWord16Be #-}
@@ -75,13 +77,15 @@ mkParserWord16Be f = (review word16BytesBe . f) <$> takeExact 2
 {-# INLINE mkParserWord32Be #-}
 mkParserWord32Be
     :: (Split Word8 b s)
-    => (b -> (Word8, Word8, Word8, Word8)) -> Parser s InputError Word32
+    => (b -> (Word8, Word8, Word8, Word8))
+    -> Parser s InputError Word32
 mkParserWord32Be f = (review word32BytesBe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Be #-}
 mkParserWord64Be
     :: (Split Word8 b s)
-    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8)) -> Parser s InputError Word64
+    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
+    -> Parser s InputError Word64
 mkParserWord64Be f = (review word64BytesBe . f) <$> takeExact 8
 
 
@@ -279,11 +283,15 @@ instance Binary Bytes.ByteString Bytes.ByteString where
                 )
 
     {-# INLINE bytes #-}
-    bytes :: Parser Bytes.ByteString e Bytes.ByteString -> Parser Bytes.ByteString e Bytes.ByteString
+    bytes
+        :: Parser Bytes.ByteString e Bytes.ByteString
+        -> Parser Bytes.ByteString e Bytes.ByteString
     bytes = id
 
     {-# INLINE shortBytes #-}
-    shortBytes :: Parser Bytes.ByteString e Bytes.ByteString -> Parser Bytes.ByteString e SBytes.ShortByteString
+    shortBytes
+        :: Parser Bytes.ByteString e Bytes.ByteString
+        -> Parser Bytes.ByteString e SBytes.ShortByteString
     shortBytes = fmap SBytes.toShort
 
 instance Binary LBytes.ByteString LBytes.ByteString where
@@ -357,7 +365,9 @@ instance Binary LBytes.ByteString LBytes.ByteString where
         operation.
     -}
     {-# INLINE bytes #-}
-    bytes :: Parser LBytes.ByteString e LBytes.ByteString -> Parser LBytes.ByteString e Bytes.ByteString
+    bytes
+        :: Parser LBytes.ByteString e LBytes.ByteString
+        -> Parser LBytes.ByteString e Bytes.ByteString
     bytes = fmap LBytes.toStrict
 
 
@@ -425,11 +435,15 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
                 )
 
     {-# INLINE bytes #-}
-    bytes :: Parser SBytes.ShortByteString e SBytes.ShortByteString -> Parser SBytes.ShortByteString e Bytes.ByteString
+    bytes
+        :: Parser SBytes.ShortByteString e SBytes.ShortByteString
+        -> Parser SBytes.ShortByteString e Bytes.ByteString
     bytes = fmap SBytes.fromShort
 
     {-# INLINE shortBytes #-}
-    shortBytes :: Parser SBytes.ShortByteString e SBytes.ShortByteString -> Parser SBytes.ShortByteString e SBytes.ShortByteString
+    shortBytes
+        :: Parser SBytes.ShortByteString e SBytes.ShortByteString
+        -> Parser SBytes.ShortByteString e SBytes.ShortByteString
     shortBytes = id
 
 
