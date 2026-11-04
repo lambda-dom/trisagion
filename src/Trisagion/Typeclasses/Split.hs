@@ -154,6 +154,15 @@ instance Eq a => Split a [a] [a] where
     dropPrefix :: Int -> [a] -> [a]
     dropPrefix = drop
 
+    {-# INLINE dropPrefixExact #-}
+    dropPrefixExact :: Int -> [a] -> Maybe [a]
+    dropPrefixExact n xs
+        | n <= 0    = Just xs
+        | otherwise =
+            case xs of
+                []       -> Nothing
+                (_ : ys) -> dropPrefixExact (pred n) ys
+
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> [a] -> [a]
     dropWith = dropWhile
@@ -390,16 +399,16 @@ instance Eq a => Split a (Seq a) (Seq a) where
     splitRemainder :: Seq a -> (Seq a, Seq a)
     splitRemainder xs = (xs, empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Int -> Seq a -> Seq a
+    dropPrefix = Seq.drop
+
     {-# INLINE dropPrefixExact #-}
     dropPrefixExact :: Int -> Seq a -> Maybe (Seq a)
     dropPrefixExact n xs =
         if length xs < n
         then Nothing
         else Just $ dropPrefix n xs
-
-    {-# INLINE dropPrefix #-}
-    dropPrefix :: Int -> Seq a -> Seq a
-    dropPrefix = Seq.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> Seq a -> Seq a
@@ -507,16 +516,16 @@ instance (Eq a, UVector.Unbox a) => Split a (UVector.Vector a) (UVector.Vector a
     splitRemainder :: UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitRemainder xs = (xs, UVector.empty)
 
+    {-# INLINE dropPrefix #-}
+    dropPrefix :: Int -> UVector.Vector a -> UVector.Vector a
+    dropPrefix = UVector.drop
+
     {-# INLINE dropPrefixExact #-}
     dropPrefixExact :: Int -> UVector.Vector a -> Maybe (UVector.Vector a)
     dropPrefixExact n xs =
         if UVector.length xs < n
         then Nothing
         else Just $ dropPrefix n xs
-
-    {-# INLINE dropPrefix #-}
-    dropPrefix :: Int -> UVector.Vector a -> UVector.Vector a
-    dropPrefix = UVector.drop
 
     {-# INLINE dropWith #-}
     dropWith :: (a -> Bool) -> UVector.Vector a -> UVector.Vector a

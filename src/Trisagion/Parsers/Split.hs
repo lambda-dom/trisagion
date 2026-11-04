@@ -172,7 +172,7 @@ takeExact n = do
 >>> parse (skipExact 2) "0123"
 Right ((),"23")
 
->>> parse (skipPrefix 10) "0123"
+>>> parse (skipExact 10) "0123"
 Left (InputError 10)
 -}
 {-# INLINE skipExact #-}
