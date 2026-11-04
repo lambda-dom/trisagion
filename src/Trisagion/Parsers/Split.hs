@@ -13,6 +13,7 @@ module Trisagion.Parsers.Split (
     takeRemainder,
     takeWith1,
     takeExact,
+    skipExact,
     matchPrefix,
     isolate,
     consumed,
@@ -38,7 +39,8 @@ import Trisagion.Typeclasses.Split (
     splitWith,
     splitPrefixExact,
     dropPrefix,
-    dropWith)
+    dropWith,
+    dropPrefixExact)
 import qualified Trisagion.Typeclasses.Split as Split (matchPrefix)
 import Trisagion.Parser (Parser, parse, eval)
 import Trisagion.Parsers.Combinators (lookAhead)
@@ -162,6 +164,24 @@ takeExact n = do
     case r of
         Just (xs, ys) -> put ys $> xs
         Nothing       -> throwError $ InputError n
+
+{- | Skip an exact, fixed size prefix from the input stream.
+
+=== __Examples:__
+
+>>> parse (skipExact 2) "0123"
+Right ((),"23")
+
+>>> parse (skipExact 10) "0123"
+Left (InputError 10)
+-}
+{-# INLINE skipExact #-}
+skipExact :: Split a b s => Int -> Parser s InputError ()
+skipExact n = do
+    xs <- gets $ dropPrefixExact n
+    case xs of
+        Just ys -> put ys $> ()
+        Nothing -> throwError $ InputError n
 
 {- | Parse a matching prefix from the input stream.
 
