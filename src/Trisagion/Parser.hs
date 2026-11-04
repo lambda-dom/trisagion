@@ -188,7 +188,13 @@ instance Monoid e => Alternative (Parser s e) where
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
 
-{- | The 'Selective' instance. -}
+{- | The 'Selective' instance.
+
+note(s):
+
+    * See the [selective package](https://hackage.haskell.org/package/selective) for the why's and
+    the what's of the 'Selective' typeclass.
+-}
 instance Selective (Parser s e) where
     {-# INLINE select #-}
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
@@ -258,14 +264,18 @@ instance MonadError e (Parser s e) where
             Error e         -> run (h e) s
 
 
-{- | Embed a parsing function in the t'Parser' monad. -}
+{- | Embed a parsing function in the t'Parser' monad.
+
+The inverse of @'run'@.
+-}
 {-# INLINE embed #-}
 embed ::  (s ->  Result s e a) -> Parser s e a
 embed = Parser
 
 {- | Run the parser on the input and return the results.
 
-The inverse of @'embed'@.
+This function is mostly for internal use; the user-facing public API consistently uses the isomorph
+@e :+: (a, s)@ instead of @'Result' s e a@.
 -}
 {-# INLINE run #-}
 run :: Parser s e a -> s ->  Result s e a
