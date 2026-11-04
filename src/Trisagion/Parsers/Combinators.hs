@@ -69,7 +69,8 @@ The difference with 'pure' is the more precise type signature.
 value :: a -> Parser s Void a
 value = pure
 
-{- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return 'Nothing'.
+{- | @'optional' p@ runs @p@ returning the result as a 'Just'. On error, backtrack and return
+'Nothing'.
 
 The difference with 'Control.Applicative.optional' from 'Control.Applicative.Alternative' is the
 more precise type signature.

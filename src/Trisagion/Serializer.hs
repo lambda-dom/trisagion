@@ -12,8 +12,12 @@ module Trisagion.Serializer (
     embed,
     run,
 
+    -- ** Isomorphisms.
+    serializing,
+
     -- * Operators.
     (|*>),
+    (<*|),
 ) where
 
 -- Imports.
@@ -27,6 +31,7 @@ import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..))
 
 -- non-Hackage libraries.
 import Trisagion.Utils.Either ((:+:))
+import Optics.Core (Iso', iso)
 
 
 {- | The @Serializer@ type. -}
@@ -74,6 +79,12 @@ instance Monoid s => Decidable (Serializer s) where
                 Right y -> q y
 
 
+{- | The isomorphism between serializers and serializing functions. -}
+{-# INLINE serializing #-}
+serializing :: Iso' (Serializer s a) (a -> s)
+serializing = iso run embed
+
+
 {- | Embed a serializing function in a t'Serializer'. -}
 {-# INLINE embed #-}
 embed :: (a -> s) -> Serializer s a
@@ -88,12 +99,12 @@ run :: Serializer s a -> a -> s
 run (Serializer f) = f
 
 
-{- | Monoid action for serializers.
+{- | Monoid left action for serializers.
 
-The binary operator @(|*>)@ satisfies the (left) /monoid action/ laws:
+The binary operator @(|*>)@ satisfies the left /monoid action/ laws:
 
 @
-mempty |*> p == p
+mempty   |*> p == p
 (m <> n) |*> p == m |*> (n |*> p)
 @
 -}
@@ -101,3 +112,17 @@ mempty |*> p == p
 (|*>) :: Monoid s => s -> Serializer s a -> Serializer s a
 (|*>) m s = embed $ (m <>) . run s
 infixr 5 |*>
+
+{- | Monoid right action for serializers.
+
+The binary operator @(|*>)@ satisfies the right /monoid action/ laws:
+
+@
+p <*| mempty   == p
+p <*| (m <> n) == (p <*| n) <*| m
+@
+-}
+{-# INLINE (<*|) #-}
+(<*|) :: Monoid s => Serializer s a -> s -> Serializer s a
+(<*|) s m = embed $ (<> m) . run s
+infixl 5 <*|

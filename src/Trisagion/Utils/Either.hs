@@ -29,5 +29,5 @@ cozip = either (fmap Left) (fmap Right)
 
 {- | Make a validator from a function producing a 'Maybe'. -}
 {-# INLINE annotate #-}
-annotate :: (a -> e) -> (a -> Maybe b) -> a -> Either e b
+annotate :: (a -> e) -> (a -> Maybe b) -> a -> e :+: b
 annotate e h x = maybe (Left . e $ x) Right (h x)

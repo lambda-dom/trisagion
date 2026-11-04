@@ -10,6 +10,11 @@ module Trisagion.Types.Span (
 
     -- ** Functions.
     width,
+    toList,
+
+    -- ** Predicates.
+    isEmpty,
+    isElem,
 ) where
 
 -- Imports.
@@ -31,3 +36,16 @@ data Span = Span {
 {- | Return the width of the span. -}
 width :: Span -> Int
 width (Span n m) = m - n
+
+{- | Return the list of elements in the span. -}
+toList :: Span -> [Int]
+toList (Span m n) = [m .. pred n]
+
+
+{- | Return 'True' if the spane is empty. -}
+isEmpty :: Span -> Bool
+isEmpty (Span m n) = m >= n
+
+{- | Return 'True' if elem is in the span. -}
+isElem :: Int -> Span -> Bool
+isElem x (Span m n) = m <= x && x < n

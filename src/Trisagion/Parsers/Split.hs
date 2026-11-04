@@ -211,9 +211,7 @@ isolate
     -> Parser s e (a, b)
 isolate n p = do
     prefix <- first absurd $ takePrefix n
-    case parse p prefix of
-        Left e  -> throwError e
-        Right x -> pure x
+    either throwError pure $ parse p prefix
 
 {- | Run the parser and return its result along with the prefix of consumed input.
 

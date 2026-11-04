@@ -30,9 +30,6 @@ import Data.Void (Void)
 import Control.Monad.State (MonadState (..), gets)
 import Control.Monad.Except (MonadError (..))
 
--- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Source (Source (..))
@@ -49,12 +46,6 @@ import Trisagion.Parsers.Combinators (lookAhead, validate)
 type InputError :: Type
 newtype InputError = InputError Int
     deriving stock (Eq, Show)
-
-{- | Monofunctoriality of t'InputError'. -}
-instance MonoFunctor Int InputError where
-    {-# INLINE monomap #-}
-    monomap :: (Int -> Int) -> InputError -> InputError
-    monomap f (InputError n) = InputError (f n)
 
 
 {- | The @ValidationError@ error tag type thrown on failed validations. -}

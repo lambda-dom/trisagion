@@ -84,7 +84,7 @@ class Sink Word8 b s => Binary b s where
     bytes :: Serializer s ByteString
     bytes = contramap Bytes.unpack (many word8)
 
-    {- | Serialize a 'Data.ByteString.ByteString'. -}
+    {- | Serialize a 'Data.ByteString.Short.ShortByteString'. -}
     {-# INLINE shortBytes #-}
     shortBytes :: Serializer s ShortByteString
     shortBytes = contramap Short.unpack (many word8)
