@@ -202,7 +202,7 @@ instance Split Word8 Bytes.ByteString Bytes.ByteString where
     dropPrefixExact n xs =
         if Bytes.length xs < n
         then Nothing
-        else Just $ Bytes.drop n xs
+        else Just $ dropPrefix n xs
 
     {-# INLINE dropWith #-}
     dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
