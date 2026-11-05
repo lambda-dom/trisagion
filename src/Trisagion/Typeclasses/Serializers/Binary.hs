@@ -185,7 +185,12 @@ int64Be = contramap (view int64ToWord64) word64Be
 word8s :: Binary b s => Serializer s [Word8]
 word8s = many word8
 
-{- | Serialize a 'String' as list of 8-bit characters. Multibyte characters are truncated. -}
+{- | Serialize a 'String' as list of 8-bit characters in the latin-1 encoding.
+
+note(s):
+
+    * Multibyte characters are truncated.
+-}
 {-# INLINE char8s #-}
 char8s :: Binary b s => Serializer s String
 char8s = contramap (fmap (fromIntegral @Int @Word8 . ord)) word8s
