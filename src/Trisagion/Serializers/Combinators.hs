@@ -5,6 +5,10 @@ Various serializer combinators.
 -}
 
 module Trisagion.Serializers.Combinators (
+    -- * Serializers.
+    constant,
+    applied,
+
     -- * List combinators.
     many,
 ) where
@@ -12,6 +16,17 @@ module Trisagion.Serializers.Combinators (
 -- Imports.
 -- Package.
 import Trisagion.Serializer (Serializer, embed, run)
+
+
+{- | The constant serializer. -}
+{-# INLINE constant #-}
+constant :: s -> Serializer s a
+constant s = embed $ const s
+
+{- | The application of a serializer as a (constant) serializer. -}
+{-# INLINE applied #-}
+applied :: Serializer s a -> a -> Serializer s b
+applied s x = constant $ run s x
 
 
 {- | Serializer for lists. -}
