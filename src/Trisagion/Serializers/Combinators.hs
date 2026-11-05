@@ -28,6 +28,7 @@ constant s = embed $ const s
 applied :: Serializer s a -> a -> Serializer s b
 applied s x = constant $ run s x
 
+
 {- | Serializer for lists. -}
 {-# INLINE many #-}
 many :: Monoid s => Serializer s a -> Serializer s [a]
