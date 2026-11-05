@@ -44,7 +44,7 @@ import Trisagion.Parsers.Source (InputError)
 The implementation initializes the counter to @0@ and then updates it on every operation of the
 input stream by computing the length of the prefix.
 -}
-type Counter:: Type -> Type
+type Counter :: Type -> Type
 data Counter s = Counter {-# UNPACK #-} !Int !s
     deriving stock (Eq, Show)
 
@@ -90,39 +90,39 @@ The instance requires computing the length of the prefix, which is @O(n)@ for so
 instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
     {-# INLINE splitPrefix #-}
     splitPrefix :: Int -> Counter s -> (b, Counter s)
-    splitPrefix n (Counter off xs) =
-        let (prefix, rest) = splitPrefix n xs in
-            (prefix, Counter (off + monolength prefix) rest)
+    splitPrefix m (Counter n xs) =
+        let (prefix, rest) = splitPrefix m xs in
+            (prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE splitWith #-}
     splitWith :: (a -> Bool) -> Counter s -> (b, Counter s)
-    splitWith p (Counter off xs) =
+    splitWith p (Counter n xs) =
         let (prefix, rest) = splitWith p xs in
-            (prefix, Counter (off + monolength prefix) rest)
+            (prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE splitPrefixExact #-}
     splitPrefixExact :: Int -> Counter s -> Maybe (b, Counter s)
-    splitPrefixExact n (Counter off xs) =
-        case splitPrefixExact n xs of
+    splitPrefixExact m (Counter n xs) =
+        case splitPrefixExact m xs of
             Nothing        -> Nothing
-            Just (ys, zs)  -> Just (ys, Counter (off + monolength ys) zs)
+            Just (ys, zs)  -> Just (ys, Counter (n + monolength ys) zs)
 
     {-# INLINE matchPrefix #-}
     matchPrefix :: b -> Counter s -> Maybe (Counter s)
-    matchPrefix xs (Counter off ys) =
+    matchPrefix xs (Counter n ys) =
         case matchPrefix xs ys of
             Nothing -> Nothing
-            Just zs -> Just (Counter (off + monolength xs) zs)
+            Just zs -> Just (Counter (n + monolength xs) zs)
 
     {-# INLINE splitRemainder #-}
     splitRemainder :: Counter s -> (b, Counter s)
-    splitRemainder (Counter off xs) =
+    splitRemainder (Counter n xs) =
         let (prefix, rest) = splitRemainder xs in
-            (prefix, Counter (off + monolength prefix) rest)
+            (prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE dropPrefixExact #-}
     dropPrefixExact :: Int -> Counter s -> Maybe (Counter s)
-    dropPrefixExact n (Counter off xs) = fmap (Counter (off + n)) $ dropPrefixExact n xs
+    dropPrefixExact m (Counter off xs) = fmap (Counter (off + m)) $ dropPrefixExact m xs
 
 instance (Binary b s, MonoFoldable Word8 b) => Binary b (Counter s) where
     {-# INLINE word16Le #-}
