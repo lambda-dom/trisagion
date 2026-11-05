@@ -67,6 +67,7 @@ library
         Trisagion.Types.ParseError
         Trisagion.Types.Span
         Trisagion.Streams.Counter
+        Trisagion.Streams.Offset
         Trisagion.Typeclasses.Source
         Trisagion.Typeclasses.HasOffset
         Trisagion.Typeclasses.Split
