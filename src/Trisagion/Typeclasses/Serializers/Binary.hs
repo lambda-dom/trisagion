@@ -19,6 +19,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
 
     -- * List serializers.
     word8s,
+    nulls,
     char8s,
 ) where
 
@@ -54,7 +55,7 @@ import Data.Int.Optics (int8ToWord8, int16ToWord16, int32ToWord32, int64ToWord64
 -- Package.
 import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
-import Trisagion.Serializers.Combinators (many)
+import Trisagion.Serializers.Combinators (many, applied)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
@@ -185,7 +186,12 @@ int64Be = contramap (view int64ToWord64) word64Be
 word8s :: Binary b s => Serializer s [Word8]
 word8s = many word8
 
-{- | Serialize a 'String' as list of 8-bit characters in the latin-1 encoding.
+{- | Serialize @n@ zeros as a constant serializer. -}
+{-# INLINE nulls #-}
+nulls :: Binary b s => Int -> Serializer s a
+nulls n = applied word8s (replicate n 0)
+
+{- | Serialize a 'String' as a list of 8-bit characters in the latin-1 encoding.
 
 note(s):
 
