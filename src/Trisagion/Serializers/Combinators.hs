@@ -11,11 +11,13 @@ module Trisagion.Serializers.Combinators (
 
     -- * List combinators.
     many,
+    repeatN,
 ) where
 
 -- Imports.
 -- Package.
 import Trisagion.Serializer (Serializer, embed, run)
+import Data.Foldable (Foldable(..))
 
 
 {- | The constant serializer. -}
@@ -32,4 +34,9 @@ applied s x = constant $ run s x
 {- | Serializer for lists. -}
 {-# INLINE many #-}
 many :: Monoid s => Serializer s a -> Serializer s [a]
-many s = embed $ foldMap (run s)
+many s = embed $ \xs -> foldl' (<>) mempty $ fmap (run s) xs
+
+{- | Serializer repeating @s@ @n@ times. -}
+{-# INLINE repeatN #-}
+repeatN :: Monoid s => Int -> Serializer s a -> Serializer s a
+repeatN n s = fold $ replicate n s
