@@ -15,9 +15,11 @@ module Trisagion.Serializers.Combinators (
 ) where
 
 -- Imports.
+-- Base.
+import Data.Foldable (Foldable (..))
+
 -- Package.
 import Trisagion.Serializer (Serializer, embed, run)
-import Data.Foldable (Foldable(..))
 
 
 {- | The constant serializer. -}
