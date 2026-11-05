@@ -186,7 +186,7 @@ int64Be = contramap (view int64ToWord64) word64Be
 word8s :: Binary b s => Serializer s [Word8]
 word8s = many word8
 
-{- | Serialize a @n@ zeros as a constant serializer. -}
+{- | Serialize @n@ zeros as a constant serializer. -}
 {-# INLINE nulls #-}
 nulls :: Binary b s => Int -> Serializer s a
 nulls n = applied word8s (replicate n 0)
