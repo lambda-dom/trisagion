@@ -19,10 +19,12 @@ module Trisagion.Typeclasses.Serializers.Binary (
 
     -- * List serializers.
     word8s,
+    char8s,
 ) where
 
 -- Imports.
 -- Base.
+import Data.Char (ord)
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Int (Int8, Int16, Int32, Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -182,3 +184,13 @@ int64Be = contramap (view int64ToWord64) word64Be
 {-# INLINE word8s #-}
 word8s :: Binary b s => Serializer s [Word8]
 word8s = many word8
+
+{- | Serialize a 'String' as list of 8-bit characters in the latin-1 encoding.
+
+note(s):
+
+    * Multibyte characters are truncated.
+-}
+{-# INLINE char8s #-}
+char8s :: Binary b s => Serializer s String
+char8s = contramap (fmap (fromIntegral @Int @Word8 . ord)) word8s
