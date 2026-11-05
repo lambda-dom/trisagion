@@ -8,7 +8,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
     -- * Typeclasses.
     Binary (..),
 
-    -- Integral, primitive serializers.
+    -- * Integral, primitive serializers.
     int8,
     int16Le,
     int32Le,
@@ -16,6 +16,9 @@ module Trisagion.Typeclasses.Serializers.Binary (
     int16Be,
     int32Be,
     int64Be,
+
+    -- * List serializers.
+    word8s,
 ) where
 
 -- Imports.
@@ -79,15 +82,25 @@ class Sink Word8 b s => Binary b s where
     {- | Serialize a 'Word64' in big-endian format. -}
     word64Be :: Serializer s Word64
 
-    {- | Serialize a 'Data.ByteString.ByteString'. -}
+    {- | Serialize a 'Data.ByteString.ByteString'.
+
+    Default implementation:
+
+    @bytes = contramap 'Bytes.unpack' word8s@
+    -}
     {-# INLINE bytes #-}
     bytes :: Serializer s ByteString
-    bytes = contramap Bytes.unpack (many word8)
+    bytes = contramap Bytes.unpack word8s
 
-    {- | Serialize a 'Data.ByteString.Short.ShortByteString'. -}
+    {- | Serialize a 'Data.ByteString.Short.ShortByteString'.
+
+    Default implementation:
+
+    @bytes = contramap 'Short.unpack' word8s@
+    -}
     {-# INLINE shortBytes #-}
     shortBytes :: Serializer s ShortByteString
-    shortBytes = contramap Short.unpack (many word8)
+    shortBytes = contramap Short.unpack word8s
 
 
 -- Instances.
@@ -120,12 +133,10 @@ instance Binary Lazy.ByteString Builder where
     word64Be :: Serializer Builder Word64
     word64Be = embed $ Builder.word64BE
 
-    {- | Serialize a 'Data.ByteString.ByteString'. -}
     {-# INLINE bytes #-}
     bytes :: Serializer Builder ByteString
     bytes = embed $ Builder.byteString
 
-    {- | Serialize a 'Data.ByteString.Short.ShortByteString'. -}
     {-# INLINE shortBytes #-}
     shortBytes :: Serializer Builder ShortByteString
     shortBytes = embed $ Builder.shortByteString
@@ -165,3 +176,9 @@ int32Be = contramap (view int32ToWord32) word32Be
 {-# INLINE int64Be #-}
 int64Be :: Binary b s => Serializer s Int64
 int64Be = contramap (view int64ToWord64) word64Be
+
+
+{- | Serialize a list of 'Word8'. -}
+{-# INLINE word8s #-}
+word8s :: Binary b s => Serializer s [Word8]
+word8s = many word8
