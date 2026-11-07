@@ -19,7 +19,7 @@ module Trisagion.Parsers.Combinators (
     between,
     zipP,
     zipWithP,
-    count,
+    repeatN,
     sequenceP,
 
     -- * 'Alternative' parsers.
@@ -229,21 +229,22 @@ zipWithP = liftA2
 
 === __Examples:__
 
->>> parse (count 2 one) "0123"
+>>> parse (repeatN 2 one) "0123"
 Right ("01","23")
 
->>> parse (count 10 one) "0123"
+>>> parse (repeatN 10 one) "0123"
 Left (InputError 1)
 
->>> parse (count 2 (matchOne '0')) "0123"
+>>> parse (repeatN 2 (matchOne '0')) "0123"
 Left (Left (ValidationError '1'))
 -}
-{-# INLINEABLE count #-}
-count :: Word -> Parser s e a -> Parser s e [a]
-count n p = go n
+{-# INLINEABLE repeatN #-}
+repeatN :: Int -> Parser s e a -> Parser s e [a]
+repeatN n p = go n
     where
-        go 0 = pure []
-        go m = (:) <$> p <*> go (pred m)
+        go m
+            | m <= 0    = pure []
+            | otherwise = (:) <$> p <*> go (pred m)
 
 {- | Sequence together a traversable of parsers and return the traversable of results. -}
 {-# INLINE sequenceP #-}
