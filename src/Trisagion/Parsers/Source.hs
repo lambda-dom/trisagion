@@ -17,10 +17,12 @@ module Trisagion.Parsers.Source (
     satisfy,
     matchOne,
     oneOf,
+    matchFoldable,
 ) where
 
 -- Imports.
 -- Base.
+import qualified Data.Foldable as Foldable (toList)
 import Data.Functor (($>))
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
@@ -35,7 +37,7 @@ import Trisagion.Utils.Either ((:+:))
 import Trisagion.Typeclasses.Source (Source (..))
 import qualified Trisagion.Typeclasses.Source as Source (null)
 import Trisagion.Parser (Parser)
-import Trisagion.Parsers.Combinators (lookAhead, validate)
+import Trisagion.Parsers.Combinators (lookAhead, validate, sequenceP_)
 
 
 -- $setup
@@ -174,3 +176,20 @@ oneOf
     => t a                              -- ^ Foldable of @a@'s against which to test inclusion.
     -> Parser s (ValidationError a :+: InputError) a
 oneOf xs = satisfy (`elem` xs)
+
+{- | Parse a matching prefix from the input stream against a foldable.
+
+=== __Examples:__
+
+>>> parse (matchFoldable "01") "0123"
+Right ((),"23")
+
+>>> parse (matchFoldable "02") "0123"
+Left (Left (ValidationError '1'))
+-}
+{-# INLINE matchFoldable #-}
+matchFoldable
+    :: (Source a s, Foldable t, Eq a)
+    => t a                              -- ^ Foldable of @a@'s to match against.
+    -> Parser s (ValidationError a :+: InputError) ()
+matchFoldable xs = sequenceP_  $ fmap matchOne (Foldable.toList xs)
