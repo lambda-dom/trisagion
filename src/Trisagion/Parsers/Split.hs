@@ -15,7 +15,6 @@ module Trisagion.Parsers.Split (
     takeExact,
     skipExact,
     matchPrefix,
-    matchFoldablePrefix,
     isolate,
     consumed,
 ) where
@@ -23,16 +22,12 @@ module Trisagion.Parsers.Split (
 -- Imports.
 -- Base.
 import Data.Bifunctor (Bifunctor (..))
-import Data.Foldable (Foldable (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
 -- Libraries.
 import Control.Monad.State (MonadState (..), gets)
 import Control.Monad.Except (MonadError (..))
-
--- non-Hackage library.
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
@@ -208,18 +203,6 @@ matchPrefix xs = do
     case r of
         Just ys -> put ys $> ()
         Nothing -> throwError $ ValidationError xs
-
-{- | Parse a matching prefix from the input stream against a foldable. -}
-{-# INLINE matchFoldablePrefix #-}
-matchFoldablePrefix
-    :: (Split a b s, MonoFoldable a b, Foldable t, Eq a)
-    => t a
-    -> Parser s (ValidationError b :+: InputError) ()
-matchFoldablePrefix xs = do
-    ys <- first Right $ takeExact (length xs)
-    if toList xs /= monotoList ys
-        then throwError . Left $ ValidationError ys
-        else pure ()
 
 {- | Run a parser isolated to a fixed size prefix of the input stream.
 

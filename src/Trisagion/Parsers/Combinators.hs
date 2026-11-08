@@ -21,6 +21,7 @@ module Trisagion.Parsers.Combinators (
     zipWithP,
     repeatN,
     sequenceP,
+    sequenceP_,
 
     -- * 'Alternative' parsers.
     eitherP,
@@ -40,6 +41,7 @@ module Trisagion.Parsers.Combinators (
 -- Base.
 import Control.Applicative (Alternative ((<|>)), asum)
 import Data.Bifunctor (Bifunctor (..))
+import Data.Foldable (sequenceA_)
 import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
@@ -250,6 +252,11 @@ repeatN n p = go n
 {-# INLINE sequenceP #-}
 sequenceP :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 sequenceP = sequenceA
+
+{- | Sequence together a traversable of parsers and discard the results. -}
+{-# INLINE sequenceP_ #-}
+sequenceP_ :: Foldable t => t (Parser s e a) -> Parser s e ()
+sequenceP_ = sequenceA_
 
 
 {- | Choose between two alternative parsers.
