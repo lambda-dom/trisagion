@@ -33,12 +33,12 @@ applied :: Serializer s a -> a -> Serializer s b
 applied s x = constant $ run s x
 
 
-{- | Serializer for lists. -}
+{- | Serializer for foldables. -}
 {-# INLINE many #-}
-many :: Monoid s => Serializer s a -> Serializer s [a]
-many s = embed $ \xs -> foldl' (<>) mempty $ fmap (run s) xs
+many :: (Foldable t, Monoid s) => Serializer s a -> Serializer s (t a)
+many s = embed $ foldMap' (run s)
 
-{- | Serializer repeating @s@ @n@ times. -}
+{- | Serializer that repeats @s@ @n@ times. -}
 {-# INLINE repeatN #-}
 repeatN :: Monoid s => Int -> Serializer s a -> Serializer s a
-repeatN n s = fold $ replicate n s
+repeatN n s = foldMap' id $ replicate n s
