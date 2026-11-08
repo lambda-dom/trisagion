@@ -7,7 +7,7 @@ Various serializer combinators.
 module Trisagion.Serializers.Combinators (
     -- * Serializers.
     constant,
-    applied,
+    value,
 
     -- * List combinators.
     many,
@@ -17,6 +17,7 @@ module Trisagion.Serializers.Combinators (
 -- Imports.
 -- Base.
 import Data.Foldable (Foldable (..))
+import Data.Functor.Contravariant (Contravariant (..))
 
 -- Package.
 import Trisagion.Serializer (Serializer, embed, run)
@@ -27,10 +28,10 @@ import Trisagion.Serializer (Serializer, embed, run)
 constant :: s -> Serializer s a
 constant s = embed $ const s
 
-{- | The application of a serializer as a (constant) serializer. -}
-{-# INLINE applied #-}
-applied :: Serializer s a -> a -> Serializer s b
-applied s x = constant $ run s x
+{- | Embed a value in a serializer as a (constant) serializer. -}
+{-# INLINE value #-}
+value :: Serializer s a -> a -> Serializer s b
+value s x = contramap (const x) s
 
 
 {- | Serializer for foldables. -}
