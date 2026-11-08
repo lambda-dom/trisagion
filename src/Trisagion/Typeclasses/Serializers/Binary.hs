@@ -55,7 +55,7 @@ import Data.Int.Optics (int8ToWord8, int16ToWord16, int32ToWord32, int64ToWord64
 -- Package.
 import Trisagion.Typeclasses.Sink (Sink, single)
 import Trisagion.Serializer (Serializer, embed)
-import Trisagion.Serializers.Combinators (many, applied)
+import Trisagion.Serializers.Combinators (many, value, repeatN)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
@@ -189,7 +189,7 @@ word8s = many word8
 {- | Serialize @n@ zeros as a constant serializer. -}
 {-# INLINE nulls #-}
 nulls :: Binary b s => Int -> Serializer s a
-nulls n = applied word8s (replicate n 0)
+nulls n = repeatN n $ value word8 0
 
 {- | Serialize a 'String' as a list of 8-bit characters in the latin-1 encoding.
 
