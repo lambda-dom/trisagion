@@ -21,6 +21,9 @@ module Trisagion.Parsers.IStream (
 ) where
 
 -- Imports.
+-- Hiding.
+import Prelude hiding (head)
+
 -- Base.
 import qualified Data.Foldable as Foldable (toList)
 import Data.Functor (($>))
@@ -32,7 +35,7 @@ import Data.Void (Void)
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.IStream (IStream (..))
 import Trisagion.Parser (Parser, get, put, throw)
-import Trisagion.Parsers.Combinators (lookAhead, validate, chain_)
+import Trisagion.Parsers.Combinators (validate, chain_)
 
 
 -- $setup
@@ -40,12 +43,11 @@ import Trisagion.Parsers.Combinators (lookAhead, validate, chain_)
 
 
 {- | The @InputError@ error type. -}
-type InputError :: Type
 newtype InputError = InputError Int
     deriving stock (Eq, Show)
 
 
-{- | The @ValidationError@ error tag type thrown on failed validations. -}
+{- | The @ValidationError@ error type thrown on failed validations. -}
 type ValidationError :: Type -> Type
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
@@ -110,7 +112,7 @@ Right (Nothing,"")
 -}
 {-# INLINE peek #-}
 peek :: IStream a s => Parser s Void (Maybe a)
-peek = either (const Nothing) Just <$> lookAhead one
+peek = fmap head get
 
 {- | Parse one element from the input stream satisfying a predicate.
 
@@ -174,6 +176,10 @@ oneOf xs = satisfy (`elem` xs)
 
 {- | Parse a matching prefix from the input stream against a foldable.
 
+note(s):
+
+    * If at all possible, use @matchPrefix@ and variants, as it is more efficient.
+
 === __Examples:__
 
 >>> parse (matchFoldable "01") "0123"
@@ -187,4 +193,4 @@ matchFoldable
     :: (IStream a s, Foldable t, Eq a)
     => t a                              -- ^ Foldable of @a@'s to match against.
     -> Parser s (InputError :+: ValidationError a) ()
-matchFoldable xs = chain_  $ fmap matchOne (Foldable.toList xs)
+matchFoldable xs = chain_ $ fmap matchOne (Foldable.toList xs)
