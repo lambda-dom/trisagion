@@ -18,7 +18,12 @@ module Trisagion.Parser (
     -- ** Isomorphisms.
     parsing,
 
+    -- * State parsers.
+    get,
+    put,
+
     -- * Error parsers.
+    throw,
     catch,
     try,
 ) where
@@ -32,13 +37,13 @@ import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (MonadState (..))
+import qualified Control.Monad.State as State (MonadState (..))
 import Control.Selective (Selective (..), selectM)
 import Optics.Core (Iso', iso, view, review)
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Types.Result (Result (..), toEither)
+import Trisagion.Types.Result (Result (..), result)
 
 
 -- $setup
@@ -188,6 +193,20 @@ instance Monoid e => Alternative (Parser s e) where
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
 
+{- | The 'Semigroup' instance for @t'Parser' s e a@.
+
+Another name for the 'Alternative' instance.
+-}
+instance Monoid e => Semigroup (Parser s e a) where
+    {-# INLINE (<>) #-}
+    (<>) = (<|>)
+
+{- | The 'Monoid' instance for @t'Parser' s e a@. -}
+instance Monoid e => Monoid (Parser s e a) where
+    {-# INLINE mempty #-}
+    mempty :: Parser s e a
+    mempty = empty
+
 {- | The 'Selective' instance.
 
 note(s):
@@ -200,32 +219,9 @@ instance Selective (Parser s e) where
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
     select = selectM
 
-{- | The 'MonadState' instance.
-
-The @'get'@ parser allows probing the t'Parser' state, e.g.:
-
-@
-    do
-        s <- get
-        -- Do something with @s@.
-@
-
-The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
-the t'Parser' state.
-
-__Definition__: a parser @p@ is /monotonic/ if for every input @xs@, on success, the 'remainder' is
-a, possibly improper, suffix of @xs@.
-
-All the parsers in the library are provably monotonic, and all parser combinators return monotonic
-parsers on the assumption that the arguments are monotonic, but the 'MonadState' typeclass,
-specifically the 'put' method, allows the construction of non-monotonic parsers.
-
-note(s):
-
-  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Source.Source' a s@
-  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Source.isSuffix'.
--}
-instance MonadState s (Parser s e) where
+{- | The 'State.MonadState' instance. -}
+instance State.MonadState s (Parser s e) where
+    -- Because of naming, have to copy-paste the definition.
     {-# INLINE get #-}
     get :: Parser s e s
     get = embed $ \ xs -> Success xs xs
@@ -236,14 +232,10 @@ instance MonadState s (Parser s e) where
 
 {- | The 'MonadError' instance.
 
-The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
-unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
-the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
-returned by @p@.
-
-The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
-difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
-continuation to depend on the specific error that was thrown.
+The typeclass provides error handling for the t'Parser' monad. The difference between 'MonadError'
+and 'Alternative' regarding errors, is analogous to the difference between 'Monad' and
+'Applicative'. Just as with the former, 'MonadError' allows the continuation to depend on the
+error that was thrown.
 
 note(s):
 
@@ -253,7 +245,7 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError e = embed $ const (Error e)
+    throwError = throw
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
@@ -274,8 +266,10 @@ embed = Parser
 
 {- | Run the parser on the input and return the results.
 
-This function is mostly for internal use; the user-facing public API consistently uses the isomorph
-@e :+: (a, s)@ instead of @'Result' s e a@.
+note(s):
+
+    * This function is mostly for internal use; the user-facing public API consistently uses the
+    isomorph @e :+: (a, s)@ instead of @'Result' s e a@.
 -}
 {-# INLINE run #-}
 run :: Parser s e a -> s ->  Result s e a
@@ -300,8 +294,54 @@ remainder p = fmap snd . parse p
 {- | The isomorphism between parsers and parsing functions. -}
 {-# INLINE parsing #-}
 parsing :: Iso' (Parser s e a) (s -> e :+: (a, s))
-parsing = iso (\ p -> view toEither . run p) (\ f -> embed $ review toEither . f)
+parsing = iso (\ p -> view result . run p) (\ f -> embed $ review result . f)
 
+{- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The 'get' parser does not throw an error or /consume input/ -- see parser 'put' below for the
+definition.
+-}
+{-# INLINE get #-}
+get :: Parser s e s
+get = embed $ \ xs -> Success xs xs
+
+{- | Replace the state of the t'Parser' monad with @s@.
+
+Two definitions:
+
+__Definition__: a parser @p@ /consumes input/ if there is an input @xs@ on which @p@ is successful
+and the 'remainder' is a proper suffix of @xs@.
+
+__Definition__: a parser is /monotonic/ if for every input @xs@, on success, the 'remainder' is
+a, possibly improper, suffix of @xs@.
+
+All the parsers in the library are provably monotonic, and all parser combinators return monotonic
+parsers on the assumption that the arguments are monotonic. The 'put' parser is the only exception,
+allowing the construction of non-monotonic parsers. It is provided as the escape hatch to build new
+primitives, but it is incumbent on the caller to ensure monotonicity, or at least be aware
+of the issue as some parser combinators implicitly rely on it.
+
+note(s):
+
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Source.Source' a s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Source.isSuffix'.
+
+-}
+{-# INLINE put #-}
+put :: s -> Parser s e ()
+put xs = embed $ const (Success () xs)
+
+
+{- | Parser that fails unconditionally with error @e@. -}
+{-# INLINE throw #-}
+throw :: e -> Parser s e a
+throw e = embed $ const (Error e)
 
 {- | The type-changing version of 'catchError'.
 

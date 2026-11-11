@@ -31,7 +31,7 @@ element. The instance is idempotent and for every @f :: d -> e@,
 'fmap' f :: t'ParseError' d -> t'ParseError' e
 @
 
-is a monoid morphism. With this monoid structure, @'Parser' e@ is monoid-isomorphic to
+is a monoid morphism. With this monoid structure, @t'ParseError' e@ is monoid-isomorphic to
 @'Maybe' (t'Data.First.First' e)@.
 -}
 instance Semigroup (ParseError e) where
