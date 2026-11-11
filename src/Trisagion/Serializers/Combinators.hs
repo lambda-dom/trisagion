@@ -20,7 +20,6 @@ module Trisagion.Serializers.Combinators (
 
 -- Imports.
 -- Base.
-import Data.Foldable (Foldable (..))
 import Data.Functor.Contravariant (Contravariant (..))
 
 -- Libraries.
@@ -55,9 +54,9 @@ pairWith = divide
 {- | Serializer for foldables. -}
 {-# INLINE many #-}
 many :: (Foldable t, Monoid s) => Serializer s a -> Serializer s (t a)
-many s = embed $ foldMap' (run s)
+many s = embed $ foldMap (run s)
 
 {- | Serializer that repeats @s@ @n@ times. -}
 {-# INLINE repeatN #-}
 repeatN :: Monoid s => Int -> Serializer s a -> Serializer s a
-repeatN n s = foldMap' id $ replicate n s
+repeatN n s = foldMap id $ replicate n s
