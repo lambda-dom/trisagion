@@ -43,22 +43,22 @@ import Trisagion.IStream (IStream)
 Mirroring the laws for the 'IStream' typeclass, the first law is:
 
 __Mononaturality__: With the constraints @('Data.MonoFunctor.MonoFunctor' a s,
-'Data.MonoFunctor.MonoFunctor' a b)@, @singleton@ and @splitPrefix n@ are mononatural.
+'Data.MonoFunctor.MonoFunctor' a b)@, @singleton@ and @splitN n@ are mononatural.
 
 __List identities__: For the second law, assuming a
 @'Data.MonoFoldable.MonoFoldable' a b@ constraint on the prefix, then at the level of
-lists @splitPrefix@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
+lists @splitN@ is 'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
 @
-bimap monotoList toList . splitPrefix n == splitAt n . toList
+bimap monotoList toList . splitN n == splitAt n . toList
 bimap monotoList toList . splitWith p == span p . toList
 @
 
 __Compatibility__: The third and final law is a compatibility condition between
-'Trisagion.IStream.uncons' and @splitPrefix@:
+'Trisagion.IStream.uncons' and @splitN@:
 
 @
-maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitPrefix 1
+maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitN 1
 @
 
 === __Counterexample:__
@@ -103,7 +103,7 @@ class IStream a s => Split a b s | s -> b where
 
     Default implementation is:
 
-    @dropN n = snd . splitPrefix n@
+    @dropN n = snd . splitN n@
     -}
     dropN :: Int -> s -> s
     dropN n = snd . splitN n
@@ -112,7 +112,7 @@ class IStream a s => Split a b s | s -> b where
 
     Default implementation is:
 
-    @dropExact n = fmap snd . splitPrefixExact n@
+    @dropExact n = fmap snd . splitExact n@
     -}
     dropExact :: Int -> s -> Maybe s
     dropExact n = fmap snd . splitExact n
