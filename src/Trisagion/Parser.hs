@@ -127,6 +127,24 @@ instance Applicative (Parser s e) where
                     Error e      -> Error e
                     Success x zs -> Success (f x) zs
 
+    {-# INLINE (*>) #-}
+    (*>) :: Parser s e a -> Parser s e b -> Parser s e b
+    (*>) p q = embed $ \ xs ->
+        case run p xs of
+            Error d      -> Error d
+            Success _ ys -> case run q ys of
+                    e@(Error _)     -> e
+                    x@(Success _ _) -> x
+
+    {-# INLINE (<*) #-}
+    (<*) :: Parser s e a -> Parser s e b -> Parser s e a
+    (<*) p q = embed $ \ xs ->
+        case run p xs of
+            e@(Error _)  -> e
+            Success x ys -> case run q ys of
+                    Error d      -> Error d
+                    Success _ zs -> Success x zs
+
 {- | The 'Monad' instance.
 
 The bind combinator @p >>= h@ first runs @p@ and then the parser obtained by applying the monadic

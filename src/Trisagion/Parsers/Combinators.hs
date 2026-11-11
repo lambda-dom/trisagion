@@ -61,7 +61,7 @@ import Trisagion.Parser (Parser, try, eval, get, throw, catch)
 
 {- | Embed a value in the t'Parser' monad.
 
-The difference with 'pure' is the more precise type signature.
+Specialization of 'pure' for a more precise error type 'Void' in the signature.
 -}
 {-# INLINE value #-}
 value :: a -> Parser s Void a
@@ -94,7 +94,7 @@ The parser never consumes input and throws the monoid unit for @e@ if @p@ succee
 
 note(s):
 
-  * This parser can be used to implement the longest match rule -- see 'untilEnd'.
+  * 'failIff' can be used to implement the longest match rule -- see 'untilEnd'.
 
 === __Examples:__
 
@@ -135,11 +135,11 @@ Left (Right (InputError 1))
 validate
     :: (a -> d :+: b)                   -- ^ Validator.
     -> Parser s e a                     -- ^ Parser to run.
-    -> Parser s (d :+: e) b
+    -> Parser s (e :+: d) b
 validate v p = do
-    x <- first Right p
+    x <- first Left p
     case v x of
-        Left d  -> throw $ Left d
+        Left d  -> throw $ Right d
         Right y -> pure y
 
 {- | Run the parser and return the result, but never consume any input.
@@ -214,6 +214,12 @@ pair = pairWith (,)
 
 {- | Sequence two parsers and pair the results with a binary function.
 
+Defined as:
+
+@
+pairWith = 'liftA2'
+@
+
 === __Examples:__
 
 >>> parse (pairWith max one one) "0123"
@@ -224,6 +230,12 @@ pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
 pairWith = liftA2
 
 {- | Run the parser @n@ times and return the list of results.
+
+note(s):
+
+    * Negative @n@ is the same as @0@. It would be preferable to have 'Word' as indexing, but the
+    entire Haskell ecosystem has 'Int' for indexing and lengths -- presumably for historical
+    reasons.
 
 === __Examples:__
 
@@ -244,12 +256,27 @@ repeatN n p = go n
             | m <= 0    = pure []
             | otherwise = (:) <$> p <*> go (pred m)
 
-{- | Chain together a traversable of parsers but discard the results. -}
+{- | Chain together a traversable of parsers but discard the results.
+
+Defined as:
+
+@
+chain_ = 'sequenceA_'
+@
+-}
 {-# INLINE chain_ #-}
 chain_ :: Foldable t => t (Parser s e a) -> Parser s e ()
 chain_ = sequenceA_
 
-{- | Chain together a traversable of parsers and return the traversable of results. -}
+{- | Chain together a traversable of parsers and return the traversable of results.
+
+
+Defined as:
+
+@
+chain = 'sequenceA'
+@
+-}
 {-# INLINE chain #-}
 chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
 chain = sequenceA
@@ -281,6 +308,12 @@ choose q p = (Left <$> q) <|> (Right <$> p)
 {- | Choose between a foldable of parsers.
 
 Run the parsers in succession, returning the result of the first successful one.
+
+Defined as:
+
+@
+choices = 'asum'
+@
 -}
 {-# INLINE choices #-}
 choices :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
