@@ -17,15 +17,15 @@ module Trisagion.Parsers.Combinators (
     -- * 'Applicative' parsers.
     skip,
     between,
-    zipP,
-    zipWithP,
+    pair,
+    pairWith,
     repeatN,
-    sequenceP,
-    sequenceP_,
+    chain_,
+    chain,
 
     -- * 'Alternative' parsers.
-    eitherP,
-    choice,
+    choose,
+    choices,
     many,
     some,
     skipMany,
@@ -46,13 +46,9 @@ import Data.Functor (($>))
 import Data.List.NonEmpty (NonEmpty (..), (<|))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (MonadState (..))
-
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Parser (Parser, try, eval)
+import Trisagion.Parser (Parser, try, eval, get, throw, catch)
 
 
 -- $setup
@@ -94,7 +90,7 @@ optional p = either (const Nothing) Just <$> try p
 
 {- | The parser @'failIff' p@ fails if and only if @p@ succeeds.
 
-The parser does not consume input and throws the monoid unit for @e@ if @p@ succeeds.
+The parser never consumes input and throws the monoid unit for @e@ if @p@ succeeds.
 
 note(s):
 
@@ -120,7 +116,7 @@ failIff p = do
     r <- first absurd $ lookAhead p
     case r of
         Left  _ -> pure ()
-        Right _ -> throwError mempty
+        Right _ -> throw mempty
 
 {- | Run the parser and return the result, validating it.
 
@@ -143,10 +139,10 @@ validate
 validate v p = do
     x <- first Right p
     case v x of
-        Left d  -> throwError $ Left d
+        Left d  -> throw $ Left d
         Right y -> pure y
 
-{- | Run the parser and return the result, but do not consume any input.
+{- | Run the parser and return the result, but never consume any input.
 
 === __Examples:__
 
@@ -203,29 +199,29 @@ between open close p = open *> p <* close
 
 === __Examples:__
 
->>> parse (zipP one one) "0123"
+>>> parse (pair one one) "0123"
 Right (('0','1'),"23")
 
->>> parse (zipP (matchOne '1') (matchOne '1')) "0123"
+>>> parse (pair (matchOne '1') (matchOne '1')) "0123"
 Left (Left (ValidationError '0'))
 
->>> parse (zipP (matchOne '0') (matchOne '2')) "0123"
+>>> parse (pair (matchOne '0') (matchOne '2')) "0123"
 Left (Left (ValidationError '1'))
 -}
-{-# INLINE zipP #-}
-zipP :: Parser s e a -> Parser s e b -> Parser s e (a, b)
-zipP = zipWithP (,)
+{-# INLINE pair #-}
+pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
+pair = pairWith (,)
 
 {- | Sequence two parsers and pair the results with a binary function.
 
 === __Examples:__
 
->>> parse (zipWithP max one one) "0123"
+>>> parse (pairWith max one one) "0123"
 Right ('1',"23")
 -}
-{-# INLINE zipWithP #-}
-zipWithP :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
-zipWithP = liftA2
+{-# INLINE pairWith #-}
+pairWith :: (a -> b -> c) -> Parser s e a -> Parser s e b -> Parser s e c
+pairWith = liftA2
 
 {- | Run the parser @n@ times and return the list of results.
 
@@ -248,15 +244,15 @@ repeatN n p = go n
             | m <= 0    = pure []
             | otherwise = (:) <$> p <*> go (pred m)
 
-{- | Sequence together a traversable of parsers and return the traversable of results. -}
-{-# INLINE sequenceP #-}
-sequenceP :: Traversable t => t (Parser s e a) -> Parser s e (t a)
-sequenceP = sequenceA
+{- | Chain together a traversable of parsers but discard the results. -}
+{-# INLINE chain_ #-}
+chain_ :: Foldable t => t (Parser s e a) -> Parser s e ()
+chain_ = sequenceA_
 
-{- | Sequence together a traversable of parsers and discard the results. -}
-{-# INLINE sequenceP_ #-}
-sequenceP_ :: Foldable t => t (Parser s e a) -> Parser s e ()
-sequenceP_ = sequenceA_
+{- | Chain together a traversable of parsers and return the traversable of results. -}
+{-# INLINE chain #-}
+chain :: Traversable t => t (Parser s e a) -> Parser s e (t a)
+chain = sequenceA
 
 
 {- | Choose between two alternative parsers.
@@ -266,29 +262,29 @@ as an @'Either'@.
 
 === __Examples:__
 
-The parser 'eitherP' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
+The parser 'choose' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
 That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tests below.
 
->>> parse (eitherP (withParseError one) (withParseError one)) (initialize "0123")
+>>> parse (choose (withParseError one) (withParseError one)) (initialize "0123")
 Right (Left '0',Counter 1 "123")
 
->>> parse (eitherP (withParseError $ matchOne '1') (withParseError $ first Right one)) (initialize "0123")
+>>> parse (choose (withParseError $ matchOne '1') (withParseError $ first Right one)) (initialize "0123")
 Right (Right '0',Counter 1 "123")
 
->>> parse (eitherP (withParseError $ matchOne '1') (withParseError $ matchOne '2')) (initialize "0123")
+>>> parse (choose (withParseError $ matchOne '1') (withParseError $ matchOne '2')) (initialize "0123")
 Left (ParseError 0 (Left (ValidationError '0')))
 -}
-{-# INLINE eitherP #-}
-eitherP :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
-eitherP q p = (Left <$> q) <|> (Right <$> p)
+{-# INLINE choose #-}
+choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
+choose q p = (Left <$> q) <|> (Right <$> p)
 
 {- | Choose between a foldable of parsers.
 
 Run the parsers in succession, returning the result of the first successful one.
 -}
-{-# INLINE choice #-}
-choice :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
-choice = asum
+{-# INLINE choices #-}
+choices :: (Foldable t, Monoid e) => t (Parser s e a) -> Parser s e a
+choices = asum
 
 {- | Run the parser zero or more times until it fails, returning the list of results.
 
@@ -297,9 +293,9 @@ precise type signature and the fact that it does not require a @'Monoid' e@ cons
 
 note(s):
 
-  * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
-  possibly does not consume input, e.g. any parser with @'Void'@ in the error type or their
-  polymorphic variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
+    * The @'many' p@ parser can loop forever if fed a parser @p@ that does not throw an error and
+    does not consume input, e.g. any parser with @'Void'@ in the error type or their polymorphic
+    variants, like @'pure' x@, @'Control.Applicative.many' p@, etc.
 
 === __Examples:__
 
@@ -343,9 +339,9 @@ Left (Right (InputError 1))
 -}
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
-some p = zipWithP (:|) p (first absurd (many p))
+some p = pairWith (:|) p (first absurd (many p))
 
-{- | Run the parser zero or more times until it fails and discard the results. -}
+{- | Run the parser zero or more times until it fails but discard the results. -}
 {-# INLINEABLE skipMany #-}
 skipMany :: Parser s e a -> Parser s Void ()
 skipMany p = go
@@ -356,7 +352,7 @@ skipMany p = go
                 Left _  -> pure ()
                 Right _ -> go
 
-{- | Run the parser one or more times until it fails and discard the results. -}
+{- | Run the parser one or more times until it fails but discard the results. -}
 {-# INLINE skipSome #-}
 skipSome :: Parser s e a -> Parser s e ()
 skipSome p = p *> first absurd (skipMany p)
@@ -366,7 +362,7 @@ skipSome p = p *> first absurd (skipMany p)
 note(s):
 
   * The difference with 'manyTill' is the need for the monoid constraint and the fact that the
-  @end@ parser will not consume any input.
+  @end@ parser never consumes any input.
 
 === __Examples:__
 
@@ -402,7 +398,7 @@ manyTill :: Parser s e a -> Parser s e b -> Parser s e [b]
 manyTill end p = go
     where
         go = do
-            r <- catchError (fmap Left end) (const (fmap Right p))
+            r <- catch (fmap Left end) (const (fmap Right p))
             case r of
                 Left _  -> pure []
                 Right x -> (x :) <$> go
@@ -422,7 +418,7 @@ manyTillEnd
 manyTillEnd end p = go
     where
         go = do
-            r <- catchError (fmap Left end) (const (fmap Right p))
+            r <- catch (fmap Left end) (const (fmap Right p))
             case r of
                 Left e  -> pure $ e :| []
                 Right x -> (x <|) <$> go

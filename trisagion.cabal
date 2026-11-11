@@ -66,11 +66,11 @@ library
         Trisagion.Types.ParseError
         Trisagion.Types.Span
         Trisagion.Parser
+        Trisagion.Parsers.Combinators
         -- Trisagion.Typeclasses.Source
         -- Trisagion.Typeclasses.HasOffset
         -- Trisagion.Typeclasses.Split
         -- Trisagion.Typeclasses.Sink
-        -- Trisagion.Parsers.Combinators
         -- Trisagion.Parsers.Source
         -- Trisagion.Parsers.HasOffset
         -- Trisagion.Parsers.ParseError

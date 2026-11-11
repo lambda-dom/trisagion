@@ -255,11 +255,7 @@ instance MonadError e (Parser s e) where
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
-    catchError p h = embed $ \ s ->
-        -- Case statement instead of 'catch' to make use of sharing in the Success branch.
-        case run p s of
-            x@(Success _ _) -> x
-            Error e         -> run (h e) s
+    catchError = catch
 
 
 {- | Embed a parsing function in the t'Parser' monad.
@@ -319,10 +315,22 @@ get = embed $ \ xs -> Success xs xs
 
 {- | Replace the state of the t'Parser' monad with @s@.
 
-Two definitions:
+Some definitions:
 
 __Definition__: a parser @p@ /consumes input/ if there is an input @xs@ on which @p@ is successful
-and the 'remainder' is a proper suffix of @xs@.
+and the 'remainder' is a proper suffix of @xs@. The parser @p@ /does not consume input/ if there is
+an input @xs@ on which @p@ is successful and the 'remainder' is @xs@. 
+
+The terminology is not entirely felicitous, because /not consuming input/ is /not/ the logical
+negation of /consuming input/. Hopefully, no confusion should arise.
+
+__Definition__: The parser @p@ /never consumes input/ if for all input @xs@ on which @p@ is
+successful, the 'remainder' is @xs@.
+
+As a rule, if a parser never consumes input it should not throw an error, in which case the error
+type signature should be 'Void' or fully polymorphic @forall e . e@ -- for all intents and purposes
+the two are isomorphic. In general, for parsers that never throw errors, we prefer 'Void' in the
+error type, but as a trade-off the code is littered with @'first' 'Data.Void.absurd'@ calls.
 
 __Definition__: a parser is /monotonic/ if for every input @xs@, on success, the 'remainder' is
 a, possibly improper, suffix of @xs@.
