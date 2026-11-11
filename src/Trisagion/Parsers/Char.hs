@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Char
 
-Parsers with constraints @'Source' Char s@.
+Parsers with constraints @'IStream' Char s@.
 -}
 
 module Trisagion.Parsers.Char (
@@ -49,9 +49,6 @@ import Data.List (intersperse)
 import Data.Maybe (fromMaybe)
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-
 -- non-Hackage libraries.
 import Data.MonoPointed (MonoPointed (..))
 import Data.MonoFoldable (MonoFoldable (..))
@@ -59,18 +56,18 @@ import Data.MonoFoldable (MonoFoldable (..))
 -- Package.
 import Trisagion.Utils.Either ((:+:))
 import Trisagion.Utils.List (enumDown)
-import Trisagion.Typeclasses.Source (Source)
-import Trisagion.Typeclasses.Split (Split (..))
-import Trisagion.Parser (Parser)
+import Trisagion.IStream (IStream)
+import Trisagion.Split (Split (..))
+import Trisagion.Parser (Parser, throw, catch)
 import Trisagion.Parsers.Combinators (optional, manyTill, validate, lookAhead)
-import Trisagion.Parsers.Source (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
+import Trisagion.Parsers.IStream (ValidationError (..), InputError (..), matchOne, one, eoi, satisfy)
 import Trisagion.Parsers.Split (takeWith, takeWith1)
 
 
 -- $setup
 -- >>> import Trisagion.Parser
 -- >>> import Trisagion.Parsers.Combinators
--- >>> import Trisagion.Parsers.Source
+-- >>> import Trisagion.Parsers.IStream
 
 
 {- | The universal newline type. -}
@@ -107,18 +104,18 @@ data StringError
 Right ('\n',"123")
 
 >>> parse lf "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse lf ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE lf #-}
-lf :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
+lf :: IStream Char s => Parser s (InputError :+: ValidationError Char) Char
 lf = matchOne '\n'
 
 {- | Parse a carriage return (character @'\\r'@). -}
 {-# INLINE cr #-}
-cr :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
+cr :: IStream Char s => Parser s (InputError :+: ValidationError Char) Char
 cr = matchOne '\r'
 
 {- | Parse a universal newline from the input stream.
@@ -138,25 +135,25 @@ Right (CRLF,"123")
 Right (LF,"\r123")
 
 >>> parse newline "123"
-Left (Left (ValidationError '1'))
+Left (Right (ValidationError '1'))
 
 >>> parse newline ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE newline #-}
-newline :: Source Char s => Parser s (ValidationError Char :+: InputError) Newline
+newline :: IStream Char s => Parser s (InputError :+: ValidationError Char) Newline
 newline = do
-    c <- first Right one
+    c <- first Left one
     case c of
         '\n' -> pure LF
-        '\r' -> catchError (fmap (const CRLF) lf) (const (pure CR))
-        _    -> throwError $ Left (ValidationError c)
+        '\r' -> catch (fmap (const CRLF) lf) (const (pure CR))
+        _    -> throw $ Right (ValidationError c)
 
 {- | Parse a line from the input stream. The line does not contain the ending newline and can be null.
 
 note(s):
 
-    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
+    * Either @'\\n'@ or @"\\r\\n"@ count as a newline; @'\\r'@ does /not/.
 
 === __Examples:__
 
@@ -186,7 +183,7 @@ line :: forall b s . (MonoPointed Char b, Split Char b s, Monoid b) => Parser s 
 line = (foldl' (<>) mempty . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
-            then throwError $ InputError 1
+            then throw $ InputError 1
             else first absurd go
     where
         go :: Parser s Void [b] 
@@ -226,7 +223,7 @@ notSpaces = takeWith (not . isSpace)
 
 {- | Parse a decimal digit. -}
 {-# INLINE digit #-}
-digit :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
+digit :: IStream Char s => Parser s (InputError :+: ValidationError Char) Char
 digit = satisfy isDigit
 
 {- | Parse a number sign.
@@ -240,13 +237,13 @@ Right (Positive,"123")
 Right (Negative,"123")
 
 >>> parse sign "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse sign ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE sign #-}
-sign :: Source Char s => Parser s (ValidationError Char :+: InputError) Sign
+sign :: IStream Char s => Parser s (InputError :+: ValidationError Char) Sign
 sign = validate v one
     where
         v :: Char -> ValidationError Char :+: Sign
@@ -273,15 +270,15 @@ Right (1,"ab")
 Right (123,"")
 
 >>> parse positive "abc"
-Left (Left (ValidationError 'a'))
+Left (Right (ValidationError 'a'))
 
 >>> parse positive ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINEABLE positive #-}
 positive
     :: (Split Char b s, MonoFoldable Char b)
-    => Parser s (ValidationError Char :+: InputError) Integer
+    => Parser s (InputError :+: ValidationError Char) Integer
 positive = do
         digits <- takeWith1 isDigit
         let xs = enumDown (pred (monolength digits)) (monotoList digits)
@@ -314,7 +311,7 @@ Right (-123,"")
 {-# INLINE integer #-}
 integer
     :: (Split Char b s, MonoFoldable Char b)
-    => Parser s (ValidationError Char :+: InputError) Integer
+    => Parser s (InputError :+: ValidationError Char) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> optional sign)
     case sgn of
@@ -324,7 +321,7 @@ integer = do
 
 {- | Parse a single (unicode) letter. -}
 {-# INLINE letter #-}
-letter :: Source Char s => Parser s (ValidationError Char :+: InputError) Char
+letter :: IStream Char s => Parser s (InputError :+: ValidationError Char) Char
 letter = satisfy isLetter
 
 {- | Parse a word.
@@ -338,13 +335,13 @@ Right ("abc","  ")
 Right ("abc","__  ")
 
 >>> parse word "__abc"
-Left (Left (ValidationError '_'))
+Left (Right (ValidationError '_'))
 
 >>> parse word "  __abc"
-Left (Left (ValidationError ' '))
+Left (Right (ValidationError ' '))
 -}
 {-# INLINE word #-}
-word :: Split Char b s => Parser s (ValidationError Char :+: InputError) b
+word :: Split Char b s => Parser s (InputError :+: ValidationError Char) b
 word = takeWith1 isLetter
 
 {- | Parse an identifier.
@@ -361,17 +358,17 @@ Right ("abc","  ")
 Right ("abc__","  ")
 
 >>> parse identifier "__abc"
-Left (Left (ValidationError '_'))
+Left (Right (ValidationError '_'))
 
 >>> parse identifier "  __abc"
-Left (Left (ValidationError ' '))
+Left (Right (ValidationError ' '))
 -}
 {-# INLINE identifier #-}
-identifier :: Split Char b s => Parser s (ValidationError Char :+: InputError) b
+identifier :: Split Char b s => Parser s (InputError :+: ValidationError Char) b
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
-            Left e  -> throwError e
+            Left e  -> throw e
             Right _ -> first absurd $ takeWith p
     where
         p :: Char -> Bool
@@ -417,22 +414,22 @@ Right (" ","")
 Right ("\\","")
 
 >>> parse escape "s"
-Left (Left (EscapeCharError 's'))
+Left (Right (EscapeCharError 's'))
 
 >>> parse escape "\\a"
-Left (Left (EscapeSequenceError 'a'))
+Left (Right (EscapeSequenceError 'a'))
 
 >>> parse escape ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE escape #-}
 escape
     :: forall b s . (MonoPointed Char b, Split Char b s)
-    => Parser s (EscapeError :+: InputError) b
+    => Parser s (InputError :+: EscapeError) b
 escape = do
-        c <- first Right one
+        c <- first Left one
         if '\\' /= c
-            then throwError . Left $ EscapeCharError c
+            then throw . Right $ EscapeCharError c
             else validate v one
     where
         v :: Char -> EscapeError :+: b
@@ -473,13 +470,13 @@ Right ("Quoted string with many   spaces and one '\\' escape character.","")
 {-# INLINEABLE string #-}
 string
     :: (MonoPointed Char b, Split Char b s, Monoid b)
-    => Parser s (StringError :+: InputError) b
+    => Parser s (InputError :+: StringError) b
 string = do
         c      <- startQuote
-        blocks <- manyTill (endQuote c) (catchError escapeSequence (const $ block c))
+        blocks <- manyTill (endQuote c) (catch escapeSequence (const $ block c))
         pure $ foldl' (<>) mempty blocks
     where
-        startQuote :: Source Char s => Parser s (StringError :+: InputError) Char
+        startQuote :: IStream Char s => Parser s (InputError :+: StringError) Char
         startQuote = validate v one
             where
                 v :: Char -> StringError :+: Char
@@ -487,7 +484,7 @@ string = do
                     then Right c
                     else Left $ StartQuoteError c
 
-        endQuote :: Source Char s => Char -> Parser s (StringError :+: InputError) Char
+        endQuote :: IStream Char s => Char -> Parser s (InputError :+: StringError) Char
         endQuote c = validate v one
             where
                 v :: Char -> StringError :+: Char
@@ -495,11 +492,11 @@ string = do
                     then Right c
                     else Left $ EndQuoteError c
 
-        escapeSequence :: (MonoPointed Char b, Split Char b s) => Parser s (StringError :+: InputError) b
-        escapeSequence = first (first StringEscapeError) escape
+        escapeSequence :: (MonoPointed Char b, Split Char b s) => Parser s (InputError :+: StringError) b
+        escapeSequence = first (fmap StringEscapeError) escape
 
-        block :: Split Char b s => Char -> Parser s (StringError :+: InputError) b
-        block c = first (first f) $ takeWith1 (\ d -> d /= c && d /= '\\' && d /= '\n')
+        block :: Split Char b s => Char -> Parser s (InputError :+: StringError) b
+        block c = first (fmap f) $ takeWith1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
                 f (ValidationError d) = EndQuoteError d
@@ -510,7 +507,7 @@ A line comment starts with @p@ and runs to the end of the line, returning the pr
 
 note(s):
 
-    * Either @'\n'@ or @"\r\n"@ count as a newline; @'\r'@ does *not*.
+    * Either @'\\n'@ or @"\\r\\n"@ count as a newline; @'\\r'@ does /not/.
 
 === __Examples:__
 
@@ -521,5 +518,5 @@ Right ("a line comment"," code starts here")
 comment
     :: (Split Char b s, MonoPointed Char b, Monoid b)
     => Parser s e ()                    -- ^ Parser for start of line comment.
-    -> Parser s (e :+: InputError) b
-comment p = first Left p *> first Right line
+    -> Parser s (InputError :+: e) b
+comment p = first Right p *> first Left line

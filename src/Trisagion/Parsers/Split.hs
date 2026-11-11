@@ -1,14 +1,14 @@
 {- |
 Module: Trisagion.Parsers.Split
 
-Parsers with @'Split' a b s@ constraints.
+Parsers with @'Split' a b s@ constraints on the input stream.
 -}
 
 module Trisagion.Parsers.Split (
     -- * Parsers @'Split' a b s => 'Parser' s e b@.
-    takePrefix,
+    takeN,
     takeWith,
-    skipPrefix,
+    skipN,
     skipWith,
     takeRemainder,
     takeWith1,
@@ -25,26 +25,22 @@ import Data.Bifunctor (Bifunctor (..))
 import Data.Functor (($>))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.State (MonadState (..), gets)
-import Control.Monad.Except (MonadError (..))
-
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Typeclasses.Split (
+import Trisagion.HasOffset (HasOffset)
+import Trisagion.Split (
     Split,
     splitRemainder,
-    splitPrefix,
+    splitN,
     splitWith,
-    splitPrefixExact,
-    dropPrefix,
+    splitExact,
+    dropN,
     dropWith,
-    dropPrefixExact)
-import qualified Trisagion.Typeclasses.Split as Split (matchPrefix)
-import Trisagion.Parser (Parser, parse, eval)
+    dropExact)
+import qualified Trisagion.Split as Split (matchPrefix)
+import Trisagion.Parser (Parser, parse, eval, get, put, throw)
 import Trisagion.Parsers.Combinators (lookAhead)
-import Trisagion.Parsers.Source (InputError (..), ValidationError (..), satisfy)
+import Trisagion.Parsers.IStream (InputError (..), ValidationError (..), satisfy)
 import Trisagion.Parsers.HasOffset (offset)
 
 
@@ -60,16 +56,16 @@ The parser does not error and it is guaranteed that the prefix has length equal 
 
 === __Examples:__
 
->>> parse (takePrefix 2) "0123"
+>>> parse (takeN 2) "0123"
 Right ("01","23")
 
->>> parse (takePrefix 10) "0123"
+>>> parse (takeN 10) "0123"
 Right ("0123","")
 -}
-{-# INLINE takePrefix #-}
-takePrefix :: Split a b s => Int -> Parser s Void b
-takePrefix n = do
-    (xs, ys) <- gets $ splitPrefix n
+{-# INLINE takeN #-}
+takeN :: Split a b s => Int -> Parser s Void b
+takeN n = do
+    (xs, ys) <- fmap (splitN n) get
     put ys $> xs
 
 {- | Parse the longest prefix from the input stream whose elements satisfy a predicate.
@@ -85,22 +81,22 @@ Right ("","")
 {-# INLINE takeWith #-}
 takeWith :: Split a b s => (a -> Bool) -> Parser s Void b
 takeWith p = do
-    (xs, ys) <- gets $ splitWith p
+    (xs, ys) <- fmap (splitWith p) get
     put ys $> xs
 
 {- | Skip a fixed size prefix from the input stream.
 
 === __Examples:__
 
->>> parse (skipPrefix 2) "0123"
+>>> parse (skipN 2) "0123"
 Right ((),"23")
 
->>> parse (skipPrefix 10) "0123"
+>>> parse (skipN 10) "0123"
 Right ((),"")
 -}
-{-# INLINE skipPrefix #-}
-skipPrefix :: Split a b s => Int -> Parser s Void ()
-skipPrefix n = gets (dropPrefix n) >>= put
+{-# INLINE skipN #-}
+skipN :: Split a b s => Int -> Parser s Void ()
+skipN n = fmap (dropN n) get >>= put
 
 {- | Skip the longest prefix from the input stream whose elements satisfy a predicate.
 
@@ -114,13 +110,13 @@ Right ((),"")
  -}
 {-# INLINE skipWith #-}
 skipWith :: Split a b s => (a -> Bool) -> Parser s Void ()
-skipWith p = gets (dropWith p) >>= put
+skipWith p = fmap (dropWith p) get >>= put
 
 {- | Parse the remainder of the input stream as a prefix. -}
 {-# INLINE takeRemainder #-}
 takeRemainder :: Split a b s => Parser s Void b
 takeRemainder = do
-    (prefix, rest) <- gets splitRemainder
+    (prefix, rest) <- fmap splitRemainder get
     put rest $> prefix
 
 {- | Parse the longest prefix with at least one element, whose elements satisfy a predicate.
@@ -140,11 +136,11 @@ Left (Left (ValidationError '0'))
 Left (Right (InputError 1))
 -}
 {-# INLINE takeWith1 #-}
-takeWith1 :: Split a b s => (a -> Bool) -> Parser s (ValidationError a :+: InputError) b
+takeWith1 :: Split a b s => (a -> Bool) -> Parser s (InputError :+: ValidationError a) b
 takeWith1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
-        Left e  -> throwError e
+        Left e  -> throw e
         Right _ -> first absurd $ takeWith p
 
 {- | Parse an exact, fixed size prefix from the input stream.
@@ -160,10 +156,10 @@ Left (InputError 10)
 {-# INLINE takeExact #-}
 takeExact :: Split a b s => Int -> Parser s InputError b
 takeExact n = do
-    r <- gets $ splitPrefixExact n
+    r <- fmap (splitExact n) get
     case r of
         Just (xs, ys) -> put ys $> xs
-        Nothing       -> throwError $ InputError n
+        Nothing       -> throw $ InputError n
 
 {- | Skip an exact, fixed size prefix from the input stream.
 
@@ -178,10 +174,10 @@ Left (InputError 10)
 {-# INLINE skipExact #-}
 skipExact :: Split a b s => Int -> Parser s InputError ()
 skipExact n = do
-    xs <- gets $ dropPrefixExact n
+    xs <- fmap (dropExact n) get
     case xs of
         Just ys -> put ys $> ()
-        Nothing -> throwError $ InputError n
+        Nothing -> throw $ InputError n
 
 {- | Parse a matching prefix from the input stream.
 
@@ -199,10 +195,10 @@ Left (ValidationError "{}")
 {-# INLINE matchPrefix #-}
 matchPrefix :: Split a b s => b -> Parser s (ValidationError b) ()
 matchPrefix xs = do
-    r <- gets $ Split.matchPrefix xs
+    r <- fmap (Split.matchPrefix xs) get
     case r of
         Just ys -> put ys $> ()
-        Nothing -> throwError $ ValidationError xs
+        Nothing -> throw $ ValidationError xs
 
 {- | Run a parser isolated to a fixed size prefix of the input stream.
 
@@ -230,8 +226,8 @@ isolate
     -> Parser b e a                     -- ^ Parser to run on the prefix.
     -> Parser s e (a, b)
 isolate n p = do
-    prefix <- first absurd $ takePrefix n
-    either throwError pure $ parse p prefix
+    prefix <- first absurd $ takeN n
+    either throw pure $ parse p prefix
 
 {- | Run the parser and return its result along with the prefix of consumed input.
 
@@ -259,5 +255,5 @@ consumed p = do
     x     <- p
     end   <- first absurd offset
     -- Implicitly relies on the parser @p@ being monotonic, for positivity of @end - start@.
-    let ys = either absurd id $ eval (takePrefix (end - start)) xs
+    let ys = either absurd id $ eval (takeN (end - start)) xs
     pure (x, ys)
