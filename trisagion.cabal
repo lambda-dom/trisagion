@@ -79,6 +79,6 @@ library
         Trisagion.Parsers.Binary
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
-        -- Trisagion.Streams.Counter
-        -- Trisagion.Streams.Offset
-        -- Trisagion.Typeclasses.Serializers.Binary
+        Trisagion.Serializers.Binary
+        Trisagion.IStreams.Counter
+        Trisagion.IStreams.Offset

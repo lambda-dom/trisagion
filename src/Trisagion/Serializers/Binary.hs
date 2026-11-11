@@ -1,10 +1,10 @@
 {- |
-Module: Trisagion.Typeclasses.Serializers.Binary
+Module: Trisagion.Serializers.Binary
 
-The @Binary@ typeclass for serializers with @'Sink' 'Word8' b s@ constraints.
+The @Binary@ typeclass for serializers with @'OStream' 'Word8' s@ constraints.
 -}
 
-module Trisagion.Typeclasses.Serializers.Binary (
+module Trisagion.Serializers.Binary (
     -- * Typeclasses.
     Binary (..),
 
@@ -19,7 +19,7 @@ module Trisagion.Typeclasses.Serializers.Binary (
 
     -- * List serializers.
     word8s,
-    nulls,
+    nullN,
     char8s,
 ) where
 
@@ -44,7 +44,6 @@ import qualified Data.ByteString.Builder as Builder (
     word64BE,
     byteString,
     shortByteString)
-import qualified Data.ByteString.Lazy as Lazy (ByteString)
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short (unpack)
 import Optics.Core (view)
@@ -53,19 +52,19 @@ import Optics.Core (view)
 import Data.Int.Optics (int8ToWord8, int16ToWord16, int32ToWord32, int64ToWord64)
 
 -- Package.
-import Trisagion.Typeclasses.Sink (Sink, single)
+import Trisagion.OStream (OStream, one)
 import Trisagion.Serializer (Serializer, embed)
 import Trisagion.Serializers.Combinators (many, value, repeatN)
 
 
 {- | The @Binary@ typeclass for efficient serializers for machine-width types. -}
-class Sink Word8 b s => Binary b s where
+class OStream Word8 s => Binary s where
     {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Serialize a single 'Word8'. -}
     {-# INLINE word8 #-}
     word8 :: Serializer s Word8
-    word8 = embed single
+    word8 = embed one
 
     {- | Serialize a 'Word16' in little-endian format. -}
     word16Le :: Serializer s Word16
@@ -107,7 +106,7 @@ class Sink Word8 b s => Binary b s where
 
 
 -- Instances.
-instance Binary Lazy.ByteString Builder where
+instance Binary Builder where
     {-# INLINE word8 #-}
     word8 :: Serializer Builder Word8
     word8 = embed $ Builder.word8
@@ -147,49 +146,49 @@ instance Binary Lazy.ByteString Builder where
 
 {- | Serialize an 'Int8'. -}
 {-# INLINE int8 #-}
-int8 :: Binary b s => Serializer s Int8
+int8 :: Binary s => Serializer s Int8
 int8 = contramap (view int8ToWord8) word8
 
 {- | Serialize an 'Int16' in little-endian format. -}
 {-# INLINE int16Le #-}
-int16Le :: Binary b s => Serializer s Int16
+int16Le :: Binary s => Serializer s Int16
 int16Le = contramap (view int16ToWord16) word16Le
 
 {- | Serialize an 'Int32' in little-endian format. -}
 {-# INLINE int32Le #-}
-int32Le :: Binary b s => Serializer s Int32
+int32Le :: Binary s => Serializer s Int32
 int32Le = contramap (view int32ToWord32) word32Le
 
 {- | Serialize an 'Int64' in little-endian format. -}
 {-# INLINE int64Le #-}
-int64Le :: Binary b s => Serializer s Int64
+int64Le :: Binary s => Serializer s Int64
 int64Le = contramap (view int64ToWord64) word64Le
 
 {- | Serialize an 'Int16' in big-endian format. -}
 {-# INLINE int16Be #-}
-int16Be :: Binary b s => Serializer s Int16
+int16Be :: Binary s => Serializer s Int16
 int16Be = contramap (view int16ToWord16) word16Be
 
 {- | Serialize an 'Int32' in big-endian format. -}
 {-# INLINE int32Be #-}
-int32Be :: Binary b s => Serializer s Int32
+int32Be :: Binary s => Serializer s Int32
 int32Be = contramap (view int32ToWord32) word32Be
 
 {- | Serialize an 'Int64' in big-endian format. -}
 {-# INLINE int64Be #-}
-int64Be :: Binary b s => Serializer s Int64
+int64Be :: Binary s => Serializer s Int64
 int64Be = contramap (view int64ToWord64) word64Be
 
 
 {- | Serialize a list of 'Word8'. -}
 {-# INLINE word8s #-}
-word8s :: Binary b s => Serializer s [Word8]
+word8s :: Binary s => Serializer s [Word8]
 word8s = many word8
 
-{- | Serialize @n@ zeros as a constant serializer. -}
-{-# INLINE nulls #-}
-nulls :: Binary b s => Int -> Serializer s a
-nulls n = repeatN n $ value word8 0
+{- | Serialize @n@ zeros as a (constant) serializer. -}
+{-# INLINE nullN #-}
+nullN :: Binary s => Int -> Serializer s a
+nullN n = repeatN n $ value word8 0
 
 {- | Serialize a 'String' as a list of 8-bit characters in the latin-1 encoding.
 
@@ -198,5 +197,5 @@ note(s):
     * Multibyte characters are truncated.
 -}
 {-# INLINE char8s #-}
-char8s :: Binary b s => Serializer s String
+char8s :: Binary s => Serializer s String
 char8s = contramap (fmap (fromIntegral @Int @Word8 . ord)) word8s
