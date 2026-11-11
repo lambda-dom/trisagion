@@ -9,7 +9,7 @@ module Trisagion.Types.Result (
     Result (..),
 
     -- ** Isomorphisms.
-    toEither,
+    result,
 ) where
 
 -- Imports.
@@ -41,9 +41,9 @@ instance Bifunctor (Result s) where
 
 
 {- | The isomorphism @'Result' s e a -> 'Either' e (a, s)@. -}
-{-# INLINE toEither #-}
-toEither :: Iso' (Result s e a) (e :+: (a, s))
-toEither = iso to from
+{-# INLINE result #-}
+result :: Iso' (Result s e a) (e :+: (a, s))
+result = iso to from
     where
         to :: Result s e a -> e :+: (a, s)
         to (Error e)      = Left e

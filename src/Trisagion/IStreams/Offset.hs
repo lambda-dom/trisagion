@@ -1,13 +1,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
-Module: Trisagion.Streams.Offset
+Module: Trisagion.IStreams.Offset
 
-The @Offset@ type wrapping a 'Source' with an offset tracking current position.
+The @Offset@ type wrapping an 'IStream' with an offset tracking current position.
 -}
 
-module Trisagion.Streams.Offset (
-    -- * Streams.
+module Trisagion.IStreams.Offset (
+    -- * IStreams.
     Offset,
 
     -- ** Constructors.
@@ -16,30 +16,31 @@ module Trisagion.Streams.Offset (
 
 -- Imports.
 -- Base.
+import Data.Functor (($>))
 import Data.Kind (Type)
+import Data.Word (Word8, Word16, Word32, Word64)
+
+-- Libraries.
+import Control.Monad.State (MonadState (..))
+import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-import Mono.Typeclasses.MonoPointed (MonoPointed (..))
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+import Data.MonoFunctor (MonoFunctor (..))
+import Data.MonoPointed (MonoPointed (..))
+import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Source (Source (..))
-import qualified Trisagion.Typeclasses.Source as Source (null)
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.Typeclasses.Split (Split (..))
-import Trisagion.Typeclasses.Parsers.Binary (Binary (..))
-import Data.Word (Word8, Word16, Word32, Word64)
+import Trisagion.IStream (IStream (..))
+import Trisagion.HasOffset (HasOffset (..))
+import Trisagion.Split (Split (..))
+import Trisagion.Parsers.Binary (Binary (..))
 import Trisagion.Parser (Parser, parse)
-import Trisagion.Parsers.Source (InputError)
-import Control.Monad.State (MonadState(..))
-import Control.Monad.Except (MonadError(..))
-import Data.Functor (($>))
+import Trisagion.Parsers.IStream (InputError)
 
 
-{- | Wrapper around a 'Source' adding an offset to track current position.
+{- | Wrapper around an 'IStream' adding an offset to track current position.
 
-The implementation initializes the offset to the length of the streamable and on each call to
+The implementation initializes the offset to the length of the stream and on each call to
 'offset' takes the difference. This not only requires efficient implementation of 'monolength',
 but forces the entire input stream into memory.
 -}
@@ -59,7 +60,7 @@ instance MonoPointed a s => MonoPointed a (Offset s) where
     monopoint :: a -> Offset s
     monopoint x = Offset 1 (monopoint x)
 
-instance Source a s => Source a (Offset s) where
+instance IStream a s => IStream a (Offset s) where
     {-# INLINE uncons #-}
     uncons :: Offset s -> Maybe (a, Offset s)
     uncons (Offset n xs) =
@@ -67,24 +68,24 @@ instance Source a s => Source a (Offset s) where
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Offset n ys)
 
-    {-# INLINE null #-}
-    null :: Offset s -> Bool
-    null (Offset _ xs) = Source.null xs
+    {-# INLINE isNull #-}
+    isNull :: Offset s -> Bool
+    isNull (Offset _ xs) = isNull xs
 
     {-# INLINE toList #-}
     toList :: Offset s -> [a]
     toList (Offset _ xs) = toList xs
 
-instance (Source a s, MonoFoldable a s) => HasOffset (Offset s) where
+instance (IStream a s, MonoFoldable a s) => HasOffset (Offset s) where
     {-# INLINE offset #-}
     offset :: Offset s -> Int
     offset (Offset n xs) = n - monolength xs
 
 instance (Split a b s, MonoFoldable a b) => Split a b (Offset s) where
-    {-# INLINE splitPrefix #-}
-    splitPrefix :: Int -> Offset s -> (b, Offset s)
-    splitPrefix m (Offset n xs) =
-        let (prefix, rest) = splitPrefix m xs in
+    {-# INLINE splitN #-}
+    splitN :: Int -> Offset s -> (b, Offset s)
+    splitN m (Offset n xs) =
+        let (prefix, rest) = splitN m xs in
             (prefix, Offset n rest)
 
     {-# INLINE splitWith #-}
@@ -93,10 +94,10 @@ instance (Split a b s, MonoFoldable a b) => Split a b (Offset s) where
         let (prefix, rest) = splitWith p xs in
             (prefix, Offset n rest)
 
-    {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Int -> Offset s -> Maybe (b, Offset s)
-    splitPrefixExact m (Offset n xs) =
-        case splitPrefixExact m xs of
+    {-# INLINE splitExact #-}
+    splitExact :: Int -> Offset s -> Maybe (b, Offset s)
+    splitExact m (Offset n xs) =
+        case splitExact m xs of
             Nothing        -> Nothing
             Just (ys, zs)  -> Just (ys, Offset n zs)
 
@@ -113,9 +114,9 @@ instance (Split a b s, MonoFoldable a b) => Split a b (Offset s) where
         let (prefix, rest) = splitRemainder xs in
             (prefix, Offset n rest)
 
-    {-# INLINE dropPrefixExact #-}
-    dropPrefixExact :: Int -> Offset s -> Maybe (Offset s)
-    dropPrefixExact m (Offset n xs) = fmap (Offset n) $ dropPrefixExact m xs
+    {-# INLINE dropExact #-}
+    dropExact :: Int -> Offset s -> Maybe (Offset s)
+    dropExact m (Offset n xs) = fmap (Offset n) $ dropExact m xs
 
 instance (Binary b s, MonoFoldable Word8 b) => Binary b (Offset s) where
     {-# INLINE word16Le #-}
@@ -167,7 +168,7 @@ instance (Binary b s, MonoFoldable Word8 b) => Binary b (Offset s) where
             Right (y, ys) -> put (Offset off ys) $> y
 
 
-{- | Construct an t'Offset' from a 'Source'. -}
+{- | Construct an t'Offset' from an 'IStream'. -}
 {-# INLINE initialize #-}
 initialize :: MonoFoldable b s => s -> Offset s
 initialize xs = Offset (monolength xs) xs

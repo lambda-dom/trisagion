@@ -18,7 +18,12 @@ module Trisagion.Parser (
     -- ** Isomorphisms.
     parsing,
 
+    -- * State parsers.
+    get,
+    put,
+
     -- * Error parsers.
+    throw,
     catch,
     try,
 ) where
@@ -32,13 +37,13 @@ import Data.Void (Void)
 
 -- Libraries.
 import Control.Monad.Except (MonadError (..))
-import Control.Monad.State (MonadState (..))
+import qualified Control.Monad.State as State (MonadState (..))
 import Control.Selective (Selective (..), selectM)
 import Optics.Core (Iso', iso, view, review)
 
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Types.Result (Result (..), toEither)
+import Trisagion.Types.Result (Result (..), result)
 
 
 -- $setup
@@ -52,12 +57,18 @@ import Trisagion.Types.Result (Result (..), toEither)
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
 is the type of parsed values.
 
-note(s):
+__Definition__: Two parsers @p@ and @q@ are said to be /equal/, written as @p == q@, iff their
+parsing functions are extensionally equal, that is, for all @xs@, we have:
 
-    * Two parsers @p@ and @q@ are said to be /equal/, written as @p == q@, iff their parsing
-    functions are extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@.
-    Obviously enough, this definition is not effective, so it cannot be turned into an 'Eq'
-    instance.
+@
+parse p xs == parse q xs
+@
+
+Obviously enough, this definition is not effective, so it cannot be turned into an 'Eq' instance.
+
+In what follows (e. g. in stating the typeclass laws), this is the operative notion of equality
+between parsers. Also, such phrases as "parser @p@ on input @xs@" are to be understood as meaning
+@parse p xs@.
 -}
 type Parser :: Type -> Type -> Type -> Type
 newtype Parser s e a = Parser (s -> Result s e a)
@@ -116,6 +127,24 @@ instance Applicative (Parser s e) where
                     Error e      -> Error e
                     Success x zs -> Success (f x) zs
 
+    {-# INLINE (*>) #-}
+    (*>) :: Parser s e a -> Parser s e b -> Parser s e b
+    (*>) p q = embed $ \ xs ->
+        case run p xs of
+            Error d      -> Error d
+            Success _ ys -> case run q ys of
+                    e@(Error _)     -> e
+                    x@(Success _ _) -> x
+
+    {-# INLINE (<*) #-}
+    (<*) :: Parser s e a -> Parser s e b -> Parser s e a
+    (<*) p q = embed $ \ xs ->
+        case run p xs of
+            e@(Error _)  -> e
+            Success x ys -> case run q ys of
+                    Error d      -> Error d
+                    Success _ zs -> Success x zs
+
 {- | The 'Monad' instance.
 
 The bind combinator @p >>= h@ first runs @p@ and then the parser obtained by applying the monadic
@@ -154,7 +183,7 @@ empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' instance also satisfies /left distributivity/:
+'Alternative' instance is also idempotent and satisfies /left distributivity/:
 
 @
 (f \<*\> x) \<|\> (f \<*\> y) == f \<*\> (x \<|\> y)
@@ -188,6 +217,20 @@ instance Monoid e => Alternative (Parser s e) where
                     x'@(Success _ _) -> x'
                     Error e'         -> Error (e <> e')
 
+{- | The 'Semigroup' instance for @t'Parser' s e a@.
+
+Another name for the 'Alternative' instance.
+-}
+instance Monoid e => Semigroup (Parser s e a) where
+    {-# INLINE (<>) #-}
+    (<>) = (<|>)
+
+{- | The 'Monoid' instance for @t'Parser' s e a@. -}
+instance Monoid e => Monoid (Parser s e a) where
+    {-# INLINE mempty #-}
+    mempty :: Parser s e a
+    mempty = empty
+
 {- | The 'Selective' instance.
 
 note(s):
@@ -200,32 +243,9 @@ instance Selective (Parser s e) where
     select :: Parser s e (a :+: b) -> Parser s e (a -> b) -> Parser s e b
     select = selectM
 
-{- | The 'MonadState' instance.
-
-The @'get'@ parser allows probing the t'Parser' state, e.g.:
-
-@
-    do
-        s <- get
-        -- Do something with @s@.
-@
-
-The 'get' parser does not throw an error or consume input while the 'put' parser allows changing
-the t'Parser' state.
-
-__Definition__: a parser @p@ is /monotonic/ if for every input @xs@, on success, the 'remainder' is
-a, possibly improper, suffix of @xs@.
-
-All the parsers in the library are provably monotonic, and all parser combinators return monotonic
-parsers on the assumption that the arguments are monotonic, but the 'MonadState' typeclass,
-specifically the 'put' method, allows the construction of non-monotonic parsers.
-
-note(s):
-
-  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Source.Source' a s@
-  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Source.isSuffix'.
--}
-instance MonadState s (Parser s e) where
+{- | The 'State.MonadState' instance. -}
+instance State.MonadState s (Parser s e) where
+    -- Because of naming, have to copy-paste the definition.
     {-# INLINE get #-}
     get :: Parser s e s
     get = embed $ \ xs -> Success xs xs
@@ -236,14 +256,10 @@ instance MonadState s (Parser s e) where
 
 {- | The 'MonadError' instance.
 
-The typeclass provides error handling for the t'Parser' monad. The @'throwError' e@ parser fails
-unconditionally with @e@. The parser @'catchError' p h@ first tries @p@. If it succeeds, it returns
-the parsed result, if it fails, it backtracks and runs the parser @h e@ where @e@ is the error
-returned by @p@.
-
-The difference between 'MonadError' and 'Alternative' regarding errors, is analogous to the
-difference between 'Monad' and 'Applicative'. Just as with the former, 'MonadError' allows the
-continuation to depend on the specific error that was thrown.
+The typeclass provides error handling for the t'Parser' monad. The difference between 'MonadError'
+and 'Alternative' regarding errors, is analogous to the difference between 'Monad' and
+'Applicative'. Just as with the former, 'MonadError' allows the continuation to depend on the
+error that was thrown.
 
 note(s):
 
@@ -253,15 +269,11 @@ note(s):
 instance MonadError e (Parser s e) where
     {-# INLINE throwError #-}
     throwError :: e -> Parser s e a
-    throwError e = embed $ const (Error e)
+    throwError = throw
 
     {-# INLINE catchError #-}
     catchError :: Parser s e a -> (e -> Parser s e a) -> Parser s e a
-    catchError p h = embed $ \ s ->
-        -- Case statement instead of 'catch' to make use of sharing in the Success branch.
-        case run p s of
-            x@(Success _ _) -> x
-            Error e         -> run (h e) s
+    catchError = catch
 
 
 {- | Embed a parsing function in the t'Parser' monad.
@@ -274,8 +286,10 @@ embed = Parser
 
 {- | Run the parser on the input and return the results.
 
-This function is mostly for internal use; the user-facing public API consistently uses the isomorph
-@e :+: (a, s)@ instead of @'Result' s e a@.
+note(s):
+
+    * This function is mostly for internal use; the user-facing public API consistently uses the
+    isomorph @e :+: (a, s)@ instead of @'Result' s e a@.
 -}
 {-# INLINE run #-}
 run :: Parser s e a -> s ->  Result s e a
@@ -300,8 +314,66 @@ remainder p = fmap snd . parse p
 {- | The isomorphism between parsers and parsing functions. -}
 {-# INLINE parsing #-}
 parsing :: Iso' (Parser s e a) (s -> e :+: (a, s))
-parsing = iso (\ p -> view toEither . run p) (\ f -> embed $ review toEither . f)
+parsing = iso (\ p -> view result . run p) (\ f -> embed $ review result . f)
 
+{- | The @'get'@ parser allows probing the t'Parser' state, e.g.:
+
+@
+    do
+        s <- get
+        -- Do something with @s@.
+@
+
+The 'get' parser does not throw an error or /consume input/ -- see parser 'put' below for the
+definition.
+-}
+{-# INLINE get #-}
+get :: Parser s e s
+get = embed $ \ xs -> Success xs xs
+
+{- | Replace the state of the t'Parser' monad with @s@.
+
+Some definitions:
+
+__Definition__: a parser @p@ /consumes input/ if there is an input @xs@ on which @p@ is successful
+and the 'remainder' is a proper suffix of @xs@. The parser @p@ /does not consume input/ if there is
+an input @xs@ on which @p@ is successful and the 'remainder' is @xs@. 
+
+The terminology is not entirely felicitous, because /not consuming input/ is /not/ the logical
+negation of /consuming input/. Hopefully, no confusion should arise.
+
+__Definition__: The parser @p@ /never consumes input/ if for all input @xs@ on which @p@ is
+successful, the 'remainder' is @xs@.
+
+As a rule, if a parser never consumes input it should not throw an error, in which case the error
+type signature should be 'Void' or fully polymorphic @forall e . e@ -- for all intents and purposes
+the two are isomorphic. In general, for parsers that never throw errors, we prefer 'Void' in the
+error type, but as a trade-off the code is littered with @'first' 'Data.Void.absurd'@ calls.
+
+__Definition__: a parser is /monotonic/ if for every input @xs@, on success, the 'remainder' is
+a, possibly improper, suffix of @xs@.
+
+All the parsers in the library are provably monotonic, and all parser combinators return monotonic
+parsers on the assumption that the arguments are monotonic. The 'put' parser is the only exception,
+allowing the construction of non-monotonic parsers. It is provided as the escape hatch to build new
+primitives, but it is incumbent on the caller to ensure monotonicity, or at least be aware
+of the issue as some parser combinators implicitly rely on it.
+
+note(s):
+
+  * To formalize the notion of /suffix/, a @'Trisagion.Typeclasses.Source.Source' a s@
+  constraint on @s@ is needed -- see 'Trisagion.Typeclasses.Source.isSuffix'.
+
+-}
+{-# INLINE put #-}
+put :: s -> Parser s e ()
+put xs = embed $ const (Success () xs)
+
+
+{- | Parser that fails unconditionally with error @e@. -}
+{-# INLINE throw #-}
+throw :: e -> Parser s e a
+throw e = embed $ const (Error e)
 
 {- | The type-changing version of 'catchError'.
 

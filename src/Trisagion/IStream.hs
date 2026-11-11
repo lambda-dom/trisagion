@@ -1,12 +1,15 @@
 {- |
-Module: Trisagion.Typeclasses.Source
+Module: Trisagion.IStream
 
-The @Source@ typeclass.
+The module 'Trisagion.Parser' defines the parsing monad and the module
+'Trisagion.Parsers.Combinators' defines various useful parser combinators but with them alone, it
+is not even possible to pull out one element of the input stream. The 'IStream' typeclass defines
+the minimum requirements on the input stream @s@ to be able to do so.
 -}
 
-module Trisagion.Typeclasses.Source (
+module Trisagion.IStream (
     -- * Typeclasses.
-    Source (..),
+    IStream (..),
 
     -- * Functions.
     isSuffix,
@@ -26,21 +29,21 @@ import qualified Data.ByteString.Short as SBytes (ShortByteString, uncons, null,
 import qualified Data.Text as Text (Text, uncons, null, unpack, drop)
 import qualified Data.Text.Lazy as LText (Text, uncons, null, unpack, drop)
 import Data.Sequence (Seq (..))
-import qualified Data.Sequence as Seq (drop)
-import Data.Vector (Vector)
+import qualified Data.Sequence as Seq (drop, lookup)
+import Data.Vector (Vector, (!?))
 import qualified Data.Vector as Vector (uncons, drop)
-import qualified Data.Vector.Strict as SVector (Vector, uncons, drop)
-import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null, toList, drop)
-import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null, toList, drop)
+import qualified Data.Vector.Strict as SVector (Vector, uncons, drop, (!?))
+import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null, toList, drop, (!?))
+import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null, toList, drop, (!?))
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor)
+import Data.MonoFunctor (MonoFunctor)
 
 
-{- | The @Source@ typeclass for input streams.
+{- | The @IStream@ typeclass for input streams.
 
 We assume that all overriden instance implementations are extensionally equal to the default ones.
-To describe the laws for the 'Source' typeclass, we start with a definition.
+To describe the laws for the 'IStream' typeclass, we start with a definition.
 
 __Definition__: Let @'MonoFunctor' a s@ and @'MonoFunctor' a t@ be two monofunctors. A function
 @h :: s -> t@ is /mononatural/ if for every @f :: a -> a@ we have the equality
@@ -55,41 +58,52 @@ explicitly required:
 __Naturality__: The function @'uncons' :: s -> 'Maybe' (a, s)@ is mononatural.
 
 In case it is not clear, the 'MonoFunctor' instance for @'Maybe' (a, s)@ is
-@monomap f = fmap (bimap f (monomap f))@.
+@monomap f = 'fmap' (bimap f (monomap f))@.
  
-__Foldability__: With the definition
+__Foldability__: With the definition,
 
 @
-'toList' ::s -> [a]
-'toList' = 'Data.List.unfoldr' 'uncons'
+toList ::s -> [a]
+toList = unfoldr uncons
 @
 
-and the @'Mono.Typeclasses.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
+and the @'Data.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
 
 @
 monotoList == toList
 @
 
-__Unconsing__: Finally, the third law says that 'uncons' really is uncons-ing at the level of lists.
+__Unconsing__: Finally, the third law says that 'uncons' is uncons-ing at the level of lists.
 
 @
 toList == maybe [] (\ (x, xs) -> x : toList xs) . uncons
 @
 -}
-class MonoFunctor a s => Source a s | s -> a where
+class MonoFunctor a s => IStream a s | s -> a where
     {-# MINIMAL uncons #-}
 
-    {- | Get the first element from the source. -}
+    {- | Get the first element from the source and its tail. -}
     uncons :: s -> Maybe (a, s)
+
+    {- | Get the first element from the source.
+
+    Default implementation is:
+
+    @
+    head = fmap fst . uncons
+    @
+    -}
+    head :: s -> Maybe a
+    head = fmap fst . uncons
 
     {- | Return 'True' if the source has no more elements.
 
     Default implementation is:
 
-    @null = maybe True (const False) . uncons@
+    @isNull = maybe True (const False) . uncons@
     -}
-    null :: s -> Bool
-    null = maybe True (const False) . uncons
+    isNull :: s -> Bool
+    isNull = maybe True (const False) . uncons
 
     {- | Get and drop first element from the source.
 
@@ -100,7 +114,7 @@ class MonoFunctor a s => Source a s | s -> a where
     dropOne :: s -> s
     dropOne s = maybe s snd $ uncons s
 
-    {- | Convert a 'Source' to a list.
+    {- | Convert an 'IStream' to a list.
 
     Default implementation is:
 
@@ -112,7 +126,7 @@ class MonoFunctor a s => Source a s | s -> a where
 
 -- Instances.
 -- Base.
-instance Source a (Maybe a) where
+instance IStream a (Maybe a) where
     {-# INLINE uncons #-}
     uncons :: Maybe a -> Maybe (a, Maybe a)
     uncons xs =
@@ -120,9 +134,13 @@ instance Source a (Maybe a) where
             Just x -> Just (x, Nothing)
             _      -> Nothing
 
-    {-# INLINE null #-}
-    null :: Maybe a -> Bool
-    null = maybe (True) (const False)
+    {-# INLINE head #-}
+    head :: Maybe a -> Maybe a
+    head = id
+
+    {-# INLINE isNull #-}
+    isNull :: Maybe a -> Bool
+    isNull = maybe (True) (const False)
 
     {-# INLINE dropOne #-}
     dropOne :: Maybe a -> Maybe a
@@ -132,14 +150,19 @@ instance Source a (Maybe a) where
     toList :: Maybe a -> [a]
     toList = maybe [] singleton
 
-instance Source a [a] where
+instance IStream a [a] where
     {-# INLINE uncons #-}
     uncons :: [a] -> Maybe (a, [a])
     uncons = List.uncons
 
-    {-# INLINE null #-}
-    null :: [a] -> Bool
-    null = List.null
+    {-# INLINE head #-}
+    head :: [a] -> Maybe a
+    head []      = Nothing
+    head (x : _) = Just x
+
+    {-# INLINE isNull #-}
+    isNull :: [a] -> Bool
+    isNull = List.null
 
     {-# INLINE dropOne #-}
     dropOne :: [a] -> [a]
@@ -151,14 +174,14 @@ instance Source a [a] where
 
 
 -- Libraries.
-instance Source Word8 Bytes.ByteString where
+instance IStream Word8 Bytes.ByteString where
     {-# INLINE uncons #-}
     uncons :: Bytes.ByteString -> Maybe (Word8, Bytes.ByteString)
     uncons = Bytes.uncons
 
-    {-# INLINE null #-}
-    null :: Bytes.ByteString -> Bool
-    null = Bytes.null
+    {-# INLINE isNull #-}
+    isNull :: Bytes.ByteString -> Bool
+    isNull = Bytes.null
 
     {-# INLINE dropOne #-}
     dropOne :: Bytes.ByteString -> Bytes.ByteString
@@ -168,14 +191,14 @@ instance Source Word8 Bytes.ByteString where
     toList :: Bytes.ByteString -> [Word8]
     toList = Bytes.unpack
 
-instance Source Word8 LBytes.ByteString where
+instance IStream Word8 LBytes.ByteString where
     {-# INLINE uncons #-}
     uncons :: LBytes.ByteString -> Maybe (Word8, LBytes.ByteString)
     uncons = LBytes.uncons
 
-    {-# INLINE null #-}
-    null :: LBytes.ByteString -> Bool
-    null = LBytes.null
+    {-# INLINE isNull #-}
+    isNull :: LBytes.ByteString -> Bool
+    isNull = LBytes.null
 
     {-# INLINE dropOne #-}
     dropOne :: LBytes.ByteString -> LBytes.ByteString
@@ -185,14 +208,14 @@ instance Source Word8 LBytes.ByteString where
     toList :: LBytes.ByteString -> [Word8]
     toList = LBytes.unpack
 
-instance Source Word8 SBytes.ShortByteString where
+instance IStream Word8 SBytes.ShortByteString where
     {-# INLINE uncons #-}
     uncons :: SBytes.ShortByteString -> Maybe (Word8, SBytes.ShortByteString)
     uncons = SBytes.uncons
 
-    {-# INLINE null #-}
-    null :: SBytes.ShortByteString -> Bool
-    null = SBytes.null
+    {-# INLINE isNull #-}
+    isNull :: SBytes.ShortByteString -> Bool
+    isNull = SBytes.null
 
     {-# INLINE dropOne #-}
     dropOne :: SBytes.ShortByteString -> SBytes.ShortByteString
@@ -202,14 +225,14 @@ instance Source Word8 SBytes.ShortByteString where
     toList :: SBytes.ShortByteString -> [Word8]
     toList = SBytes.unpack
 
-instance Source Char Text.Text where
+instance IStream Char Text.Text where
     {-# INLINE uncons #-}
     uncons :: Text.Text -> Maybe (Char, Text.Text)
     uncons = Text.uncons
 
-    {-# INLINE null #-}
-    null :: Text.Text -> Bool
-    null = Text.null
+    {-# INLINE isNull #-}
+    isNull :: Text.Text -> Bool
+    isNull = Text.null
 
     {-# INLINE dropOne #-}
     dropOne :: Text.Text -> Text.Text
@@ -219,14 +242,14 @@ instance Source Char Text.Text where
     toList :: Text.Text -> [Char]
     toList = Text.unpack
 
-instance Source Char LText.Text where
+instance IStream Char LText.Text where
     {-# INLINE uncons #-}
     uncons :: LText.Text -> Maybe (Char, LText.Text)
     uncons = LText.uncons
 
-    {-# INLINE null #-}
-    null :: LText.Text -> Bool
-    null = LText.null
+    {-# INLINE isNull #-}
+    isNull :: LText.Text -> Bool
+    isNull = LText.null
 
     {-# INLINE dropOne #-}
     dropOne :: LText.Text -> LText.Text
@@ -236,15 +259,19 @@ instance Source Char LText.Text where
     toList :: LText.Text -> [Char]
     toList = LText.unpack
 
-instance Source a (Seq a) where
+instance IStream a (Seq a) where
     {-# INLINE uncons #-}
     uncons :: Seq a -> Maybe (a, Seq a)
     uncons Empty      = Nothing
     uncons (x :<| xs) = Just (x, xs)
 
-    {-# INLINE null #-}
-    null :: Seq a -> Bool
-    null = Foldable.null
+    {-# INLINE head #-}
+    head :: Seq a -> Maybe a
+    head = Seq.lookup 0
+
+    {-# INLINE isNull #-}
+    isNull :: Seq a -> Bool
+    isNull = Foldable.null
 
     {-# INLINE dropOne #-}
     dropOne :: Seq a -> Seq a
@@ -254,14 +281,18 @@ instance Source a (Seq a) where
     toList :: Seq a -> [a]
     toList = Foldable.toList
 
-instance Source a (Vector a) where
+instance IStream a (Vector a) where
     {-# INLINE uncons #-}
     uncons :: Vector a -> Maybe (a, Vector a)
     uncons = Vector.uncons
 
-    {-# INLINE null #-}
-    null :: Vector a -> Bool
-    null = Foldable.null
+    {-# INLINE head #-}
+    head :: Vector a -> Maybe a
+    head = (!? 0)
+
+    {-# INLINE isNull #-}
+    isNull :: Vector a -> Bool
+    isNull = Foldable.null
 
     {-# INLINE dropOne #-}
     dropOne :: Vector a -> Vector a
@@ -271,14 +302,18 @@ instance Source a (Vector a) where
     toList :: Vector a -> [a]
     toList = Foldable.toList
 
-instance Source a (SVector.Vector a) where
+instance IStream a (SVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: SVector.Vector a -> Maybe (a, SVector.Vector a)
     uncons = SVector.uncons
 
-    {-# INLINE null #-}
-    null :: SVector.Vector a -> Bool
-    null = Foldable.null
+    {-# INLINE head #-}
+    head :: SVector.Vector a -> Maybe a
+    head = (SVector.!? 0)
+
+    {-# INLINE isNull #-}
+    isNull :: SVector.Vector a -> Bool
+    isNull = Foldable.null
 
     {-# INLINE dropOne #-}
     dropOne :: SVector.Vector a -> SVector.Vector a
@@ -288,14 +323,18 @@ instance Source a (SVector.Vector a) where
     toList :: SVector.Vector a -> [a]
     toList = Foldable.toList
 
-instance UVector.Unbox a => Source a (UVector.Vector a) where
+instance UVector.Unbox a => IStream a (UVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: UVector.Vector a -> Maybe (a, UVector.Vector a)
     uncons = UVector.uncons
 
-    {-# INLINE null #-}
-    null :: UVector.Vector a -> Bool
-    null = UVector.null
+    {-# INLINE head #-}
+    head :: UVector.Vector a -> Maybe a
+    head = (UVector.!? 0)
+
+    {-# INLINE isNull #-}
+    isNull :: UVector.Vector a -> Bool
+    isNull = UVector.null
 
     {-# INLINE dropOne #-}
     dropOne :: UVector.Vector a -> UVector.Vector a
@@ -305,14 +344,18 @@ instance UVector.Unbox a => Source a (UVector.Vector a) where
     toList :: UVector.Vector a -> [a]
     toList = UVector.toList
 
-instance StVector.Storable a => Source a (StVector.Vector a) where
+instance StVector.Storable a => IStream a (StVector.Vector a) where
     {-# INLINE uncons #-}
     uncons :: StVector.Vector a -> Maybe (a, StVector.Vector a)
     uncons = StVector.uncons
 
-    {-# INLINE null #-}
-    null :: StVector.Vector a -> Bool
-    null = StVector.null
+    {-# INLINE head #-}
+    head :: StVector.Vector a -> Maybe a
+    head = (StVector.!? 0)
+
+    {-# INLINE isNull #-}
+    isNull :: StVector.Vector a -> Bool
+    isNull = StVector.null
 
     {-# INLINE dropOne #-}
     dropOne :: StVector.Vector a -> StVector.Vector a
@@ -323,7 +366,14 @@ instance StVector.Storable a => Source a (StVector.Vector a) where
     toList = StVector.toList
 
 
-{- | Return 'True' if @xs@ is a suffix of @ys@. -}
+{- | Return 'True' if @xs@ is a suffix of @ys@.
+
+Default implementation is:
+
+@
+'Data.List.isSuffixOf' (toList xs) (toList ys)
+@
+-}
 {-# INLINE isSuffix #-}
-isSuffix :: (Source a s, Eq a) => s -> s -> Bool
+isSuffix :: (IStream a s, Eq a) => s -> s -> Bool
 isSuffix xs ys = toList xs `List.isSuffixOf` toList ys

@@ -17,14 +17,11 @@ module Trisagion.Parsers.HasOffset (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Void (Void, absurd)
 
--- Libraries.
-import Control.Monad.State (gets)
-
 -- Package.
 import Trisagion.Types.Span (Span (..))
-import Trisagion.Typeclasses.HasOffset (HasOffset)
-import qualified Trisagion.Typeclasses.HasOffset as HasOffset (offset)
-import Trisagion.Parser (Parser)
+import Trisagion.HasOffset (HasOffset)
+import qualified Trisagion.HasOffset as HasOffset (offset)
+import Trisagion.Parser (Parser, get)
 
 
 -- $setup
@@ -42,7 +39,7 @@ Right (0,Counter 0 "0123")
 -}
 {-# INLINE offset #-}
 offset :: HasOffset s => Parser s Void Int
-offset = gets HasOffset.offset
+offset = fmap HasOffset.offset get
 
 {- | Run a parser and return its results along with the consumed span.
 

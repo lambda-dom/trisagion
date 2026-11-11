@@ -1,10 +1,10 @@
 {- |
-Module: Trisagion.Typeclasses.Parsers.Binary
+Module: Trisagion.Parsers.Binary
 
 The @Binary@ typeclass for parsers with @'Split' 'Word8' b s@ constraints.
 -}
 
-module Trisagion.Typeclasses.Parsers.Binary (
+module Trisagion.Parsers.Binary (
     -- * Typeclasses.
     Binary (..),
 
@@ -30,6 +30,7 @@ import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromSh
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
+import Data.MonoFoldable (MonoFoldable (..))
 import Data.Bits.Optics (
     word16BytesLe,
     word32BytesLe,
@@ -38,12 +39,11 @@ import Data.Bits.Optics (
     word32BytesBe,
     word64BytesBe)
 import Data.Word.Optics (word8ToInt8, word16ToInt16, word32ToInt32, word64ToInt64)
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Split (Split)
 import Trisagion.Parser (Parser)
-import Trisagion.Parsers.Source (InputError, one)
+import Trisagion.Parsers.IStream (InputError, one)
+import Trisagion.Split (Split)
 import Trisagion.Parsers.Split (takeExact)
 
 
@@ -53,19 +53,19 @@ import Trisagion.Parsers.Split (takeExact)
 
 -- Private module functions.
 {-# INLINE mkParserWord16Le #-}
-mkParserWord16Le :: (Split Word8 b s) => (b -> (Word8, Word8)) -> Parser s InputError Word16
+mkParserWord16Le :: Split Word8 b s => (b -> (Word8, Word8)) -> Parser s InputError Word16
 mkParserWord16Le f = (review word16BytesLe . f) <$> takeExact 2
 
 {-# INLINE mkParserWord32Le #-}
 mkParserWord32Le
-    :: (Split Word8 b s)
+    :: Split Word8 b s
     => (b -> (Word8, Word8, Word8, Word8))
     -> Parser s InputError Word32
 mkParserWord32Le f = (review word32BytesLe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Le #-}
 mkParserWord64Le
-    :: (Split Word8 b s)
+    :: Split Word8 b s
     => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
     -> Parser s InputError Word64
 mkParserWord64Le f = (review word64BytesLe . f) <$> takeExact 8
@@ -76,21 +76,21 @@ mkParserWord16Be f = (review word16BytesBe . f) <$> takeExact 2
 
 {-# INLINE mkParserWord32Be #-}
 mkParserWord32Be
-    :: (Split Word8 b s)
+    :: Split Word8 b s
     => (b -> (Word8, Word8, Word8, Word8))
     -> Parser s InputError Word32
 mkParserWord32Be f = (review word32BytesBe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Be #-}
 mkParserWord64Be
-    :: (Split Word8 b s)
+    :: Split Word8 b s
     => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
     -> Parser s InputError Word64
 mkParserWord64Be f = (review word64BytesBe . f) <$> takeExact 8
 
 
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}
-class (Split Word8 b s) => Binary b s where
+class Split Word8 b s => Binary b s where
     {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Parse a single 'Word8'. -}
@@ -447,37 +447,37 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
     shortBytes = id
 
 
-{- | Parse a single 'Int8'. -}
+{- | Parse an single 'Int8'. -}
 {-# INLINE int8 #-}
 int8 :: Binary b s => Parser s InputError Int8
 int8 = fmap (view word8ToInt8) word8
 
-{- | Parse a 'Int16' in little-endian format. -}
+{- | Parse an 'Int16' in little-endian format. -}
 {-# INLINE int16Le #-}
 int16Le :: Binary b s => Parser s InputError Int16
 int16Le = fmap (view word16ToInt16) word16Le
 
-{- | Parse a 'Int32' in little-endian format. -}
+{- | Parse an 'Int32' in little-endian format. -}
 {-# INLINE int32Le #-}
 int32Le :: Binary b s => Parser s InputError Int32
 int32Le = fmap (view word32ToInt32) word32Le
 
-{- | Parse a 'Int64' in little-endian format. -}
+{- | Parse an 'Int64' in little-endian format. -}
 {-# INLINE int64Le #-}
 int64Le :: Binary b s => Parser s InputError Int64
 int64Le = fmap (view word64ToInt64) word64Le
 
-{- | Parse a 'Int16' in big-endian format. -}
+{- | Parse an 'Int16' in big-endian format. -}
 {-# INLINE int16Be #-}
 int16Be :: Binary b s => Parser s InputError Int16
 int16Be = fmap (view word16ToInt16) word16Be
 
-{- | Parse a 'Int32' in big-endian format. -}
+{- | Parse an 'Int32' in big-endian format. -}
 {-# INLINE int32Be #-}
 int32Be :: Binary b s => Parser s InputError Int32
 int32Be = fmap (view word32ToInt32) word32Be
 
-{- | Parse a 'Int64' in big-endian format. -}
+{- | Parse an 'Int64' in big-endian format. -}
 {-# INLINE int64Be #-}
 int64Be :: Binary b s => Parser s InputError Int64
 int64Be = fmap (view word64ToInt64) word64Be

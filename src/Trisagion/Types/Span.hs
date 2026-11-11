@@ -17,16 +17,12 @@ module Trisagion.Types.Span (
     isElem,
 ) where
 
--- Imports.
--- Base.
-import Data.Kind (Type)
-
 
 {- | The @Span@ type.
 
-A /span/ is a closed-open interval of the form @[m, n[@ with @m, n :: 'Int'@.
+A /span/ is a closed-open interval of the form @[m, n[@ with @m, n :: 'Int'@. The span is /empty/
+if @m >= n@.
 -}
-type Span :: Type
 data Span = Span {
     lower :: {-# UNPACK #-} !Int,
     upper :: {-# UNPACK #-} !Int
@@ -35,7 +31,7 @@ data Span = Span {
 
 {- | Return the width of the span. -}
 width :: Span -> Int
-width (Span n m) = m - n
+width (Span m n) = max 0 (n - m)
 
 {- | Return the list of elements in the span. -}
 toList :: Span -> [Int]

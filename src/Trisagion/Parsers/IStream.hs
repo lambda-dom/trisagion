@@ -1,15 +1,15 @@
 {- |
-Module: Trisagion.Parsers.Streamable
+Module: Trisagion.Parsers.IStream
 
-Parsers with @'Source' a s@ constraints.
+Parsers with @'IStream' a s@ constraints.
 -}
 
-module Trisagion.Parsers.Source (
+module Trisagion.Parsers.IStream (
     -- * Error types.
     InputError (..),
     ValidationError (..),
 
-    -- * Parsers @'Source' a s => 'Parser' s e a@.
+    -- * Parsers @'IStream' a s => 'Parser' s e a@.
     one,
     eoi,
     skipOne,
@@ -21,6 +21,9 @@ module Trisagion.Parsers.Source (
 ) where
 
 -- Imports.
+-- Hiding.
+import Prelude hiding (head)
+
 -- Base.
 import qualified Data.Foldable as Foldable (toList)
 import Data.Functor (($>))
@@ -28,16 +31,11 @@ import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Void (Void)
 
--- Libraries.
-import Control.Monad.State (MonadState (..), gets)
-import Control.Monad.Except (MonadError (..))
-
 -- Package.
 import Trisagion.Utils.Either ((:+:))
-import Trisagion.Typeclasses.Source (Source (..))
-import qualified Trisagion.Typeclasses.Source as Source (null)
-import Trisagion.Parser (Parser)
-import Trisagion.Parsers.Combinators (lookAhead, validate, sequenceP_)
+import Trisagion.IStream (IStream (..))
+import Trisagion.Parser (Parser, get, put, throw)
+import Trisagion.Parsers.Combinators (validate, chain_)
 
 
 -- $setup
@@ -45,12 +43,11 @@ import Trisagion.Parsers.Combinators (lookAhead, validate, sequenceP_)
 
 
 {- | The @InputError@ error type. -}
-type InputError :: Type
 newtype InputError = InputError Int
     deriving stock (Eq, Show)
 
 
-{- | The @ValidationError@ error tag type thrown on failed validations. -}
+{- | The @ValidationError@ error type thrown on failed validations. -}
 type ValidationError :: Type -> Type
 newtype ValidationError e = ValidationError e
     deriving stock (Eq, Show, Functor, Foldable, Traversable)
@@ -68,12 +65,12 @@ Right ('0',"123")
 Left (InputError 1)
 -}
 {-# INLINE one #-}
-one :: Source a s => Parser s InputError a
+one :: IStream a s => Parser s InputError a
 one = do
-    r <- gets uncons
+    r <- fmap uncons get
     case r of
         Just (x, xs) -> put xs $> x
-        _            -> throwError $ InputError 1
+        _            -> throw $ InputError 1
 
 {- | Parser returning 'True' if there are no more elements in the input stream.
 
@@ -86,8 +83,8 @@ Right (False,"0123")
 Right (True,"")
 -}
 {-# INLINE eoi #-}
-eoi :: Source a s => Parser s Void Bool
-eoi = gets Source.null
+eoi :: IStream a s => Parser s Void Bool
+eoi = fmap isNull get
 
 {- | Skip one element from the input stream.
 
@@ -100,8 +97,8 @@ Right ((),"123")
 Right ((),"")
 -}
 {-# INLINE skipOne #-}
-skipOne :: Source a s => Parser s Void ()
-skipOne = gets dropOne >>= put
+skipOne :: IStream a s => Parser s Void ()
+skipOne = fmap dropOne get >>= put
 
 {- | Parse one element from the input stream but without consuming input.
 
@@ -114,8 +111,8 @@ Right (Just '0',"0123")
 Right (Nothing,"")
 -}
 {-# INLINE peek #-}
-peek :: Source a s => Parser s Void (Maybe a)
-peek = either (const Nothing) Just <$> lookAhead one
+peek :: IStream a s => Parser s Void (Maybe a)
+peek = fmap head get
 
 {- | Parse one element from the input stream satisfying a predicate.
 
@@ -132,9 +129,9 @@ Left (Right (InputError 1))
 -}
 {-# INLINE satisfy #-}
 satisfy
-    :: Source a s
+    :: IStream a s
     => (a -> Bool)                      -- ^ Predicate on @a@.
-    -> Parser s (ValidationError a :+: InputError) a
+    -> Parser s (InputError :+: ValidationError a) a
 satisfy p = validate (\ x -> if p x then Right x else Left $ ValidationError x) one
 
 {- | Parse one element from the input stream matching an @x :: a@.
@@ -152,9 +149,9 @@ Left (Right (InputError 1))
 -}
 {-# INLINE matchOne #-}
 matchOne
-    :: (Source a s, Eq a)
+    :: (IStream a s, Eq a)
     => a                                -- ^ Matching @x :: a@.
-    -> Parser s (ValidationError a :+: InputError) a
+    -> Parser s (InputError :+: ValidationError a) a
 matchOne x = satisfy (== x)
 
 {- | Parse one element from the input stream that is an element of a foldable.
@@ -172,12 +169,16 @@ Left (Right (InputError 1))
 -}
 {-# INLINE oneOf #-}
 oneOf
-    :: (Source a s, Eq a, Foldable t)
+    :: (IStream a s, Eq a, Foldable t)
     => t a                              -- ^ Foldable of @a@'s against which to test inclusion.
-    -> Parser s (ValidationError a :+: InputError) a
+    -> Parser s (InputError :+: ValidationError a) a
 oneOf xs = satisfy (`elem` xs)
 
 {- | Parse a matching prefix from the input stream against a foldable.
+
+note(s):
+
+    * If at all possible, use @matchPrefix@ and variants, as it is more efficient.
 
 === __Examples:__
 
@@ -189,7 +190,7 @@ Left (Left (ValidationError '1'))
 -}
 {-# INLINE matchFoldable #-}
 matchFoldable
-    :: (Source a s, Foldable t, Eq a)
+    :: (IStream a s, Foldable t, Eq a)
     => t a                              -- ^ Foldable of @a@'s to match against.
-    -> Parser s (ValidationError a :+: InputError) ()
-matchFoldable xs = sequenceP_  $ fmap matchOne (Foldable.toList xs)
+    -> Parser s (InputError :+: ValidationError a) ()
+matchFoldable xs = chain_ $ fmap matchOne (Foldable.toList xs)

@@ -1,13 +1,13 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 {- |
-Module: Trisagion.Streams.Counter
+Module: Trisagion.IStreams.Counter
 
-The @Counter@ type wrapping a 'Source' with an offset tracking the current position.
+The @Counter@ type wrapping an 'IStream' with an offset tracking the current position.
 -}
 
-module Trisagion.Streams.Counter (
-    -- * Streams.
+module Trisagion.IStreams.Counter (
+    -- * IStreams.
     Counter,
 
     -- ** Constructors.
@@ -25,21 +25,20 @@ import Control.Monad.State (MonadState (..))
 import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-import Mono.Typeclasses.MonoPointed (MonoPointed (..))
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+import Data.MonoFunctor (MonoFunctor (..))
+import Data.MonoPointed (MonoPointed (..))
+import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Source (Source (..))
-import qualified Trisagion.Typeclasses.Source as Source (null)
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.Typeclasses.Split (Split (..))
-import Trisagion.Typeclasses.Parsers.Binary (Binary (..))
+import Trisagion.IStream (IStream (..))
+import Trisagion.HasOffset (HasOffset (..))
+import Trisagion.Split (Split (..))
+import Trisagion.Parsers.Binary (Binary (..))
 import Trisagion.Parser (Parser, parse)
-import Trisagion.Parsers.Source (InputError)
+import Trisagion.Parsers.IStream (InputError)
 
 
-{- | Wrapper around a 'Source' adding an offset to track current position.
+{- | Wrapper around an 'IStream' adding an offset to track current position.
 
 The implementation initializes the counter to @0@ and then updates it on every operation of the
 input stream by computing the length of the prefix.
@@ -60,7 +59,7 @@ instance MonoPointed a s => MonoPointed a (Counter s) where
     monopoint :: a -> Counter s
     monopoint x = Counter 0 (monopoint x)
 
-instance Source a s => Source a (Counter s) where
+instance IStream a s => IStream a (Counter s) where
     {-# INLINE uncons #-}
     uncons :: Counter s -> Maybe (a, Counter s)
     uncons (Counter n xs) =
@@ -68,15 +67,15 @@ instance Source a s => Source a (Counter s) where
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Counter (succ n) ys)
 
-    {-# INLINE null #-}
-    null :: Counter s -> Bool
-    null (Counter _ xs) = Source.null xs
+    {-# INLINE isNull #-}
+    isNull :: Counter s -> Bool
+    isNull (Counter _ xs) = isNull xs
 
     {-# INLINE toList #-}
     toList :: Counter s -> [a]
     toList (Counter _ xs) = toList xs
 
-instance Source a s => HasOffset (Counter s) where
+instance IStream a s => HasOffset (Counter s) where
     {-# INLINE offset #-}
     offset :: Counter s -> Int
     offset (Counter n _) = n
@@ -88,10 +87,10 @@ The instance requires computing the length of the prefix, which is @O(n)@ for so
 @UndecidableInstances@ extension to shut up GHC.
 -}
 instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
-    {-# INLINE splitPrefix #-}
-    splitPrefix :: Int -> Counter s -> (b, Counter s)
-    splitPrefix m (Counter n xs) =
-        let (prefix, rest) = splitPrefix m xs in
+    {-# INLINE splitN #-}
+    splitN :: Int -> Counter s -> (b, Counter s)
+    splitN m (Counter n xs) =
+        let (prefix, rest) = splitN m xs in
             (prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE splitWith #-}
@@ -100,10 +99,10 @@ instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
         let (prefix, rest) = splitWith p xs in
             (prefix, Counter (n + monolength prefix) rest)
 
-    {-# INLINE splitPrefixExact #-}
-    splitPrefixExact :: Int -> Counter s -> Maybe (b, Counter s)
-    splitPrefixExact m (Counter n xs) =
-        case splitPrefixExact m xs of
+    {-# INLINE splitExact #-}
+    splitExact :: Int -> Counter s -> Maybe (b, Counter s)
+    splitExact m (Counter n xs) =
+        case splitExact m xs of
             Nothing        -> Nothing
             Just (ys, zs)  -> Just (ys, Counter (n + monolength ys) zs)
 
@@ -120,9 +119,9 @@ instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
         let (prefix, rest) = splitRemainder xs in
             (prefix, Counter (n + monolength prefix) rest)
 
-    {-# INLINE dropPrefixExact #-}
-    dropPrefixExact :: Int -> Counter s -> Maybe (Counter s)
-    dropPrefixExact m (Counter off xs) = fmap (Counter (off + m)) $ dropPrefixExact m xs
+    {-# INLINE dropExact #-}
+    dropExact :: Int -> Counter s -> Maybe (Counter s)
+    dropExact m (Counter off xs) = fmap (Counter (off + m)) $ dropExact m xs
 
 instance (Binary b s, MonoFoldable Word8 b) => Binary b (Counter s) where
     {-# INLINE word16Le #-}
@@ -174,7 +173,7 @@ instance (Binary b s, MonoFoldable Word8 b) => Binary b (Counter s) where
             Right (y, ys) -> put (Counter (off + 8) ys) $> y
 
 
-{- | Construct a t'Counter' from a 'Source'. -}
+{- | Construct a t'Counter' from a 'IStream'. -}
 {-# INLINE initialize #-}
 initialize :: s -> Counter s
 initialize = Counter 0
