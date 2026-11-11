@@ -16,13 +16,10 @@ module Trisagion.Parsers.ParseError (
 import Data.Bifunctor (Bifunctor (..))
 import Data.Void (absurd)
 
--- Libraries.
-import Control.Monad.Except (MonadError (..))
-
 -- Package.
 import Trisagion.Types.ParseError (ParseError (..))
-import Trisagion.Typeclasses.HasOffset (HasOffset)
-import Trisagion.Parser (Parser)
+import Trisagion.HasOffset (HasOffset)
+import Trisagion.Parser (Parser, throw)
 import Trisagion.Parsers.HasOffset (offset)
 
 
@@ -39,7 +36,7 @@ withParseError p = do
 {- | The parser @'throwParseError' e@ fails unconditionally with @t'ParseError' e@. -}
 {-# INLINE throwParseError #-}
 throwParseError :: HasOffset s => e -> Parser s (ParseError e) a
-throwParseError e = withParseError (throwError e)
+throwParseError e = withParseError (throw e)
 
 {- | Capture the offset of the input stream at the entry point in case of an error.
 

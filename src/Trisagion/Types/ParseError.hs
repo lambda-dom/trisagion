@@ -14,7 +14,13 @@ module Trisagion.Types.ParseError (
 import Data.Kind (Type)
 
 
-{- | The @ParseError@ type with error tag @e@. -}
+{- | The @ParseError e@ type with error tag @e@.
+
+The @t'ParseError'@ type performs two important functions in dealing with parser errors: (1) it
+provides a short-circuiting strategy for accumulating errors by embedding any type in a monoid
+(e. g. the function @e -> t'ParseError' e@ is injective) and (2) allows annotating errors with the
+input stream position.
+-}
 type ParseError :: Type -> Type
 data ParseError e
     = Failure

@@ -66,14 +66,14 @@ library
         Trisagion.Types.ParseError
         Trisagion.Types.Span
         Trisagion.IStream
+        Trisagion.HasOffset
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.IStream
-        -- Trisagion.Typeclasses.HasOffset
+        Trisagion.Parsers.HasOffset
+        Trisagion.Parsers.ParseError
         -- Trisagion.Typeclasses.Split
         -- Trisagion.Typeclasses.Sink
-        -- Trisagion.Parsers.HasOffset
-        -- Trisagion.Parsers.ParseError
         -- Trisagion.Parsers.Split
         -- Trisagion.Parsers.Char
         -- Trisagion.Typeclasses.Parsers.Binary
