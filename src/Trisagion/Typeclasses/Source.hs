@@ -34,7 +34,7 @@ import qualified Data.Vector.Unboxed as UVector (Vector, Unbox, uncons, null, to
 import qualified Data.Vector.Storable as StVector (Vector, Storable, uncons, null, toList, drop)
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor)
+import Data.MonoFunctor (MonoFunctor)
 
 
 {- | The @Source@ typeclass for input streams.

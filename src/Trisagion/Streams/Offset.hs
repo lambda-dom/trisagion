@@ -16,12 +16,18 @@ module Trisagion.Streams.Offset (
 
 -- Imports.
 -- Base.
+import Data.Functor (($>))
 import Data.Kind (Type)
+import Data.Word (Word8, Word16, Word32, Word64)
+
+-- Libraries.
+import Control.Monad.State (MonadState (..))
+import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-import Mono.Typeclasses.MonoPointed (MonoPointed (..))
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+import Data.MonoFunctor (MonoFunctor (..))
+import Data.MonoPointed (MonoPointed (..))
+import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Source (Source (..))
@@ -29,12 +35,8 @@ import qualified Trisagion.Typeclasses.Source as Source (null)
 import Trisagion.Typeclasses.HasOffset (HasOffset (..))
 import Trisagion.Typeclasses.Split (Split (..))
 import Trisagion.Typeclasses.Parsers.Binary (Binary (..))
-import Data.Word (Word8, Word16, Word32, Word64)
 import Trisagion.Parser (Parser, parse)
 import Trisagion.Parsers.Source (InputError)
-import Control.Monad.State (MonadState(..))
-import Control.Monad.Except (MonadError(..))
-import Data.Functor (($>))
 
 
 {- | Wrapper around a 'Source' adding an offset to track current position.

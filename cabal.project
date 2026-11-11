@@ -4,9 +4,9 @@ packages:
 source-repository-package
     type: git
     location: https://github.com/lambda-dom/mono
-    tag: 3b1821c6e1019a2ff1c5ec2c5ff4300e565cc291
+    tag: ad3615b0a5245fbf9a220e5922ea87d4584b3086
 
 source-repository-package
     type: git
     location: https://github.com/lambda-dom/optics-conversions
-    tag: 09e323440a1601386fa46f4e4cd8e0defefcb13b
+    tag: 528d0b21a76244b729b403aed9ef750829e25499

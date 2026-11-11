@@ -35,7 +35,7 @@ import Trisagion.Typeclasses.Source (Source)
 
 -- $setup
 -- >>> import Data.Bifunctor
--- >>> import Mono.Typeclasses.MonoFunctor
+-- >>> import Data.MonoFunctor
 
 
 {- | The @Split@ typeclass.

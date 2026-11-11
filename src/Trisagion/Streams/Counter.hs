@@ -25,9 +25,9 @@ import Control.Monad.State (MonadState (..))
 import Control.Monad.Except (MonadError (..))
 
 -- non-Hackage libraries.
-import Mono.Typeclasses.MonoFunctor (MonoFunctor (..))
-import Mono.Typeclasses.MonoPointed (MonoPointed (..))
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
+import Data.MonoFunctor (MonoFunctor (..))
+import Data.MonoPointed (MonoPointed (..))
+import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Source (Source (..))

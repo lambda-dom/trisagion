@@ -154,7 +154,7 @@ empty >>= h == empty
 but /not/ their right-sided versions because of short-circuiting.
 
 Furthermore, if the monoid @e@ is /idempotent/, that is, for all @x :: e@, @x <> x == x@, then the
-'Alternative' instance also satisfies /left distributivity/:
+'Alternative' instance is also idempotent and satisfies /left distributivity/:
 
 @
 (f \<*\> x) \<|\> (f \<*\> y) == f \<*\> (x \<|\> y)

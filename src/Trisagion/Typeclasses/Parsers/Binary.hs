@@ -37,8 +37,8 @@ import Data.Bits.Optics (
     word16BytesBe,
     word32BytesBe,
     word64BytesBe)
+import Data.MonoFoldable (MonoFoldable (..))
 import Data.Word.Optics (word8ToInt8, word16ToInt16, word32ToInt32, word64ToInt64)
-import Mono.Typeclasses.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.Typeclasses.Split (Split)
