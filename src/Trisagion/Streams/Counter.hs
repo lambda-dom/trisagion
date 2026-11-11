@@ -3,7 +3,7 @@
 {- |
 Module: Trisagion.Streams.Counter
 
-The @Counter@ type wrapping a 'Source' with an offset tracking the current position.
+The @Counter@ type wrapping a 'IStream' with an offset tracking the current position.
 -}
 
 module Trisagion.Streams.Counter (
@@ -30,16 +30,15 @@ import Data.MonoPointed (MonoPointed (..))
 import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
-import Trisagion.Typeclasses.Source (Source (..))
-import qualified Trisagion.Typeclasses.Source as Source (null)
-import Trisagion.Typeclasses.HasOffset (HasOffset (..))
-import Trisagion.Typeclasses.Split (Split (..))
+import Trisagion.IStream (IStream (..))
+import Trisagion.HasOffset (HasOffset (..))
+import Trisagion.Split (Split (..))
 import Trisagion.Typeclasses.Parsers.Binary (Binary (..))
 import Trisagion.Parser (Parser, parse)
-import Trisagion.Parsers.Source (InputError)
+import Trisagion.Parsers.IStream (InputError)
 
 
-{- | Wrapper around a 'Source' adding an offset to track current position.
+{- | Wrapper around a 'IStream' adding an offset to track current position.
 
 The implementation initializes the counter to @0@ and then updates it on every operation of the
 input stream by computing the length of the prefix.
@@ -60,7 +59,7 @@ instance MonoPointed a s => MonoPointed a (Counter s) where
     monopoint :: a -> Counter s
     monopoint x = Counter 0 (monopoint x)
 
-instance Source a s => Source a (Counter s) where
+instance IStream a s => IStream a (Counter s) where
     {-# INLINE uncons #-}
     uncons :: Counter s -> Maybe (a, Counter s)
     uncons (Counter n xs) =
@@ -70,13 +69,13 @@ instance Source a s => Source a (Counter s) where
 
     {-# INLINE null #-}
     null :: Counter s -> Bool
-    null (Counter _ xs) = Source.null xs
+    null (Counter _ xs) = IStream.null xs
 
     {-# INLINE toList #-}
     toList :: Counter s -> [a]
     toList (Counter _ xs) = toList xs
 
-instance Source a s => HasOffset (Counter s) where
+instance IStream a s => HasOffset (Counter s) where
     {-# INLINE offset #-}
     offset :: Counter s -> Int
     offset (Counter n _) = n
@@ -174,7 +173,7 @@ instance (Binary b s, MonoFoldable Word8 b) => Binary b (Counter s) where
             Right (y, ys) -> put (Counter (off + 8) ys) $> y
 
 
-{- | Construct a t'Counter' from a 'Source'. -}
+{- | Construct a t'Counter' from a 'IStream'. -}
 {-# INLINE initialize #-}
 initialize :: s -> Counter s
 initialize = Counter 0

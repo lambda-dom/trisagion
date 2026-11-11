@@ -68,6 +68,7 @@ library
         Trisagion.IStream
         Trisagion.HasOffset
         Trisagion.Split
+        Trisagion.OStream
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.IStream
@@ -75,10 +76,9 @@ library
         Trisagion.Parsers.ParseError
         Trisagion.Parsers.Split
         Trisagion.Parsers.Char
-        -- Trisagion.Typeclasses.Sink
-        -- Trisagion.Typeclasses.Parsers.Binary
-        -- Trisagion.Serializer
-        -- Trisagion.Serializers.Combinators
-        -- Trisagion.Typeclasses.Serializers.Binary
+        Trisagion.Parsers.Binary
+        Trisagion.Serializer
+        Trisagion.Serializers.Combinators
         -- Trisagion.Streams.Counter
         -- Trisagion.Streams.Offset
+        -- Trisagion.Typeclasses.Serializers.Binary
