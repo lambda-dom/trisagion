@@ -12,7 +12,7 @@ module Trisagion.Utils.Either (
     cozip,
 
     -- * Functions.
-    annotate,
+    validator,
 ) where
 
 
@@ -28,6 +28,6 @@ cozip = either (fmap Left) (fmap Right)
 
 
 {- | Make a validator from a function producing a 'Maybe'. -}
-{-# INLINE annotate #-}
-annotate :: (a -> e) -> (a -> Maybe b) -> a -> e :+: b
-annotate e h x = maybe (Left . e $ x) Right (h x)
+{-# INLINE validator #-}
+validator :: (a -> e) -> (a -> Maybe b) -> a -> e :+: b
+validator h v x = maybe (Left . h $ x) Right (v x)
