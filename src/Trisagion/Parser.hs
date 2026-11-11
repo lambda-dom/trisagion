@@ -57,12 +57,18 @@ import Trisagion.Types.Result (Result (..), result)
 @s@ is the input stream type, @e@ is the type of parsing errors that the parser can throw and @a@
 is the type of parsed values.
 
-note(s):
+__Definition__: Two parsers @p@ and @q@ are said to be /equal/, written as @p == q@, iff their
+parsing functions are extensionally equal, that is, for all @xs@, we have:
 
-    * Two parsers @p@ and @q@ are said to be /equal/, written as @p == q@, iff their parsing
-    functions are extensionally equal, that is, for all @xs@, we have @parse p xs == parse q xs@.
-    Obviously enough, this definition is not effective, so it cannot be turned into an 'Eq'
-    instance.
+@
+parse p xs == parse q xs
+@
+
+Obviously enough, this definition is not effective, so it cannot be turned into an 'Eq' instance.
+
+In what follows (e. g. in stating the typeclass laws), this is the operative notion of equality
+between parsers. Also, such phrases as "parser @p@ on input @xs@" are to be understood as meaning
+@parse p xs@.
 -}
 type Parser :: Type -> Type -> Type -> Type
 newtype Parser s e a = Parser (s -> Result s e a)
