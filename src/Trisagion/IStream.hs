@@ -60,11 +60,11 @@ __Naturality__: The function @'uncons' :: s -> 'Maybe' (a, s)@ is mononatural.
 In case it is not clear, the 'MonoFunctor' instance for @'Maybe' (a, s)@ is
 @monomap f = 'fmap' (bimap f (monomap f))@.
  
-__Foldability__: With the definition
+__Foldability__: With the definition,
 
 @
-'toList' ::s -> [a]
-'toList' = 'Data.List.unfoldr' 'uncons'
+toList ::s -> [a]
+toList = unfoldr uncons
 @
 
 and the @'Data.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
@@ -90,7 +90,7 @@ class MonoFunctor a s => IStream a s | s -> a where
     Default implementation is:
 
     @
-    head = fmap 'fst' . 'uncons'
+    head = fmap fst . uncons
     @
     -}
     head :: s -> Maybe a
@@ -366,7 +366,14 @@ instance StVector.Storable a => IStream a (StVector.Vector a) where
     toList = StVector.toList
 
 
-{- | Return 'True' if @xs@ is a suffix of @ys@. -}
+{- | Return 'True' if @xs@ is a suffix of @ys@.
+
+Default implementation is:
+
+@
+'Data.List.isSuffixOf' (toList xs) (toList ys)
+@
+-}
 {-# INLINE isSuffix #-}
 isSuffix :: (IStream a s, Eq a) => s -> s -> Bool
 isSuffix xs ys = toList xs `List.isSuffixOf` toList ys

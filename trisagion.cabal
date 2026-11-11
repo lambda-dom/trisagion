@@ -67,12 +67,12 @@ library
         Trisagion.Types.Span
         Trisagion.IStream
         Trisagion.HasOffset
+        Trisagion.Split
         Trisagion.Parser
         Trisagion.Parsers.Combinators
         Trisagion.Parsers.IStream
         Trisagion.Parsers.HasOffset
         Trisagion.Parsers.ParseError
-        -- Trisagion.Typeclasses.Split
         -- Trisagion.Typeclasses.Sink
         -- Trisagion.Parsers.Split
         -- Trisagion.Parsers.Char
