@@ -68,12 +68,12 @@ library
         Trisagion.IStream
         Trisagion.HasOffset
         Trisagion.Split
-        -- Trisagion.OStream
-        -- Trisagion.Parser
-        -- Trisagion.Parsers.Combinators
-        -- Trisagion.Parsers.IStream
-        -- Trisagion.Parsers.HasOffset
-        -- Trisagion.Parsers.ParseError
+        Trisagion.OStream
+        Trisagion.Parser
+        Trisagion.Parsers.Combinators
+        Trisagion.Parsers.IStream
+        Trisagion.Parsers.HasOffset
+        Trisagion.Parsers.ParseError
         -- Trisagion.Parsers.Split
         -- Trisagion.Parsers.Char
         -- Trisagion.Parsers.Binary
