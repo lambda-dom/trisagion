@@ -73,6 +73,10 @@ and the @'Data.MonoFoldable.MonoFoldable' a s@ constraint we have the equality:
 monotoList == toList
 @
 
+Given the definition of @toList@, the @MonoFoldable@ instance drops for free. The reason why we do
+not simply assume it is that streams (and lists) can be /infinite/ while the @MonoFoldable@
+constraint implies finitude because of totality of @length@.
+
 __Unconsing__: Finally, the third law says that 'uncons' is uncons-ing at the level of lists.
 
 @
