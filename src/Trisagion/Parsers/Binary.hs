@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Binary
 
-The @Binary@ typeclass for parsers with @'Split' 'Word8' b s@ constraints.
+The @Binary@ typeclass for parsers with @'Split' 'Word8' s@ constraints.
 -}
 
 module Trisagion.Parsers.Binary (
@@ -30,7 +30,6 @@ import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromSh
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
-import Data.MonoFoldable (MonoFoldable (..))
 import Data.Bits.Optics (
     word16BytesLe,
     word32BytesLe,
@@ -41,6 +40,7 @@ import Data.Bits.Optics (
 import Data.Word.Optics (word8ToInt8, word16ToInt16, word32ToInt32, word64ToInt64)
 
 -- Package.
+import Trisagion.IStream (IStream (toList))
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.IStream (InputError, one)
 import Trisagion.Split (Split)
@@ -53,44 +53,44 @@ import Trisagion.Parsers.Split (takeExact)
 
 -- Private module functions.
 {-# INLINE mkParserWord16Le #-}
-mkParserWord16Le :: Split Word8 b s => (b -> (Word8, Word8)) -> Parser s InputError Word16
+mkParserWord16Le :: Split Word8 s => (s -> (Word8, Word8)) -> Parser s InputError Word16
 mkParserWord16Le f = (review word16BytesLe . f) <$> takeExact 2
 
 {-# INLINE mkParserWord32Le #-}
 mkParserWord32Le
-    :: Split Word8 b s
-    => (b -> (Word8, Word8, Word8, Word8))
+    :: Split Word8 s
+    => (s -> (Word8, Word8, Word8, Word8))
     -> Parser s InputError Word32
 mkParserWord32Le f = (review word32BytesLe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Le #-}
 mkParserWord64Le
-    :: Split Word8 b s
-    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
+    :: Split Word8 s
+    => (s -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
     -> Parser s InputError Word64
 mkParserWord64Le f = (review word64BytesLe . f) <$> takeExact 8
 
 {-# INLINE mkParserWord16Be #-}
-mkParserWord16Be :: (Split Word8 b s) => (b -> (Word8, Word8)) -> Parser s InputError Word16
+mkParserWord16Be :: (Split Word8 s) => (s -> (Word8, Word8)) -> Parser s InputError Word16
 mkParserWord16Be f = (review word16BytesBe . f) <$> takeExact 2
 
 {-# INLINE mkParserWord32Be #-}
 mkParserWord32Be
-    :: Split Word8 b s
-    => (b -> (Word8, Word8, Word8, Word8))
+    :: Split Word8 s
+    => (s -> (Word8, Word8, Word8, Word8))
     -> Parser s InputError Word32
 mkParserWord32Be f = (review word32BytesBe . f) <$> takeExact 4
 
 {-# INLINE mkParserWord64Be #-}
 mkParserWord64Be
-    :: Split Word8 b s
-    => (b -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
+    :: Split Word8 s
+    => (s -> (Word8, Word8, Word8, Word8, Word8, Word8, Word8, Word8))
     -> Parser s InputError Word64
 mkParserWord64Be f = (review word64BytesBe . f) <$> takeExact 8
 
 
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}
-class Split Word8 b s => Binary b s where
+class Split Word8 s => Binary s where
     {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Parse a single 'Word8'. -}
@@ -120,25 +120,25 @@ class Split Word8 b s => Binary b s where
 
     note(s):
 
-        * The default implementation is to make use of the 'MonoFoldable' constraint and apply the
-        obvious function under @fmap@. Specific prefix types usually have a faster conversion method.
+        * The default implementation is to make use of 'toList' from 'IStream' and apply the
+        obvious function under @fmap@. Specific streams usually have a faster conversion method.
     -}
-    bytes :: MonoFoldable Word8 b => Parser s e b -> Parser s e Bytes.ByteString
-    bytes = fmap (Bytes.pack . monotoList)
+    bytes :: Parser s e s -> Parser s e Bytes.ByteString
+    bytes = fmap (Bytes.pack . toList)
 
     {- | Turn a prefix parser into a 'SBytes.ShortByteString' parser.
 
     note(s):
 
-        * The default implementation is to make use of the 'MonoFoldable' constraint and apply the
-        obvious function under @fmap@. Specific prefix types usually have a faster conversion method.
+        * The default implementation is to make use of 'toList' from 'IStream' and apply the
+        obvious function under @fmap@. Specific streams usually have a faster conversion method.
     -}
-    shortBytes :: MonoFoldable Word8 b => Parser s e b -> Parser s e SBytes.ShortByteString
-    shortBytes = fmap (SBytes.pack . monotoList)
+    shortBytes :: Parser s e s -> Parser s e SBytes.ShortByteString
+    shortBytes = fmap (SBytes.pack . toList)
 
 
 -- Instances.
-instance Binary [Word8] [Word8] where
+instance Binary [Word8] where
     {-# INLINE word16Le #-}
     word16Le :: Parser [Word8] InputError Word16
     word16Le = mkParserWord16Le h
@@ -219,7 +219,7 @@ instance Binary [Word8] [Word8] where
             h (m : n : p : q : r : s : t : u : _) = (u, t, s, r, q, p, n, m)
             h _                                   = error "Impossible case."
 
-instance Binary Bytes.ByteString Bytes.ByteString where
+instance Binary Bytes.ByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser Bytes.ByteString InputError Word16
     word16Le = mkParserWord16Le h
@@ -294,7 +294,7 @@ instance Binary Bytes.ByteString Bytes.ByteString where
         -> Parser Bytes.ByteString e SBytes.ShortByteString
     shortBytes = fmap SBytes.toShort
 
-instance Binary LBytes.ByteString LBytes.ByteString where
+instance Binary LBytes.ByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser LBytes.ByteString InputError Word16
     word16Le = mkParserWord16Le h
@@ -371,7 +371,7 @@ instance Binary LBytes.ByteString LBytes.ByteString where
     bytes = fmap LBytes.toStrict
 
 
-instance Binary SBytes.ShortByteString SBytes.ShortByteString where
+instance Binary SBytes.ShortByteString where
     {-# INLINE word16Le #-}
     word16Le :: Parser SBytes.ShortByteString InputError Word16
     word16Le = mkParserWord16Le h
@@ -447,37 +447,37 @@ instance Binary SBytes.ShortByteString SBytes.ShortByteString where
     shortBytes = id
 
 
-{- | Parse an single 'Int8'. -}
+{- | Parse a single 'Int8'. -}
 {-# INLINE int8 #-}
-int8 :: Binary b s => Parser s InputError Int8
+int8 :: Binary s => Parser s InputError Int8
 int8 = fmap (view word8ToInt8) word8
 
 {- | Parse an 'Int16' in little-endian format. -}
 {-# INLINE int16Le #-}
-int16Le :: Binary b s => Parser s InputError Int16
+int16Le :: Binary s => Parser s InputError Int16
 int16Le = fmap (view word16ToInt16) word16Le
 
 {- | Parse an 'Int32' in little-endian format. -}
 {-# INLINE int32Le #-}
-int32Le :: Binary b s => Parser s InputError Int32
+int32Le :: Binary s => Parser s InputError Int32
 int32Le = fmap (view word32ToInt32) word32Le
 
 {- | Parse an 'Int64' in little-endian format. -}
 {-# INLINE int64Le #-}
-int64Le :: Binary b s => Parser s InputError Int64
+int64Le :: Binary s => Parser s InputError Int64
 int64Le = fmap (view word64ToInt64) word64Le
 
 {- | Parse an 'Int16' in big-endian format. -}
 {-# INLINE int16Be #-}
-int16Be :: Binary b s => Parser s InputError Int16
+int16Be :: Binary s => Parser s InputError Int16
 int16Be = fmap (view word16ToInt16) word16Be
 
 {- | Parse an 'Int32' in big-endian format. -}
 {-# INLINE int32Be #-}
-int32Be :: Binary b s => Parser s InputError Int32
+int32Be :: Binary s => Parser s InputError Int32
 int32Be = fmap (view word32ToInt32) word32Be
 
 {- | Parse an 'Int64' in big-endian format. -}
 {-# INLINE int64Be #-}
-int64Be :: Binary b s => Parser s InputError Int64
+int64Be :: Binary s => Parser s InputError Int64
 int64Be = fmap (view word64ToInt64) word64Be

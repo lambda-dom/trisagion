@@ -53,10 +53,10 @@ import Trisagion.Parser (Parser, try, eval, get, throw, catch)
 
 -- $setup
 -- >>> import Data.Bifunctor
--- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
--- >>> import Trisagion.Parsers.Source
 -- >>> import Trisagion.Parsers.ParseError
+-- >>> import Trisagion.Parsers.IStream
+-- >>> import Trisagion.IStreams.Counter
 
 
 {- | Embed a value in the t'Parser' monad.
@@ -126,10 +126,10 @@ failIff p = do
 Right ('0',"123")
 
 >>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) "123"
-Left (Left ())
+Left (Right ())
 
 >>> parse (validate (\ c -> if c == '0' then Right c else Left ()) one) ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE validate #-}
 validate
@@ -150,7 +150,7 @@ validate v p = do
 Right (Right '0',"0123")
 
 >>> parse (lookAhead $ matchOne '1') "0123"
-Right (Left (Left (ValidationError '0')),"0123")
+Right (Left (Right (ValidationError '0')),"0123")
 
 >>> parse (lookAhead one) ""
 Right (Left (InputError 1),"")
@@ -169,23 +169,23 @@ skip = ($> ())
 
 === __Examples:__
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{1}3"
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) "{1}3"
 Right ('1',"3")
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "11}3"
-Left (Left (ValidationError '1'))
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) "11}3"
+Left (Right (ValidationError '1'))
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{123"
-Left (Left (ValidationError '2'))
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) "{123"
+Left (Right (ValidationError '2'))
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) ""
-Left (Right (InputError 1))
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) ""
+Left (Left (InputError 1))
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{"
-Left (Right (InputError 1))
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) "{"
+Left (Left (InputError 1))
 
->>> parse (between (matchOne '{') (matchOne '}') (first Right one)) "{1"
-Left (Right (InputError 1))
+>>> parse (between (matchOne '{') (matchOne '}') (first Left one)) "{1"
+Left (Left (InputError 1))
 -}
 {-# INLINE between #-}
 between
@@ -203,10 +203,10 @@ between open close p = open *> p <* close
 Right (('0','1'),"23")
 
 >>> parse (pair (matchOne '1') (matchOne '1')) "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (pair (matchOne '0') (matchOne '2')) "0123"
-Left (Left (ValidationError '1'))
+Left (Right (ValidationError '1'))
 -}
 {-# INLINE pair #-}
 pair :: Parser s e a -> Parser s e b -> Parser s e (a, b)
@@ -246,7 +246,7 @@ Right ("01","23")
 Left (InputError 1)
 
 >>> parse (repeatN 2 (matchOne '0')) "0123"
-Left (Left (ValidationError '1'))
+Left (Right (ValidationError '1'))
 -}
 {-# INLINEABLE repeatN #-}
 repeatN :: Int -> Parser s e a -> Parser s e [a]
@@ -295,11 +295,11 @@ That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tes
 >>> parse (choose (withParseError one) (withParseError one)) (initialize "0123")
 Right (Left '0',Counter 1 "123")
 
->>> parse (choose (withParseError $ matchOne '1') (withParseError $ first Right one)) (initialize "0123")
+>>> parse (choose (withParseError $ matchOne '1') (withParseError $ first Left one)) (initialize "0123")
 Right (Right '0',Counter 1 "123")
 
 >>> parse (choose (withParseError $ matchOne '1') (withParseError $ matchOne '2')) (initialize "0123")
-Left (ParseError 0 (Left (ValidationError '0')))
+Left (ParseError 0 (Right (ValidationError '0')))
 -}
 {-# INLINE choose #-}
 choose :: Monoid e => Parser s e a -> Parser s e b -> Parser s e (a :+: b)
@@ -365,10 +365,10 @@ precise type signature and the fact that it does not require a @'Monoid' e@ cons
 Right ('0' :| "1","{3")
 
 >>> parse (some (satisfy ('0' /=))) "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (some (satisfy ('0' /=))) ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE some #-}
 some :: Parser s e a -> Parser s e (NonEmpty a)
@@ -402,13 +402,13 @@ note(s):
 The parser 'untilEnd' requires a 'Monoid' constraint so the error type must be embedded in a monoid.
 That is the function of 'Trisagion.Parsers.ParseError.withParseError' in the tests below.
 
->>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Right one)) (initialize "01}3")
+>>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Left one)) (initialize "01}3")
 Right ("01",Counter 2 "}3")
 
->>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Right one)) (initialize "}123")
+>>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Left one)) (initialize "}123")
 Right ("",Counter 0 "}123")
 
->>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Right one)) (initialize "")
+>>> parse (untilEnd (withParseError $ matchOne '}') (withParseError $ first Left one)) (initialize "")
 Right ("",Counter 0 "")
 -}
 {-# INLINE untilEnd #-}
@@ -423,7 +423,7 @@ untilEnd end p = many $ failIff end *> p
 
 === __Examples:__
 
->>> parse (manyTill (matchOne '}') (first Right one)) "01}3"
+>>> parse (manyTill (matchOne '}') (first Left one)) "01}3"
 Right ("01","3")
 -}
 {-# INLINEABLE manyTill #-}
@@ -440,7 +440,7 @@ manyTill end p = go
 
 === __Examples:__
 
->>> parse (manyTillEnd (matchOne '}') (first Right one)) "01}3"
+>>> parse (manyTillEnd (matchOne '}') (first Left one)) "01}3"
 Right ('0' :| "1}","3")
 -}
 {-# INLINEABLE manyTillEnd #-}
@@ -469,14 +469,14 @@ sepBy sep p = do
 
 === __Examples:__
 
->>> parse (sepBy1 (matchOne ',') (first Right one)) "0,1,2,345"
+>>> parse (sepBy1 (matchOne ',') (first Left one)) "0,1,2,345"
 Right ('0' :| "123","45")
 
->>> parse (sepBy1 (matchOne ',') (first Right one)) "0123"
+>>> parse (sepBy1 (matchOne ',') (first Left one)) "0123"
 Right ('0' :| "","123")
 
->>> parse (sepBy1 (matchOne ',') (first Right one)) ""
-Left (Right (InputError 1))
+>>> parse (sepBy1 (matchOne ',') (first Left one)) ""
+Left (Left (InputError 1))
 -}
 {-# INLINE sepBy1 #-}
 sepBy1 :: Parser s e a -> Parser s e b -> Parser s e (NonEmpty b)

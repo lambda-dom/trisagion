@@ -49,7 +49,7 @@ import Trisagion.Types.Result (Result (..), result)
 -- $setup
 -- >>> import Data.Bifunctor
 -- >>> import Control.Applicative (Alternative (..))
--- >>> import Trisagion.Parsers.Source
+-- >>> import Trisagion.Parsers.IStream
 
 
 {- | The parsing monad @Parser s e a@.
@@ -400,7 +400,7 @@ backtracks and returns the error as a 'Left'.
 Right (Right '0',"123")
 
 >>> parse (try $ matchOne '1') "0123"
-Right (Left (Left (ValidationError '0')),"0123")
+Right (Left (Right (ValidationError '0')),"0123")
 
 >>> parse (try one) ""
 Right (Left (InputError 1),"")

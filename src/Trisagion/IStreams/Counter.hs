@@ -83,47 +83,51 @@ instance IStream a s => HasOffset (Counter s) where
 {- | 'Split' instance.
 
 The instance requires computing the length of the prefix, which is @O(n)@ for some types like
-@Text@. This in its turn, requires a @'MonoFoldable' a b@ constraint and the
+@Text@. This in its turn, requires a @'MonoFoldable' a s@ constraint and the
 @UndecidableInstances@ extension to shut up GHC.
 -}
-instance (Split a b s, MonoFoldable a b) => Split a b (Counter s) where
+instance (Split a s, MonoFoldable a s) => Split a (Counter s) where
     {-# INLINE splitN #-}
-    splitN :: Int -> Counter s -> (b, Counter s)
+    splitN :: Int -> Counter s -> (Counter s, Counter s)
     splitN m (Counter n xs) =
         let (prefix, rest) = splitN m xs in
-            (prefix, Counter (n + monolength prefix) rest)
+            (Counter n prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE splitWith #-}
-    splitWith :: (a -> Bool) -> Counter s -> (b, Counter s)
+    splitWith :: (a -> Bool) -> Counter s -> (Counter s, Counter s)
     splitWith p (Counter n xs) =
         let (prefix, rest) = splitWith p xs in
-            (prefix, Counter (n + monolength prefix) rest)
+            (Counter n prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE splitExact #-}
-    splitExact :: Int -> Counter s -> Maybe (b, Counter s)
+    splitExact :: Int -> Counter s -> Maybe (Counter s, Counter s)
     splitExact m (Counter n xs) =
         case splitExact m xs of
             Nothing        -> Nothing
-            Just (ys, zs)  -> Just (ys, Counter (n + monolength ys) zs)
+            Just (ys, zs)  -> Just (Counter n ys, Counter (n + monolength ys) zs)
 
+    {- | Match a prefix.
+
+    The offset of the prefix is irrelevant, so you can simply do @matchPrefix ('initialize' xs)@.
+    -}
     {-# INLINE matchPrefix #-}
-    matchPrefix :: b -> Counter s -> Maybe (Counter s)
-    matchPrefix xs (Counter n ys) =
+    matchPrefix :: Counter s -> Counter s -> Maybe (Counter s)
+    matchPrefix (Counter _ xs) (Counter n ys) =
         case matchPrefix xs ys of
             Nothing -> Nothing
             Just zs -> Just (Counter (n + monolength xs) zs)
 
     {-# INLINE splitRemainder #-}
-    splitRemainder :: Counter s -> (b, Counter s)
+    splitRemainder :: Counter s -> (Counter s, Counter s)
     splitRemainder (Counter n xs) =
         let (prefix, rest) = splitRemainder xs in
-            (prefix, Counter (n + monolength prefix) rest)
+            (Counter n prefix, Counter (n + monolength prefix) rest)
 
     {-# INLINE dropExact #-}
     dropExact :: Int -> Counter s -> Maybe (Counter s)
     dropExact m (Counter off xs) = fmap (Counter (off + m)) $ dropExact m xs
 
-instance (Binary b s, MonoFoldable Word8 b) => Binary b (Counter s) where
+instance (Binary s, MonoFoldable Word8 s) => Binary (Counter s) where
     {-# INLINE word16Le #-}
     word16Le :: Parser (Counter s) InputError Word16
     word16Le = do

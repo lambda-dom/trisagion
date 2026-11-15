@@ -25,9 +25,9 @@ import Trisagion.Parser (Parser, get)
 
 
 -- $setup
--- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
--- >>> import Trisagion.Parsers.Source
+-- >>> import Trisagion.Parsers.IStream
+-- >>> import Trisagion.IStreams.Counter
 
 
 {- | Parser returning the current offset of the input stream.

@@ -122,10 +122,10 @@ peek = fmap head get
 Right ('0',"123")
 
 >>> parse (satisfy ('1' ==)) "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (satisfy ('0' ==)) ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE satisfy #-}
 satisfy
@@ -142,10 +142,10 @@ satisfy p = validate (\ x -> if p x then Right x else Left $ ValidationError x) 
 Right ('0',"123")
 
 >>> parse (matchOne '1') "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (matchOne '0') ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE matchOne #-}
 matchOne
@@ -162,10 +162,10 @@ matchOne x = satisfy (== x)
 Right ('0',"123")
 
 >>> parse (oneOf "12") "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (oneOf "12") ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE oneOf #-}
 oneOf
@@ -186,7 +186,7 @@ note(s):
 Right ((),"23")
 
 >>> parse (matchFoldable "02") "0123"
-Left (Left (ValidationError '1'))
+Left (Right (ValidationError '1'))
 -}
 {-# INLINE matchFoldable #-}
 matchFoldable
