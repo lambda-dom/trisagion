@@ -179,14 +179,14 @@ Right ("456","")
 Left (InputError 1)
 -}
 {-# INLINEABLE line #-}
-line :: forall b s . (MonoPointed Char b, Split Char b s, Monoid b) => Parser s InputError b
+line :: forall s . (MonoPointed Char s, Split Char s, Monoid s) => Parser s InputError s
 line = (foldl' (<>) mempty . intersperse (monopoint '\r')) <$> do
         b <- first absurd eoi
         if b
             then throw $ InputError 1
             else first absurd go
     where
-        go :: Parser s Void [b] 
+        go :: Parser s Void [s] 
         go = do
             xs      <- takeWith (\ c -> c /= '\n' && c /= '\r')
             endline <- optional newline
@@ -212,12 +212,12 @@ Right ("","0123")
 Right ("","")
 -}
 {-# INLINE spaces #-}
-spaces :: Split Char b s => Parser s Void b
+spaces :: Split Char s => Parser s Void s
 spaces = takeWith isSpace
 
 {- | Parse a, possibly null, prefix of non-whitespace characters. -}
 {-# INLINE notSpaces #-}
-notSpaces :: Split Char b s => Parser s Void b
+notSpaces :: Split Char s => Parser s Void s
 notSpaces = takeWith (not . isSpace)
 
 
@@ -277,7 +277,7 @@ Left (Left (InputError 1))
 -}
 {-# INLINEABLE positive #-}
 positive
-    :: (Split Char b s, MonoFoldable Char b)
+    :: (Split Char s, MonoFoldable Char s)
     => Parser s (InputError :+: ValidationError Char) Integer
 positive = do
         digits <- takeWith1 isDigit
@@ -310,7 +310,7 @@ Right (-123,"")
 -}
 {-# INLINE integer #-}
 integer
-    :: (Split Char b s, MonoFoldable Char b)
+    :: (Split Char s, MonoFoldable Char s)
     => Parser s (InputError :+: ValidationError Char) Integer
 integer = do
     sgn <- first absurd (fromMaybe Positive <$> optional sign)
@@ -341,7 +341,7 @@ Left (Right (ValidationError '_'))
 Left (Right (ValidationError ' '))
 -}
 {-# INLINE word #-}
-word :: Split Char b s => Parser s (InputError :+: ValidationError Char) b
+word :: Split Char s => Parser s (InputError :+: ValidationError Char) s
 word = takeWith1 isLetter
 
 {- | Parse an identifier.
@@ -364,7 +364,7 @@ Left (Right (ValidationError '_'))
 Left (Right (ValidationError ' '))
 -}
 {-# INLINE identifier #-}
-identifier :: Split Char b s => Parser s (InputError :+: ValidationError Char) b
+identifier :: Split Char s => Parser s (InputError :+: ValidationError Char) s
 identifier = do
         x <- first absurd $ lookAhead letter
         case x of
@@ -424,15 +424,15 @@ Left (Left (InputError 1))
 -}
 {-# INLINE escape #-}
 escape
-    :: forall b s . (MonoPointed Char b, Split Char b s)
-    => Parser s (InputError :+: EscapeError) b
+    :: forall s . (MonoPointed Char s, Split Char s)
+    => Parser s (InputError :+: EscapeError) s
 escape = do
         c <- first Left one
         if '\\' /= c
             then throw . Right $ EscapeCharError c
             else validate v one
     where
-        v :: Char -> EscapeError :+: b
+        v :: Char -> EscapeError :+: s
         v c = case c of
             't'  -> Right (monopoint '\t')
             'n'  -> Right (monopoint '\n')
@@ -469,8 +469,8 @@ Right ("Quoted string with many   spaces and one '\\' escape character.","")
 -}
 {-# INLINEABLE string #-}
 string
-    :: (MonoPointed Char b, Split Char b s, Monoid b)
-    => Parser s (InputError :+: StringError) b
+    :: (MonoPointed Char s, Split Char s, Monoid s)
+    => Parser s (InputError :+: StringError) s
 string = do
         c      <- startQuote
         blocks <- manyTill (endQuote c) (catch escapeSequence (const $ block c))
@@ -492,10 +492,10 @@ string = do
                     then Right c
                     else Left $ EndQuoteError c
 
-        escapeSequence :: (MonoPointed Char b, Split Char b s) => Parser s (InputError :+: StringError) b
+        escapeSequence :: (MonoPointed Char s, Split Char s) => Parser s (InputError :+: StringError) s
         escapeSequence = first (fmap StringEscapeError) escape
 
-        block :: Split Char b s => Char -> Parser s (InputError :+: StringError) b
+        block :: Split Char s => Char -> Parser s (InputError :+: StringError) s
         block c = first (fmap f) $ takeWith1 (\ d -> d /= c && d /= '\\' && d /= '\n')
             where
                 f :: ValidationError Char -> StringError
@@ -516,7 +516,7 @@ Right ("a line comment"," code starts here")
 -}
 {-# INLINE comment #-}
 comment
-    :: (Split Char b s, MonoPointed Char b, Monoid b)
+    :: (Split Char s, MonoPointed Char s, Monoid s)
     => Parser s e ()                    -- ^ Parser for start of line comment.
-    -> Parser s (InputError :+: e) b
+    -> Parser s (InputError :+: e) s
 comment p = first Right p *> first Left line

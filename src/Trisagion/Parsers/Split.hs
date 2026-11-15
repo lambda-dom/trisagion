@@ -63,7 +63,7 @@ Right ("01","23")
 Right ("0123","")
 -}
 {-# INLINE takeN #-}
-takeN :: Split a b s => Int -> Parser s Void b
+takeN :: Split a s => Int -> Parser s Void s
 takeN n = do
     (xs, ys) <- fmap (splitN n) get
     put ys $> xs
@@ -79,7 +79,7 @@ Right ("012","3")
 Right ("","")
 -}
 {-# INLINE takeWith #-}
-takeWith :: Split a b s => (a -> Bool) -> Parser s Void b
+takeWith :: Split a s => (a -> Bool) -> Parser s Void s
 takeWith p = do
     (xs, ys) <- fmap (splitWith p) get
     put ys $> xs
@@ -95,7 +95,7 @@ Right ((),"23")
 Right ((),"")
 -}
 {-# INLINE skipN #-}
-skipN :: Split a b s => Int -> Parser s Void ()
+skipN :: Split a s => Int -> Parser s Void ()
 skipN n = fmap (dropN n) get >>= put
 
 {- | Skip the longest prefix from the input stream whose elements satisfy a predicate.
@@ -109,12 +109,12 @@ Right ((),"3")
 Right ((),"")
  -}
 {-# INLINE skipWith #-}
-skipWith :: Split a b s => (a -> Bool) -> Parser s Void ()
+skipWith :: Split a s => (a -> Bool) -> Parser s Void ()
 skipWith p = fmap (dropWith p) get >>= put
 
 {- | Parse the remainder of the input stream as a prefix. -}
 {-# INLINE takeRemainder #-}
-takeRemainder :: Split a b s => Parser s Void b
+takeRemainder :: Split a s => Parser s Void s
 takeRemainder = do
     (prefix, rest) <- fmap splitRemainder get
     put rest $> prefix
@@ -136,7 +136,7 @@ Left (Left (ValidationError '0'))
 Left (Right (InputError 1))
 -}
 {-# INLINE takeWith1 #-}
-takeWith1 :: Split a b s => (a -> Bool) -> Parser s (InputError :+: ValidationError a) b
+takeWith1 :: Split a s => (a -> Bool) -> Parser s (InputError :+: ValidationError a) s
 takeWith1 p = do
     x <- first absurd $ lookAhead (satisfy p)
     case x of
@@ -154,7 +154,7 @@ Right ("01","23")
 Left (InputError 10)
 -}
 {-# INLINE takeExact #-}
-takeExact :: Split a b s => Int -> Parser s InputError b
+takeExact :: Split a s => Int -> Parser s InputError s
 takeExact n = do
     r <- fmap (splitExact n) get
     case r of
@@ -172,7 +172,7 @@ Right ((),"23")
 Left (InputError 10)
 -}
 {-# INLINE skipExact #-}
-skipExact :: Split a b s => Int -> Parser s InputError ()
+skipExact :: Split a s => Int -> Parser s InputError ()
 skipExact n = do
     xs <- fmap (dropExact n) get
     case xs of
@@ -193,7 +193,7 @@ Left (ValidationError "012345")
 Left (ValidationError "{}")
 -}
 {-# INLINE matchPrefix #-}
-matchPrefix :: Split a b s => b -> Parser s (ValidationError b) ()
+matchPrefix :: Split a s => s -> Parser s (ValidationError s) ()
 matchPrefix xs = do
     r <- fmap (Split.matchPrefix xs) get
     case r of
@@ -221,10 +221,10 @@ Left (Left (ValidationError '0'))
 -}
 {-# INLINE isolate #-}
 isolate
-    :: Split a b s
+    :: Split a s
     => Int                              -- ^ Prefix size.
-    -> Parser b e a                     -- ^ Parser to run on the prefix.
-    -> Parser s e (a, b)
+    -> Parser s e a                     -- ^ Parser to run on the prefix.
+    -> Parser s e (a, s)
 isolate n p = do
     prefix <- first absurd $ takeN n
     either throw pure $ parse p prefix
@@ -246,9 +246,9 @@ Left (InputError 1)
 -}
 {-# INLINE consumed #-}
 consumed
-    :: (HasOffset s, Split a b s)
+    :: (HasOffset s, Split a s)
     => Parser s e a                     -- ^ Parser to run.
-    -> Parser s e (a, b)
+    -> Parser s e (a, s)
 consumed p = do
     xs    <- get
     start <- first absurd offset
