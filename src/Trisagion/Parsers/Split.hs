@@ -45,9 +45,9 @@ import Trisagion.Parsers.HasOffset (offset)
 
 
 -- $setup
--- >>> import Trisagion.Streams.Counter
 -- >>> import Trisagion.Parser
--- >>> import Trisagion.Parsers.Source
+-- >>> import Trisagion.Parsers.IStream
+-- >>> import Trisagion.IStreams.Counter
 
 
 {- | Parse a fixed size prefix from the input stream.
@@ -130,10 +130,10 @@ Right ("0","123")
 Right ("000","3")
 
 >>> parse (takeWith1 ('1' ==)) "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 
 >>> parse (takeWith1 ('0' ==)) ""
-Left (Right (InputError 1))
+Left (Left (InputError 1))
 -}
 {-# INLINE takeWith1 #-}
 takeWith1 :: Split a s => (a -> Bool) -> Parser s (InputError :+: ValidationError a) s
@@ -217,7 +217,7 @@ Right (('0',""),"")
 Left (InputError 1)
 
 >>> parse (isolate 2 (matchOne '1')) "0123"
-Left (Left (ValidationError '0'))
+Left (Right (ValidationError '0'))
 -}
 {-# INLINE isolate #-}
 isolate
@@ -239,7 +239,7 @@ note(s):
 === __Examples:__
 
 >>> parse (consumed one) (initialize "0123")
-Right (('0',"0"),Counter 1 "123")
+Right (('0',Counter 0 "0"),Counter 1 "123")
 
 >>> parse (consumed one) (initialize "")
 Left (InputError 1)
