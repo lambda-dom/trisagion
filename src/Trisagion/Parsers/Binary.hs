@@ -1,7 +1,7 @@
 {- |
 Module: Trisagion.Parsers.Binary
 
-The @Binary@ typeclass for parsers with @'Split' 'Word8' b s@ constraints.
+The @Binary@ typeclass for parsers with @'Split' 'Word8' s@ constraints.
 -}
 
 module Trisagion.Parsers.Binary (
@@ -120,7 +120,7 @@ class Split Word8 s => Binary s where
 
     note(s):
 
-        * The default implementation is to make use of 'toList' from 'IStream'and apply the
+        * The default implementation is to make use of 'toList' from 'IStream' and apply the
         obvious function under @fmap@. Specific streams usually have a faster conversion method.
     -}
     bytes :: Parser s e s -> Parser s e Bytes.ByteString
@@ -447,7 +447,7 @@ instance Binary SBytes.ShortByteString where
     shortBytes = id
 
 
-{- | Parse an single 'Int8'. -}
+{- | Parse a single 'Int8'. -}
 {-# INLINE int8 #-}
 int8 :: Binary s => Parser s InputError Int8
 int8 = fmap (view word8ToInt8) word8

@@ -83,7 +83,7 @@ instance IStream a s => HasOffset (Counter s) where
 {- | 'Split' instance.
 
 The instance requires computing the length of the prefix, which is @O(n)@ for some types like
-@Text@. This in its turn, requires a @'MonoFoldable' a b@ constraint and the
+@Text@. This in its turn, requires a @'MonoFoldable' a s@ constraint and the
 @UndecidableInstances@ extension to shut up GHC.
 -}
 instance (Split a s, MonoFoldable a s) => Split a (Counter s) where

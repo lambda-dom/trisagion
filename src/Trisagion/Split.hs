@@ -40,11 +40,13 @@ import Trisagion.IStream (IStream)
 
 {- | The @Split@ typeclass for 'IStream's that support prefix-splitting operations.
 
-In the @'Split' a s@ typeclass it is assumed that the type of the prefix is the same as the stream
-type @s@. It would be possible to make them different -- as say, in the
-[megaparsec](https://hackage.haskell.org/package/megaparsec) package. But in all the 'Split'
-instances in the library, the prefix type is the same as the stream type, so for an increase in
-complexity we would only have a theoretical gain.
+note(s):
+
+    * In the @'Split' a s@ typeclass it is assumed that the type of the prefix is the same as the
+    stream type @s@. It would be possible to make them different -- as say, in the
+    [megaparsec](https://hackage.haskell.org/package/megaparsec) package. But in all the 'Split'
+    instances in the library, the prefix type is the same as the stream type, so for an increase in
+    complexity we would only have a theoretical gain.
 
 Mirroring the laws for the 'IStream' typeclass, the first law is:
 
@@ -66,8 +68,8 @@ note(s):
     typeclass, can be done with the 'IStream' typeclass. The gain is in efficiency, not in
     expressive power.
 
-__Compatibility__: The third law is the compatibility between 'Trisagion.IStream.uncons' and
-@splitN@, that at the level of lists @uncons@ is @splitN 1@:
+__Compatibility__: The third law is a compatinility condition, stating that at the level of lists
+@uncons@ is @splitN 1@:
 
 @
 maybe ([], []) (bimap singleton toList) . uncons == bimap toList toList . splitN 1
