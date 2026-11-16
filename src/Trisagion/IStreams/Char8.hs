@@ -10,9 +10,10 @@ module Trisagion.IStreams.Char8 (
 
     -- ** Isomorphisms and prisms.
     char8,
-    char
+    char,
 
     -- * IStreams.
+    Char8s,
 ) where
 
 -- Imports.
@@ -73,91 +74,91 @@ char = prism' construct match
 
 A specialization of the @fromIso@ stream combinator.
 -}
-newtype Chars s = Chars s
+newtype Char8s s = Char8s s
     deriving stock Eq
     deriving newtype Show
 
 
 -- Instances.
-instance MonoFunctor Word8 s => MonoFunctor Char8 (Chars s) where
+instance MonoFunctor Word8 s => MonoFunctor Char8 (Char8s s) where
     {-# INLINE monomap #-}
-    monomap :: (Char8 -> Char8) -> Chars s -> Chars s
-    monomap f (Chars xs) = Chars (monomap (view char8 . f . review char8) xs)
+    monomap :: (Char8 -> Char8) -> Char8s s -> Char8s s
+    monomap f (Char8s xs) = Char8s (monomap (view char8 . f . review char8) xs)
 
-instance MonoPointed Word8 s => MonoPointed Char8 (Chars s) where
+instance MonoPointed Word8 s => MonoPointed Char8 (Char8s s) where
     {-# INLINE monopoint #-}
-    monopoint :: Char8 -> Chars s
-    monopoint (Char8 n) = Chars $ monopoint n
+    monopoint :: Char8 -> Char8s s
+    monopoint (Char8 n) = Char8s $ monopoint n
 
-instance MonoFoldable Word8 s => MonoFoldable Char8 (Chars s) where
+instance MonoFoldable Word8 s => MonoFoldable Char8 (Char8s s) where
     {-# INLINE monotoList #-}
-    monotoList :: Chars s -> [Char8]
-    monotoList (Chars xs) = fmap (review char8) $ monotoList xs
+    monotoList :: Char8s s -> [Char8]
+    monotoList (Char8s xs) = fmap (review char8) $ monotoList xs
 
     {-# INLINE monofoldMap #-}
-    monofoldMap :: Monoid m => (Char8 -> m) -> Chars s -> m
-    monofoldMap f (Chars xs) = monofoldMap (f . review char8) xs
+    monofoldMap :: Monoid m => (Char8 -> m) -> Char8s s -> m
+    monofoldMap f (Char8s xs) = monofoldMap (f . review char8) xs
 
     {-# INLINEABLE monofoldr #-}
-    monofoldr :: (Char8 -> b -> b) -> b -> Chars s -> b
-    monofoldr f x (Chars xs) = monofoldr (f . review char8) x xs
+    monofoldr :: (Char8 -> b -> b) -> b -> Char8s s -> b
+    monofoldr f x (Char8s xs) = monofoldr (f . review char8) x xs
 
     {-# INLINEABLE monofoldl #-}
-    monofoldl :: (b -> Char8 -> b) -> b -> Chars s -> b
-    monofoldl f x (Chars xs) = monofoldl (\ y n -> f y (review char8 n)) x xs
+    monofoldl :: (b -> Char8 -> b) -> b -> Char8s s -> b
+    monofoldl f x (Char8s xs) = monofoldl (\ y n -> f y (review char8 n)) x xs
 
     {-# INLINE mononull #-}
-    mononull :: Chars s -> Bool
-    mononull (Chars xs) = mononull xs
+    mononull :: Char8s s -> Bool
+    mononull (Char8s xs) = mononull xs
 
     {-# INLINE monolength #-}
-    monolength :: Chars s -> Int
-    monolength (Chars xs) = monolength xs
+    monolength :: Char8s s -> Int
+    monolength (Char8s xs) = monolength xs
 
-instance IStream Word8 s => IStream Char8 (Chars s) where
+instance IStream Word8 s => IStream Char8 (Char8s s) where
     {-# INLINE uncons #-}
-    uncons :: Chars s -> Maybe (Char8, Chars s)
-    uncons (Chars xs) =
+    uncons :: Char8s s -> Maybe (Char8, Char8s s)
+    uncons (Char8s xs) =
         case uncons xs of
             Nothing -> Nothing
-            Just (y, ys) -> Just (review char8 y, Chars ys)
+            Just (y, ys) -> Just (review char8 y, Char8s ys)
 
     {-# INLINE isNull #-}
-    isNull :: Chars s -> Bool
-    isNull (Chars xs) = isNull xs
+    isNull :: Char8s s -> Bool
+    isNull (Char8s xs) = isNull xs
 
     {-# INLINE toList #-}
-    toList :: Chars s -> [Char8]
-    toList (Chars xs) = fmap (review char8) $ toList xs
+    toList :: Char8s s -> [Char8]
+    toList (Char8s xs) = fmap (review char8) $ toList xs
 
-instance HasOffset s => HasOffset (Chars s) where
+instance HasOffset s => HasOffset (Char8s s) where
     {-# INLINE offset #-}
-    offset :: Chars s -> Int
-    offset (Chars xs) = offset xs
+    offset :: Char8s s -> Int
+    offset (Char8s xs) = offset xs
 
-instance Split Word8 s => Split Char8 (Chars s) where
+instance Split Word8 s => Split Char8 (Char8s s) where
     {-# INLINE splitN #-}
-    splitN :: Int -> Chars s -> (Chars s, Chars s)
-    splitN m (Chars xs) =
+    splitN :: Int -> Char8s s -> (Char8s s, Char8s s)
+    splitN m (Char8s xs) =
         let (prefix, rest) = splitN m xs in
-            (Chars prefix, Chars rest)
+            (Char8s prefix, Char8s rest)
 
     {-# INLINE splitWith #-}
-    splitWith :: (Char8 -> Bool) -> Chars s -> (Chars s, Chars s)
-    splitWith p (Chars xs) =
+    splitWith :: (Char8 -> Bool) -> Char8s s -> (Char8s s, Char8s s)
+    splitWith p (Char8s xs) =
         let (prefix, rest) = splitWith (p . review char8) xs in
-            (Chars prefix, Chars rest)
+            (Char8s prefix, Char8s rest)
 
     {-# INLINE splitExact #-}
-    splitExact :: Int -> Chars s -> Maybe (Chars s, Chars s)
-    splitExact m (Chars xs) =
+    splitExact :: Int -> Char8s s -> Maybe (Char8s s, Char8s s)
+    splitExact m (Char8s xs) =
         case splitExact m xs of
             Nothing        -> Nothing
-            Just (ys, zs)  -> Just (Chars ys, Chars zs)
+            Just (ys, zs)  -> Just (Char8s ys, Char8s zs)
 
     {-# INLINE matchPrefix #-}
-    matchPrefix :: Chars s -> Chars s -> Maybe (Chars s)
-    matchPrefix (Chars xs) (Chars ys) =
+    matchPrefix :: Char8s s -> Char8s s -> Maybe (Char8s s)
+    matchPrefix (Char8s xs) (Char8s ys) =
         case matchPrefix xs ys of
             Nothing -> Nothing
-            Just zs -> Just (Chars zs)
+            Just zs -> Just (Char8s zs)
