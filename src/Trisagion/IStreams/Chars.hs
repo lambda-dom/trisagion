@@ -58,7 +58,7 @@ note(s):
 -}
 newtype Chars s = Chars s
     deriving stock Eq
-    deriving newtype Show
+    deriving newtype (Semigroup, Monoid, Show)
 
 
 -- | Unsafe conversion (i. e. truncation) from 'Char' to 'Word8'. Not exported.
