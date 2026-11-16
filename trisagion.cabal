@@ -83,3 +83,4 @@ library
         Trisagion.IStreams.Counter
         Trisagion.IStreams.Offset
         Trisagion.IStreams.Char
+        Trisagion.IStreams.Chunk
