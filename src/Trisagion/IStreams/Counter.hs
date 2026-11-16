@@ -31,6 +31,7 @@ import Data.MonoFoldable (MonoFoldable (..))
 
 -- Package.
 import Trisagion.IStream (IStream (..))
+import qualified Trisagion.IStream as IStream (head)
 import Trisagion.HasOffset (HasOffset (..))
 import Trisagion.Split (Split (..))
 import Trisagion.Parsers.Binary (Binary (..))
@@ -67,6 +68,10 @@ instance IStream a s => IStream a (Counter s) where
             Nothing -> Nothing
             Just (y, ys) -> Just (y, Counter (succ n) ys)
 
+    {-# INLINE head #-}
+    head :: Counter s -> Maybe a
+    head (Counter _ xs) = IStream.head xs
+
     {-# INLINE isNull #-}
     isNull :: Counter s -> Bool
     isNull (Counter _ xs) = isNull xs
@@ -74,6 +79,8 @@ instance IStream a s => IStream a (Counter s) where
     {-# INLINE toList #-}
     toList :: Counter s -> [a]
     toList (Counter _ xs) = toList xs
+
+    -- Note(s): dropOne has to go through uncons to compute the offset.
 
 instance IStream a s => HasOffset (Counter s) where
     {-# INLINE offset #-}
@@ -126,6 +133,8 @@ instance (Split a s, MonoFoldable a s) => Split a (Counter s) where
     {-# INLINE dropExact #-}
     dropExact :: Int -> Counter s -> Maybe (Counter s)
     dropExact m (Counter off xs) = fmap (Counter (off + m)) $ dropExact m xs
+
+    -- Note(s): dropN and dropWith have to go through splitting to compute the offsets.
 
 instance (Binary s, MonoFoldable Word8 s) => Binary (Counter s) where
     {-# INLINE word16Le #-}
