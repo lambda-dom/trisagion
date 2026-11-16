@@ -163,8 +163,8 @@ Right ("0123","456")
 >>> parse line "0123\r\n456"
 Right ("0123","456")
 
->>> parse line "0123\r456"
-Right ("0123\r456","")
+>>> parse line "01\r23\r456"
+Right ("01\r23\r456","")
 
 >>> parse line "0123\n\n456"
 Right ("0123","\n456")
