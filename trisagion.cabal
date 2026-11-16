@@ -82,5 +82,4 @@ library
         Trisagion.Serializers.Binary
         Trisagion.IStreams.Counter
         Trisagion.IStreams.Offset
-        Trisagion.IStreams.Char
-        Trisagion.IStreams.Chunk
+        Trisagion.IStreams.Chars

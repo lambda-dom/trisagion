@@ -1,15 +1,15 @@
 {- |
-Module: Trisagion.IStreams.Char
+Module: Trisagion.IStreams.Chars
 
 Adapter for binary streams.
 -}
 
-module Trisagion.IStreams.Char (
+module Trisagion.IStreams.Chars (
     -- * Prisms.
     char,
 
     -- * IStreams.
-    Chars,
+    Chars (..),
 ) where
 
 -- Imports.
