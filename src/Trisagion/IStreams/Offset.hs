@@ -191,5 +191,5 @@ instance (Binary b s, MonoFoldable Word8 b) => Binary b (Offset s) where
 
 {- | Construct an t'Offset' from an 'IStream'. -}
 {-# INLINE initialize #-}
-initialize :: MonoFoldable b s => s -> Offset s
+initialize :: MonoFoldable a s => s -> Offset s
 initialize xs = Offset (monolength xs) xs

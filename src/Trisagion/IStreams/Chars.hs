@@ -3,6 +3,7 @@ Module: Trisagion.IStreams.Chars
 
 Adapter for binary streams.
 -}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Trisagion.IStreams.Chars (
     -- * Prisms.
@@ -48,7 +49,7 @@ char = prism' construct match
             else Nothing
 
 
-{- | Specialization of @fromIso@ turning an @IStream 'Word8'@ into a t'Char'-stream.
+{- | Turn an @IStream 'Word8'@ into a t'Char'-stream.
 
 note(s):
 
@@ -131,38 +132,38 @@ instance HasOffset s => HasOffset (Chars s) where
     offset :: Chars s -> Int
     offset (Chars xs) = offset xs
 
-instance Split Word8 s => Split Char (Chars s) where
+instance Split Word8 b s => Split Char b (Chars s) where
     {-# INLINE splitN #-}
-    splitN :: Int -> Chars s -> (Chars s, Chars s)
+    splitN :: Int -> Chars s -> (b, Chars s)
     splitN m (Chars xs) =
         let (prefix, rest) = splitN m xs in
-            (Chars prefix, Chars rest)
+            (prefix, Chars rest)
 
     {-# INLINE splitWith #-}
-    splitWith :: (Char -> Bool) -> Chars s -> (Chars s, Chars s)
+    splitWith :: (Char -> Bool) -> Chars s -> (b, Chars s)
     splitWith p (Chars xs) =
         let (prefix, rest) = splitWith (p . review char) xs in
-            (Chars prefix, Chars rest)
+            (prefix, Chars rest)
 
     {-# INLINE splitExact #-}
-    splitExact :: Int -> Chars s -> Maybe (Chars s, Chars s)
+    splitExact :: Int -> Chars s -> Maybe (b, Chars s)
     splitExact m (Chars xs) =
         case splitExact m xs of
             Nothing        -> Nothing
-            Just (ys, zs)  -> Just (Chars ys, Chars zs)
+            Just (ys, zs)  -> Just (ys, Chars zs)
 
     {-# INLINE matchPrefix #-}
-    matchPrefix :: Chars s -> Chars s -> Maybe (Chars s)
-    matchPrefix (Chars xs) (Chars ys) =
+    matchPrefix :: b -> Chars s -> Maybe (Chars s)
+    matchPrefix xs (Chars ys) =
         case matchPrefix xs ys of
             Nothing -> Nothing
             Just zs -> Just (Chars zs)
 
     {-# INLINE splitRemainder #-}
-    splitRemainder :: Chars s -> (Chars s, Chars s)
+    splitRemainder :: Chars s -> (b, Chars s)
     splitRemainder (Chars xs) =
         let (prefix, rest) = splitRemainder xs in
-            (Chars prefix, Chars rest)
+            (prefix, Chars rest)
 
     {-# INLINE dropN #-}
     dropN :: Int -> Chars s -> Chars s
