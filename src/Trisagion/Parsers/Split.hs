@@ -239,7 +239,7 @@ note(s):
 === __Examples:__
 
 >>> parse (consumed one) (initialize "0123")
-Right (('0',Counter 0 "0"),Counter 1 "123")
+Right (('0',"0"),Counter 1 "123")
 
 >>> parse (consumed one) (initialize "")
 Left (InputError 1)

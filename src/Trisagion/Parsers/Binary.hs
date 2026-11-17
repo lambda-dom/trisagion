@@ -30,6 +30,7 @@ import qualified Data.ByteString.Short as SBytes (ShortByteString, index, fromSh
 import Optics.Core (review, view)
 
 -- non-Hackage libraries.
+import Data.MonoFoldable (MonoFoldable (..))
 import Data.Bits.Optics (
     word16BytesLe,
     word32BytesLe,
@@ -40,7 +41,6 @@ import Data.Bits.Optics (
 import Data.Word.Optics (word8ToInt8, word16ToInt16, word32ToInt32, word64ToInt64)
 
 -- Package.
-import Trisagion.IStream (IStream (toList))
 import Trisagion.Parser (Parser)
 import Trisagion.Parsers.IStream (InputError, one)
 import Trisagion.Split (Split)
@@ -90,7 +90,7 @@ mkParserWord64Be f = (review word64BytesBe . f) <$> takeExact 8
 
 
 {- | The @Binary@ typeclass for efficient parsers for machine-width types. -}
-class Split Word8 b s => Binary b s where
+class (Split Word8 b s, MonoFoldable Word8 b) => Binary b s where
     {-# MINIMAL word16Le, word32Le, word64Le, word16Be, word32Be, word64Be #-}
 
     {- | Parse a single 'Word8'. -}
@@ -120,21 +120,23 @@ class Split Word8 b s => Binary b s where
 
     note(s):
 
-        * The default implementation is to make use of 'toList' from 'IStream' and apply the
-        obvious function under @fmap@. Specific streams usually have a faster conversion method.
+        * The default implementation is to make use of the @'MonoFoldable' Word8 b@ constraint and
+        apply the obvious function under @fmap@. Specific streams usually have a faster conversion
+        method.
     -}
-    bytes :: Parser s e s -> Parser s e Bytes.ByteString
-    bytes = fmap (Bytes.pack . toList)
+    bytes :: Parser s e b -> Parser s e Bytes.ByteString
+    bytes = fmap (Bytes.pack . monotoList)
 
     {- | Turn a prefix parser into a 'SBytes.ShortByteString' parser.
 
     note(s):
 
-        * The default implementation is to make use of 'toList' from 'IStream' and apply the
-        obvious function under @fmap@. Specific streams usually have a faster conversion method.
+        * The default implementation is to make use of the @'MonoFoldable' Word8 b@ constraint and
+        apply the obvious function under @fmap@. Specific streams usually have a faster conversion
+        method.
     -}
-    shortBytes :: Parser s e s -> Parser s e SBytes.ShortByteString
-    shortBytes = fmap (SBytes.pack . toList)
+    shortBytes :: Parser s e b -> Parser s e SBytes.ShortByteString
+    shortBytes = fmap (SBytes.pack . monotoList)
 
 
 -- Instances.

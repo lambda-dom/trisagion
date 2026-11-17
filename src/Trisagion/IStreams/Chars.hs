@@ -16,6 +16,7 @@ module Trisagion.IStreams.Chars (
 -- Imports.
 -- Base.
 import Data.Char (chr, ord)
+import Data.Kind (Type)
 import Data.Word (Word8)
 
 -- Libraries.
@@ -49,7 +50,7 @@ char = prism' construct match
             else Nothing
 
 
-{- | Turn an @IStream 'Word8'@ into a t'Char'-stream.
+{- | Turn an @'IStream' 'Word8'@ into an @'IStream' 'Char'@.
 
 note(s):
 
@@ -57,6 +58,7 @@ note(s):
     instances are unlawful, with the typeclass laws failing at characters outside of the
     @[0 .. 255]@ range.
 -}
+type Chars :: Type -> Type
 newtype Chars s = Chars s
     deriving stock Eq
     deriving newtype (Semigroup, Monoid, Show)
