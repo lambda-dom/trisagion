@@ -90,42 +90,42 @@ instance (IStream a s, MonoFoldable a s) => HasOffset (Offset s) where
     offset :: Offset s -> Int
     offset (Offset n xs) = n - monolength xs
 
-instance (Split a s, MonoFoldable a s) => Split a (Offset s) where
+instance (Split a b s, MonoFoldable a b) => Split a b (Offset s) where
     {-# INLINE splitN #-}
-    splitN :: Int -> Offset s -> (Offset s, Offset s)
+    splitN :: Int -> Offset s -> (b, Offset s)
     splitN m (Offset n xs) =
         let (prefix, rest) = splitN m xs in
-            (Offset n prefix, Offset n rest)
+            (prefix, Offset n rest)
 
     {-# INLINE splitWith #-}
-    splitWith :: (a -> Bool) -> Offset s -> (Offset s, Offset s)
+    splitWith :: (a -> Bool) -> Offset s -> (b, Offset s)
     splitWith p (Offset n xs) =
         let (prefix, rest) = splitWith p xs in
-            (Offset n prefix, Offset n rest)
+            (prefix, Offset n rest)
 
     {-# INLINE splitExact #-}
-    splitExact :: Int -> Offset s -> Maybe (Offset s, Offset s)
+    splitExact :: Int -> Offset s -> Maybe (b, Offset s)
     splitExact m (Offset n xs) =
         case splitExact m xs of
             Nothing        -> Nothing
-            Just (ys, zs)  -> Just (Offset n ys, Offset n zs)
+            Just (ys, zs)  -> Just (ys, Offset n zs)
 
     {- | Match a prefix.
 
     The offset of the prefix is irrelevant, so you can simply do @matchPrefix ('initialize' xs)@.
     -}
     {-# INLINE matchPrefix #-}
-    matchPrefix :: Offset s -> Offset s -> Maybe (Offset s)
-    matchPrefix (Offset _ xs) (Offset n ys) =
+    matchPrefix :: b -> Offset s -> Maybe (Offset s)
+    matchPrefix xs (Offset n ys) =
         case matchPrefix xs ys of
             Nothing -> Nothing
             Just zs -> Just . Offset n $ zs
 
     {-# INLINE splitRemainder #-}
-    splitRemainder :: Offset s -> (Offset s, Offset s)
+    splitRemainder :: Offset s -> (b, Offset s)
     splitRemainder (Offset n xs) =
         let (prefix, rest) = splitRemainder xs in
-            (Offset n prefix, Offset n rest)
+            (prefix, Offset n rest)
 
     {-# INLINE dropN #-}
     dropN :: Int -> Offset s -> Offset s
@@ -139,7 +139,7 @@ instance (Split a s, MonoFoldable a s) => Split a (Offset s) where
     dropWith :: (a -> Bool) -> Offset s -> Offset s
     dropWith p (Offset n xs) = Offset n $ dropWith p xs
 
-instance (Binary s, MonoFoldable Word8 s) => Binary (Offset s) where
+instance (Binary b s, MonoFoldable Word8 b) => Binary b (Offset s) where
     {-# INLINE word16Le #-}
     word16Le :: Parser (Offset s) InputError Word16
     word16Le = do

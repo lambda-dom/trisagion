@@ -80,6 +80,6 @@ library
         Trisagion.Serializer
         Trisagion.Serializers.Combinators
         Trisagion.Serializers.Binary
-        -- Trisagion.IStreams.Counter
-        -- Trisagion.IStreams.Offset
+        Trisagion.IStreams.Counter
+        Trisagion.IStreams.Offset
         -- Trisagion.IStreams.Chars
