@@ -1,3 +1,5 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+
 {- |
 Module: Trisagion.Split
 
@@ -40,25 +42,17 @@ import Trisagion.IStream (IStream)
 
 {- | The @Split@ typeclass for 'IStream's that support prefix-splitting operations.
 
-note(s):
-
-    * In the @'Split' a s@ typeclass it is assumed that the type of the prefix is the same as the
-    stream type @s@. It would be possible to make them different -- as say, in the
-    [megaparsec](https://hackage.haskell.org/package/megaparsec) package. But in all the 'Split'
-    instances in the library, the prefix type is the same as the stream type, so for an increase in
-    complexity we would only have a theoretical gain.
-
 Mirroring the laws for the 'IStream' typeclass, the first law is:
 
 __Mononaturality__: With the implied constraint @'Data.MonoFunctor.MonoFunctor' a s@, @splitN n@
 is mononatural.
 
-__List identities__: At the level of lists @splitN@ is 'Data.List.splitAt' and @splitWith@ is
-'Data.List.span':
+__List identities__: With a @MonoFoldable a b@ constraint, at the level of lists @splitN@ is
+'Data.List.splitAt' and @splitWith@ is 'Data.List.span':
 
 @
-bimap toList toList . splitN n    == splitAt n . toList
-bimap toList toList . splitWith p == span p . toList
+bimap monotoList toList . splitN n    == splitAt n . toList
+bimap monotoList toList . splitWith p == span p . toList
 @
 
 note(s):
@@ -68,11 +62,11 @@ note(s):
     typeclass, can be done with the 'IStream' typeclass. The gain is in efficiency, not in
     expressive power.
 
-__Compatibility__: The third law is a compatinility condition, stating that at the level of lists
+__Compatibility__: The third law is a compatibility condition, stating that at the level of lists
 @uncons@ is @splitN 1@:
 
 @
-maybe ([], []) (bimap singleton toList) . uncons == bimap toList toList . splitN 1
+maybe ([], []) (bimap singleton toList) . uncons == bimap monotoList toList . splitN 1
 @
 
 === __Counterexample:__
@@ -86,20 +80,20 @@ The following example shows that @'splitWith' p@ is /not/ mononatural.
 >>> bimap (monomap f) (monomap f) . splitWith p $ "a"
 ("","\NUL")
 -}
-class IStream a s => Split a s where
+class IStream a s => Split a b s where
     {-# MINIMAL splitN, splitWith, splitExact, matchPrefix #-}
 
     {- | Split the stream at offset @n@ into a pair @(prefix, suffix)@. -}
-    splitN :: Int -> s -> (s, s)
+    splitN :: Int -> s -> (b, s)
 
     {- | Split the longest prefix from the stream whose elements satisfy a predicate. -}
-    splitWith :: (a -> Bool) -> s -> (s, s)
+    splitWith :: (a -> Bool) -> s -> (b, s)
 
     {- | Split a prefix of exact size. -}
-    splitExact :: Int -> s -> Maybe (s, s)
+    splitExact :: Int -> s -> Maybe (b, s)
 
     {- | Match and drop a prefix. -}
-    matchPrefix :: s -> s -> Maybe s
+    matchPrefix :: b -> s -> Maybe s
 
     {- | Return the remainder of the stream as a prefix.
 
@@ -107,10 +101,10 @@ class IStream a s => Split a s where
 
     @splitRemainder = splitWith (const True)@
 
-    Instances can (almost) always define a faster implementation using a nullary operation
+    Instances can almost always define a faster implementation using a nullary operation
     @empty :: s@.
     -}
-    splitRemainder :: s -> (s, s)
+    splitRemainder :: s -> (b, s)
     splitRemainder = splitWith (const True)
 
     {- | Drop a fixed-size prefix from the stream.
@@ -143,7 +137,7 @@ class IStream a s => Split a s where
 
 -- Instances.
 -- Base.
-instance Eq a => Split a [a] where
+instance (Eq a, b ~ [a]) => Split a b [a] where
     {-# INLINE splitN #-}
     splitN :: Int -> [a] -> ([a], [a])
     splitN = splitAt
@@ -183,7 +177,7 @@ instance Eq a => Split a [a] where
 
 
 -- Libraries.
-instance Split Word8 Bytes.ByteString where
+instance b ~ Bytes.ByteString => Split Word8 b Bytes.ByteString where
     {-# INLINE splitN #-}
     splitN :: Int -> Bytes.ByteString -> (Bytes.ByteString, Bytes.ByteString)
     splitN = Bytes.splitAt
@@ -222,7 +216,7 @@ instance Split Word8 Bytes.ByteString where
     dropWith :: (Word8 -> Bool) -> Bytes.ByteString -> Bytes.ByteString
     dropWith = Bytes.dropWhile
 
-instance Split Word8 LBytes.ByteString where
+instance b ~ LBytes.ByteString => Split Word8 b LBytes.ByteString where
     {-# INLINE splitN #-}
     splitN :: Int -> LBytes.ByteString -> (LBytes.ByteString, LBytes.ByteString)
     splitN = LBytes.splitAt . fromIntegral
@@ -261,7 +255,7 @@ instance Split Word8 LBytes.ByteString where
     dropWith :: (Word8 -> Bool) -> LBytes.ByteString -> LBytes.ByteString
     dropWith = LBytes.dropWhile
 
-instance Split Word8 SBytes.ShortByteString where
+instance b ~ SBytes.ShortByteString => Split Word8 b SBytes.ShortByteString where
     {-# INLINE splitN #-}
     splitN
         :: Int
@@ -312,7 +306,7 @@ instance Split Word8 SBytes.ShortByteString where
     dropWith :: (Word8 -> Bool) -> SBytes.ShortByteString -> SBytes.ShortByteString
     dropWith = SBytes.dropWhile
 
-instance Split Char Text.Text where
+instance Split Char Text.Text Text.Text where
     {-# INLINE splitN #-}
     splitN :: Int -> Text.Text -> (Text.Text, Text.Text)
     splitN = Text.splitAt
@@ -348,7 +342,7 @@ instance Split Char Text.Text where
     dropWith :: (Char -> Bool) -> Text.Text -> Text.Text
     dropWith = Text.dropWhile
 
-instance Split Char LText.Text where
+instance Split Char LText.Text LText.Text where
     {-# INLINE splitN #-}
     splitN :: Int -> LText.Text -> (LText.Text, LText.Text)
     splitN = LText.splitAt . fromIntegral
@@ -387,7 +381,7 @@ instance Split Char LText.Text where
     dropWith :: (Char -> Bool) -> LText.Text -> LText.Text
     dropWith = LText.dropWhile
 
-instance Eq a => Split a (Seq a) where
+instance (Eq a, b ~ Seq a) => Split a b (Seq a) where
     {-# INLINE splitN #-}
     splitN :: Int -> Seq a -> (Seq a, Seq a)
     splitN = Seq.splitAt
@@ -428,7 +422,7 @@ instance Eq a => Split a (Seq a) where
     dropWith :: (a -> Bool) -> Seq a -> Seq a
     dropWith = Seq.dropWhileL
 
-instance Eq a => Split a (Vector.Vector a) where
+instance (Eq a, b ~ Vector.Vector a) => Split a b (Vector.Vector a) where
     {-# INLINE splitN #-}
     splitN :: Int -> Vector.Vector a -> (Vector.Vector a, Vector.Vector a)
     splitN = Vector.splitAt
@@ -467,7 +461,7 @@ instance Eq a => Split a (Vector.Vector a) where
     dropWith :: (a -> Bool) -> Vector.Vector a -> Vector.Vector a
     dropWith = Vector.dropWhile
 
-instance Eq a => Split a (SVector.Vector a) where
+instance (Eq a, b ~ SVector.Vector a) => Split a b (SVector.Vector a) where
     {-# INLINE splitN #-}
     splitN :: Int -> SVector.Vector a -> (SVector.Vector a, SVector.Vector a)
     splitN = SVector.splitAt
@@ -506,7 +500,7 @@ instance Eq a => Split a (SVector.Vector a) where
     dropWith :: (a -> Bool) -> SVector.Vector a -> SVector.Vector a
     dropWith = SVector.dropWhile
 
-instance (Eq a, UVector.Unbox a) => Split a (UVector.Vector a) where
+instance (Eq a, UVector.Unbox a, b ~ UVector.Vector a) => Split a b (UVector.Vector a) where
     {-# INLINE splitN #-}
     splitN :: Int -> UVector.Vector a -> (UVector.Vector a, UVector.Vector a)
     splitN = UVector.splitAt
@@ -545,7 +539,7 @@ instance (Eq a, UVector.Unbox a) => Split a (UVector.Vector a) where
     dropWith :: (a -> Bool) -> UVector.Vector a -> UVector.Vector a
     dropWith = UVector.dropWhile
 
-instance (Eq a, StVector.Storable a) => Split a (StVector.Vector a) where
+instance (Eq a, StVector.Storable a, b ~ StVector.Vector a) => Split a b (StVector.Vector a) where
     {-# INLINE splitN #-}
     splitN :: Int -> StVector.Vector a -> (StVector.Vector a, StVector.Vector a)
     splitN = StVector.splitAt
